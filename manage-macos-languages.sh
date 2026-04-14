@@ -10,37 +10,44 @@ show_usage() {
 
 dry_run=false
 restart_after_change=false
+requested_languages=()
+parse_options=true
 
 while [ "$#" -gt 0 ]; do
-  case "$1" in
-    --dry-run)
-      dry_run=true
-      shift
-      ;;
-    --restart)
-      restart_after_change=true
-      shift
-      ;;
-    --help)
-      show_usage
-      exit 0
-      ;;
-    --)
-      shift
-      break
-      ;;
-    -*)
-      echo "Neznámý přepínač: $1"
-      show_usage
-      exit 1
-      ;;
-    *)
-      break
-      ;;
-  esac
+  if [ "$parse_options" = true ]; then
+    case "$1" in
+      --dry-run)
+        dry_run=true
+        shift
+        continue
+        ;;
+      --restart)
+        restart_after_change=true
+        shift
+        continue
+        ;;
+      --help)
+        show_usage
+        exit 0
+        ;;
+      --)
+        parse_options=false
+        shift
+        continue
+        ;;
+      -*)
+        echo "Neznámý přepínač: $1"
+        show_usage
+        exit 1
+        ;;
+    esac
+  fi
+
+  requested_languages+=("$1")
+  shift
 done
 
-if [ "$#" -lt 1 ]; then
+if [ "${#requested_languages[@]}" -lt 1 ]; then
   show_usage
   exit 1
 fi
@@ -62,7 +69,6 @@ if [ "${#current_languages[@]}" -eq 0 ]; then
   exit 1
 fi
 
-requested_languages=("$@")
 result=()
 
 is_in_list() {
