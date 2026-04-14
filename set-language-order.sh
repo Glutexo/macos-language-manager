@@ -39,6 +39,19 @@ fi
 requested_languages=("$@")
 result=()
 
+is_in_list() {
+  local needle="$1"
+  shift
+
+  for item in "$@"; do
+    if [ "$item" = "$needle" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 matches_requested_language() {
   local requested="$1"
   local language="$2"
@@ -72,32 +85,25 @@ matches_requested_language() {
 }
 
 for requested in "${requested_languages[@]}"; do
+  found_match=false
+
   for lang in "${current_languages[@]}"; do
     if matches_requested_language "$requested" "$lang"; then
-      already_added=false
-      for chosen in "${result[@]}"; do
-        if [ "$chosen" = "$lang" ]; then
-          already_added=true
-          break
-        fi
-      done
-      if [ "$already_added" = false ]; then
+      found_match=true
+      if ! is_in_list "$lang" "${result[@]}"; then
         result+=("$lang")
       fi
       break
     fi
   done
+
+  if [ "$found_match" = false ] && ! is_in_list "$requested" "${result[@]}"; then
+    result+=("$requested")
+  fi
 done
 
 for lang in "${current_languages[@]}"; do
-  already_added=false
-  for chosen in "${result[@]}"; do
-    if [ "$chosen" = "$lang" ]; then
-      already_added=true
-      break
-    fi
-  done
-  if [ "$already_added" = false ]; then
+  if ! is_in_list "$lang" "${result[@]}"; then
     result+=("$lang")
   fi
 done
