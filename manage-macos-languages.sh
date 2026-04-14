@@ -4,6 +4,9 @@ set -eo pipefail
 display_command="./manage-macos-languages.sh"
 
 show_usage() {
+  echo "Manage the macOS preferred language list."
+  echo "Move selected languages to the front and add missing ones when needed."
+  echo
   echo "Usage: $display_command [--dry-run|-n] [--restart|-r] language [language...]"
   echo
   echo "Options:"
@@ -12,8 +15,9 @@ show_usage() {
   echo "  --help, -h      Show this help message."
   echo
   echo "Notes:"
-  echo "  If a base language is missing, the script uses the system locale region."
-  echo "  Example: with locale cs_CZ, 'ja' becomes 'ja-CZ'."
+  echo "  If you request a language that is not in the list yet, the script adds it."
+  echo "  For short tags like 'ja', it also adds the system locale region when available."
+  echo "  Example: with locale cs_CZ, 'ja' is added as 'ja-CZ'."
   echo
   echo "Examples:"
   echo "  $display_command cs en"

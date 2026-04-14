@@ -28,6 +28,8 @@ The script is useful when you want to quickly change language priority for apps 
 ./manage-macos-languages.sh [--dry-run|-n] [--restart|-r] language [language...]
 ```
 
+Manages the macOS preferred language list by moving selected languages to the front and adding missing ones when needed.
+
 Options:
 
 - `--dry-run`, `-n`: prints the resulting language order without writing `AppleLanguages`
@@ -82,7 +84,8 @@ Short form of `--restart`.
 
 - An exact language tag such as `en-US` matches the same tag first.
 - A base language such as `en` can match region-specific variants such as `en-US`.
-- If no configured language matches a base language such as `ja`, the script appends the current system locale region.
+- If you request a language that is not already in the list, the script adds it.
+- For short tags such as `ja`, it also appends the current system locale region when available.
 - Example: if the system locale is `cs_CZ`, requesting `ja` inserts `ja-CZ`.
 - If no configured language matches a fully qualified tag such as `en-US`, that exact tag is inserted.
 - Only the first matching configured language is moved for each requested item.
