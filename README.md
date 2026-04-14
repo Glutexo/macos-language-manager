@@ -6,7 +6,7 @@ Simple shell tooling for managing the preferred language order on macOS.
 
 This repository currently provides one script:
 
-- `set-language-order.sh` reads the current `AppleLanguages` setting.
+- `manage-macos-languages.sh` reads the current `AppleLanguages` setting.
 - It moves the requested languages to the front of the list.
 - It adds a requested language if it is not already present.
 - It uses the system locale region for missing base language tags such as `ja` -> `ja-CZ`.
@@ -25,37 +25,37 @@ The script is useful when you want to quickly change language priority for apps 
 ## Usage
 
 ```bash
-./set-language-order.sh [--dry-run] [--restart] language [language...]
+./manage-macos-languages.sh [--dry-run] [--restart] language [language...]
 ```
 
 Examples:
 
 ```bash
-./set-language-order.sh cs en
+./manage-macos-languages.sh cs en
 ```
 
 Moves Czech and English to the front of the current macOS language list.
 
 ```bash
-./set-language-order.sh --dry-run ko ja
+./manage-macos-languages.sh --dry-run ko ja
 ```
 
 Shows the reordered list for Korean and Japanese without saving it. If `ja` is missing and the system locale is `cs_CZ`, the inserted value becomes `ja-CZ`.
 
 ```bash
-./set-language-order.sh en-US de
+./manage-macos-languages.sh en-US de
 ```
 
 Prioritizes `en-US` and German, then keeps the rest of the configured languages in their previous order.
 
 ```bash
-./set-language-order.sh fr cs
+./manage-macos-languages.sh fr cs
 ```
 
 Moves French and Czech to the front and adds either language if it is missing from the current macOS list.
 
 ```bash
-./set-language-order.sh --restart ja ko
+./manage-macos-languages.sh --restart ja ko
 ```
 
 Requests a system restart after calculating the new order.
