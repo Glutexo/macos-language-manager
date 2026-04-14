@@ -9,6 +9,7 @@ This repository currently provides one script:
 - `set-language-order.sh` reads the current `AppleLanguages` setting.
 - It moves the requested languages to the front of the list.
 - It adds a requested language if it is not already present.
+- It uses the system locale region for missing base language tags such as `ja` -> `ja-CZ`.
 - It keeps the remaining languages in their original order.
 - It can preview the result with `--dry-run` before writing changes.
 
@@ -38,7 +39,7 @@ Moves Czech and English to the front of the current macOS language list.
 ./set-language-order.sh --dry-run ko ja
 ```
 
-Shows the reordered list for Korean and Japanese without saving it.
+Shows the reordered list for Korean and Japanese without saving it. If `ja` is missing and the system locale is `cs_CZ`, the inserted value becomes `ja-CZ`.
 
 ```bash
 ./set-language-order.sh en-US de
@@ -56,7 +57,8 @@ Moves French and Czech to the front and adds either language if it is missing fr
 
 - An exact language tag such as `en-US` matches the same tag first.
 - A base language such as `en` can match region-specific variants such as `en-US`.
-- If no configured language matches a requested item, the requested language tag is inserted directly.
+- If no configured language matches a base language such as `ja`, the script appends the current system locale region, for example `ja-CZ`.
+- If no configured language matches a fully qualified tag such as `en-US`, that exact tag is inserted.
 - Only the first matching configured language is moved for each requested item.
 - Languages not requested stay in the list and preserve their relative order.
 

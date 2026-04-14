@@ -52,6 +52,77 @@ is_in_list() {
   return 1
 }
 
+extract_locale_region() {
+  local locale_value="$1"
+  local normalized=""
+  local region_part=""
+  local first_subtag=""
+
+  normalized="${locale_value%%.*}"
+  normalized="${normalized%%@*}"
+  normalized="${normalized//_/-}"
+  region_part="${normalized#*-}"
+
+  if [ "$region_part" = "$normalized" ] || [ -z "$region_part" ]; then
+    return 1
+  fi
+
+  first_subtag="${region_part%%-*}"
+  case "${#first_subtag}" in
+    2|3)
+      printf '%s\n' "$first_subtag" | tr '[:lower:]' '[:upper:]'
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
+get_system_locale_region() {
+  local locale_value=""
+  local region=""
+
+  locale_value="$(defaults read -g AppleLocale 2>/dev/null || true)"
+  if [ -n "$locale_value" ]; then
+    region="$(extract_locale_region "$locale_value" || true)"
+    if [ -n "$region" ]; then
+      printf '%s\n' "$region"
+      return 0
+    fi
+  fi
+
+  for locale_value in "${LC_ALL:-}" "${LC_MESSAGES:-}" "${LANG:-}"; do
+    if [ -n "$locale_value" ]; then
+      region="$(extract_locale_region "$locale_value" || true)"
+      if [ -n "$region" ]; then
+        printf '%s\n' "$region"
+        return 0
+      fi
+    fi
+  done
+
+  return 1
+}
+
+build_missing_language_tag() {
+  local requested="$1"
+  local region=""
+
+  case "$requested" in
+    *-*)
+      printf '%s\n' "$requested"
+      return 0
+      ;;
+  esac
+
+  region="$(get_system_locale_region || true)"
+  if [ -n "$region" ]; then
+    printf '%s-%s\n' "$requested" "$region"
+  else
+    printf '%s\n' "$requested"
+  fi
+}
+
 matches_requested_language() {
   local requested="$1"
   local language="$2"
@@ -97,8 +168,11 @@ for requested in "${requested_languages[@]}"; do
     fi
   done
 
-  if [ "$found_match" = false ] && ! is_in_list "$requested" "${result[@]}"; then
-    result+=("$requested")
+  if [ "$found_match" = false ]; then
+    missing_language="$(build_missing_language_tag "$requested")"
+    if ! is_in_list "$missing_language" "${result[@]}"; then
+      result+=("$missing_language")
+    fi
   fi
 done
 
