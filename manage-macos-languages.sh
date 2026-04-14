@@ -1,8 +1,10 @@
 #!/bin/bash
 set -eo pipefail
 
+display_command="./manage-macos-languages.sh"
+
 show_usage() {
-  echo "Usage: $0 [--dry-run|-n] [--restart|-r] language [language...]"
+  echo "Usage: $display_command [--dry-run|-n] [--restart|-r] language [language...]"
   echo
   echo "Options:"
   echo "  --dry-run, -n   Print the new language order without saving changes."
@@ -14,12 +16,12 @@ show_usage() {
   echo "  A missing base language can inherit its region from the system locale."
   echo
   echo "Examples:"
-  echo "  $0 cs en"
-  echo "  $0 --dry-run ko ja"
-  echo "  $0 -n ko ja"
-  echo "  $0 --restart ja ko"
-  echo "  $0 -r ja ko"
-  echo "  $0 --help"
+  echo "  $display_command cs en"
+  echo "  $display_command --dry-run ko ja"
+  echo "  $display_command -n ko ja"
+  echo "  $display_command --restart ja ko"
+  echo "  $display_command -r ja ko"
+  echo "  $display_command --help"
 }
 
 dry_run=false
