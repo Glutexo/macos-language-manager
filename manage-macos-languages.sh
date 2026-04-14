@@ -12,8 +12,8 @@ show_usage() {
   echo "  --help, -h      Show this help message."
   echo
   echo "Notes:"
-  echo "  Options can appear before or after the language arguments."
-  echo "  A missing base language can inherit its region from the system locale."
+  echo "  If a base language is missing, the script uses the system locale region."
+  echo "  Example: with locale cs_CZ, 'ja' becomes 'ja-CZ'."
   echo
   echo "Examples:"
   echo "  $display_command cs en"

@@ -33,7 +33,6 @@ Options:
 - `--dry-run`, `-n`: prints the resulting language order without writing `AppleLanguages`
 - `--restart`, `-r`: requests an immediate restart after evaluating the command
 - `--help`, `-h`: prints the built-in help output
-- options can appear before or after the language arguments
 
 Examples:
 
@@ -77,13 +76,14 @@ Requests a system restart after calculating the new order.
 ./manage-macos-languages.sh ja ko -r
 ```
 
-Short form of `--restart`. Options can appear after the language arguments too.
+Short form of `--restart`.
 
 ## How Matching Works
 
 - An exact language tag such as `en-US` matches the same tag first.
 - A base language such as `en` can match region-specific variants such as `en-US`.
-- If no configured language matches a base language such as `ja`, the script appends the current system locale region, for example `ja-CZ`.
+- If no configured language matches a base language such as `ja`, the script appends the current system locale region.
+- Example: if the system locale is `cs_CZ`, requesting `ja` inserts `ja-CZ`.
 - If no configured language matches a fully qualified tag such as `en-US`, that exact tag is inserted.
 - Only the first matching configured language is moved for each requested item.
 - Languages not requested stay in the list and preserve their relative order.
