@@ -2,17 +2,43 @@
 set -eo pipefail
 
 show_usage() {
-  echo "Použití: $0 [--dry-run] jazyk [jazyk...]"
+  echo "Použití: $0 [--dry-run] [--restart] jazyk [jazyk...]"
   echo "Příklad: $0 cs en"
   echo "Příklad: $0 --dry-run ko ja"
+  echo "Příklad: $0 --restart ja ko"
 }
 
 dry_run=false
+restart_after_change=false
 
-if [ "${1:-}" = "--dry-run" ]; then
-  dry_run=true
-  shift
-fi
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --dry-run)
+      dry_run=true
+      shift
+      ;;
+    --restart)
+      restart_after_change=true
+      shift
+      ;;
+    --help)
+      show_usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "Neznámý přepínač: $1"
+      show_usage
+      exit 1
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
 
 if [ "$#" -lt 1 ]; then
   show_usage
@@ -190,5 +216,10 @@ if [ "$dry_run" = true ]; then
   echo "Dry run: změna nebyla zapsána."
 else
   defaults write -g AppleLanguages -array "${result[@]}"
-  echo "Změna se obvykle plně projeví po odhlášení a novém přihlášení."
+  if [ "$restart_after_change" = true ]; then
+    echo "Restartuji počítač, aby se změna projevila."
+    osascript -e 'tell application "System Events" to restart'
+  else
+    echo "Změna se obvykle plně projeví po odhlášení a novém přihlášení."
+  fi
 fi
