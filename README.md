@@ -12,7 +12,7 @@ This repository currently provides one script:
 - It uses the system locale region for missing base language tags such as `ja` -> `ja-CZ`.
 - It keeps the remaining languages in their original order.
 - It can preview the result with `--dry-run` before writing changes.
-- It can restart the Mac after saving changes with `--restart`.
+- It can restart the Mac with `--restart`, even when used together with `--dry-run`.
 
 The script is useful when you want to quickly change language priority for apps and system components that follow the global macOS language preference order.
 
@@ -58,7 +58,7 @@ Moves French and Czech to the front and adds either language if it is missing fr
 ./set-language-order.sh --restart ja ko
 ```
 
-Saves the new language order and then requests a system restart.
+Requests a system restart after calculating the new order.
 
 ## How Matching Works
 
@@ -73,7 +73,7 @@ Saves the new language order and then requests a system restart.
 
 - The script prints its status messages in Czech.
 - macOS may require logging out and back in before the change is fully reflected everywhere.
-- Use `--restart` if you want the script to request an immediate restart after saving the new order.
+- Use `--restart` if you want the script to request an immediate restart, including together with `--dry-run`.
 - Test with `--dry-run` first if you want to confirm the final order.
 
 ## Repository Workflow

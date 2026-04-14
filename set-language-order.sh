@@ -216,10 +216,11 @@ if [ "$dry_run" = true ]; then
   echo "Dry run: změna nebyla zapsána."
 else
   defaults write -g AppleLanguages -array "${result[@]}"
-  if [ "$restart_after_change" = true ]; then
-    echo "Restartuji počítač, aby se změna projevila."
-    osascript -e 'tell application "System Events" to restart'
-  else
-    echo "Změna se obvykle plně projeví po odhlášení a novém přihlášení."
-  fi
+fi
+
+if [ "$restart_after_change" = true ]; then
+  echo "Restartuji počítač."
+  osascript -e 'tell application "System Events" to restart'
+elif [ "$dry_run" != true ]; then
+  echo "Změna se obvykle plně projeví po odhlášení a novém přihlášení."
 fi
