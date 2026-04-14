@@ -90,7 +90,7 @@ Short form of `--restart`. Options can appear after the language arguments too.
 
 ## Notes
 
-- The script prints its status messages in Czech.
+- The script prints its status messages in English.
 - macOS may require logging out and back in before the change is fully reflected everywhere.
 - Use `--restart` or `-r` if you want the script to request an immediate restart, including together with `--dry-run`.
 - Test with `--dry-run` or `-n` first if you want to confirm the final order.

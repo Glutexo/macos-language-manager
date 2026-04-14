@@ -2,24 +2,24 @@
 set -eo pipefail
 
 show_usage() {
-  echo "Použití: $0 [--dry-run|-n] [--restart|-r] jazyk [jazyk...]"
+  echo "Usage: $0 [--dry-run|-n] [--restart|-r] language [language...]"
   echo
-  echo "Přepínače:"
-  echo "  --dry-run, -n   Vypíše nové pořadí jazyků bez uložení změny."
-  echo "  --restart, -r  Restartuje počítač po vyhodnocení příkazu."
-  echo "  --help, -h     Zobrazí tuto nápovědu."
+  echo "Options:"
+  echo "  --dry-run, -n   Print the new language order without saving changes."
+  echo "  --restart, -r   Restart the Mac after evaluating the command."
+  echo "  --help, -h      Show this help message."
   echo
-  echo "Poznámky:"
-  echo "  Přepínače mohou být před i za jazyky."
-  echo "  Chybějící základní jazyk může doplnit region podle systémového locale."
+  echo "Notes:"
+  echo "  Options can appear before or after the language arguments."
+  echo "  A missing base language can inherit its region from the system locale."
   echo
-  echo "Příklady:"
-  echo "Příklad: $0 cs en"
-  echo "Příklad: $0 --dry-run ko ja"
-  echo "Příklad: $0 -n ko ja"
-  echo "Příklad: $0 --restart ja ko"
-  echo "Příklad: $0 -r ja ko"
-  echo "Příklad: $0 --help"
+  echo "Examples:"
+  echo "  $0 cs en"
+  echo "  $0 --dry-run ko ja"
+  echo "  $0 -n ko ja"
+  echo "  $0 --restart ja ko"
+  echo "  $0 -r ja ko"
+  echo "  $0 --help"
 }
 
 dry_run=false
@@ -50,7 +50,7 @@ while [ "$#" -gt 0 ]; do
         continue
         ;;
       -*)
-        echo "Neznámý přepínač: $1"
+        echo "Unknown option: $1"
         show_usage
         exit 1
         ;;
@@ -79,7 +79,7 @@ while IFS= read -r language; do
 done < "$tmp_languages_file"
 
 if [ "${#current_languages[@]}" -eq 0 ]; then
-  echo "Nepodařilo se načíst AppleLanguages."
+  echo "Failed to read AppleLanguages."
   exit 1
 fi
 
@@ -228,19 +228,19 @@ for lang in "${current_languages[@]}"; do
   fi
 done
 
-echo "Nové pořadí jazyků:"
+echo "New language order:"
 printf '  %s\n' "${result[@]}"
 echo
 
 if [ "$dry_run" = true ]; then
-  echo "Dry run: změna nebyla zapsána."
+  echo "Dry run: no changes were saved."
 else
   defaults write -g AppleLanguages -array "${result[@]}"
 fi
 
 if [ "$restart_after_change" = true ]; then
-  echo "Restartuji počítač."
+  echo "Restarting the Mac."
   osascript -e 'tell application "System Events" to restart'
 elif [ "$dry_run" != true ]; then
-  echo "Změna se obvykle plně projeví po odhlášení a novém přihlášení."
+  echo "The change usually takes full effect after logging out and back in."
 fi
