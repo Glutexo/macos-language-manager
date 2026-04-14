@@ -2,10 +2,12 @@
 set -eo pipefail
 
 show_usage() {
-  echo "Použití: $0 [--dry-run] [--restart] jazyk [jazyk...]"
+  echo "Použití: $0 [--dry-run|-n] [--restart|-r] jazyk [jazyk...]"
   echo "Příklad: $0 cs en"
   echo "Příklad: $0 --dry-run ko ja"
+  echo "Příklad: $0 -n ko ja"
   echo "Příklad: $0 --restart ja ko"
+  echo "Příklad: $0 -r ja ko"
 }
 
 dry_run=false
@@ -16,17 +18,17 @@ parse_options=true
 while [ "$#" -gt 0 ]; do
   if [ "$parse_options" = true ]; then
     case "$1" in
-      --dry-run)
+      --dry-run|-n)
         dry_run=true
         shift
         continue
         ;;
-      --restart)
+      --restart|-r)
         restart_after_change=true
         shift
         continue
         ;;
-      --help)
+      --help|-h)
         show_usage
         exit 0
         ;;

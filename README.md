@@ -11,8 +11,8 @@ This repository currently provides one script:
 - It adds a requested language if it is not already present.
 - It uses the system locale region for missing base language tags such as `ja` -> `ja-CZ`.
 - It keeps the remaining languages in their original order.
-- It can preview the result with `--dry-run` before writing changes.
-- It can restart the Mac with `--restart`, even when used together with `--dry-run`.
+- It can preview the result with `--dry-run` or `-n` before writing changes.
+- It can restart the Mac with `--restart` or `-r`, even when used together with `--dry-run`.
 
 The script is useful when you want to quickly change language priority for apps and system components that follow the global macOS language preference order.
 
@@ -25,7 +25,7 @@ The script is useful when you want to quickly change language priority for apps 
 ## Usage
 
 ```bash
-./manage-macos-languages.sh [--dry-run] [--restart] language [language...]
+./manage-macos-languages.sh [--dry-run|-n] [--restart|-r] language [language...]
 ```
 
 Examples:
@@ -41,6 +41,12 @@ Moves Czech and English to the front of the current macOS language list.
 ```
 
 Shows the reordered list for Korean and Japanese without saving it. If `ja` is missing and the system locale is `cs_CZ`, the inserted value becomes `ja-CZ`.
+
+```bash
+./manage-macos-languages.sh -n ko ja
+```
+
+Short form of `--dry-run`.
 
 ```bash
 ./manage-macos-languages.sh en-US de
@@ -60,6 +66,12 @@ Moves French and Czech to the front and adds either language if it is missing fr
 
 Requests a system restart after calculating the new order.
 
+```bash
+./manage-macos-languages.sh ja ko -r
+```
+
+Short form of `--restart`. Options can appear after the language arguments too.
+
 ## How Matching Works
 
 - An exact language tag such as `en-US` matches the same tag first.
@@ -73,8 +85,8 @@ Requests a system restart after calculating the new order.
 
 - The script prints its status messages in Czech.
 - macOS may require logging out and back in before the change is fully reflected everywhere.
-- Use `--restart` if you want the script to request an immediate restart, including together with `--dry-run`.
-- Test with `--dry-run` first if you want to confirm the final order.
+- Use `--restart` or `-r` if you want the script to request an immediate restart, including together with `--dry-run`.
+- Test with `--dry-run` or `-n` first if you want to confirm the final order.
 
 ## Repository Workflow
 
