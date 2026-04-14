@@ -3,11 +3,23 @@ set -eo pipefail
 
 show_usage() {
   echo "Použití: $0 [--dry-run|-n] [--restart|-r] jazyk [jazyk...]"
+  echo
+  echo "Přepínače:"
+  echo "  --dry-run, -n   Vypíše nové pořadí jazyků bez uložení změny."
+  echo "  --restart, -r  Restartuje počítač po vyhodnocení příkazu."
+  echo "  --help, -h     Zobrazí tuto nápovědu."
+  echo
+  echo "Poznámky:"
+  echo "  Přepínače mohou být před i za jazyky."
+  echo "  Chybějící základní jazyk může doplnit region podle systémového locale."
+  echo
+  echo "Příklady:"
   echo "Příklad: $0 cs en"
   echo "Příklad: $0 --dry-run ko ja"
   echo "Příklad: $0 -n ko ja"
   echo "Příklad: $0 --restart ja ko"
   echo "Příklad: $0 -r ja ko"
+  echo "Příklad: $0 --help"
 }
 
 dry_run=false

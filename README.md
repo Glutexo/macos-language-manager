@@ -28,6 +28,13 @@ The script is useful when you want to quickly change language priority for apps 
 ./manage-macos-languages.sh [--dry-run|-n] [--restart|-r] language [language...]
 ```
 
+Options:
+
+- `--dry-run`, `-n`: prints the resulting language order without writing `AppleLanguages`
+- `--restart`, `-r`: requests an immediate restart after evaluating the command
+- `--help`, `-h`: prints the built-in help output
+- options can appear before or after the language arguments
+
 Examples:
 
 ```bash
