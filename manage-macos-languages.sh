@@ -76,9 +76,23 @@ defaults read -g AppleLanguages 2>/dev/null \
   | tr -d '()",'\'' ' \
   | sed '/^$/d' > "$tmp_languages_file"
 
+is_valid_configured_language() {
+  local language="$1"
+
+  case "$language" in
+    [A-Za-z]*)
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
 current_languages=()
 while IFS= read -r language; do
-  current_languages+=("$language")
+  if is_valid_configured_language "$language"; then
+    current_languages+=("$language")
+  fi
 done < "$tmp_languages_file"
 
 if [ "${#current_languages[@]}" -eq 0 ]; then
