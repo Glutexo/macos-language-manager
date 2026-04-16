@@ -12,7 +12,7 @@ This repository currently provides one script:
 - It uses the system locale region for missing base language tags such as `ja` -> `ja-CZ`.
 - It keeps the remaining languages in their original order.
 - It can preview the result with `--dry-run` or `-n` before writing changes.
-- It can target the current account, the login window, or both with `--target`.
+- It targets the current account, the login window, or both via the first argument.
 - It can restart the Mac with `--restart` or `-r`, even when used together with `--dry-run`.
 
 The script is useful when you want to quickly change language priority for apps and system components that follow the global macOS language preference order.
@@ -26,15 +26,15 @@ The script is useful when you want to quickly change language priority for apps 
 ## Usage
 
 ```bash
-./manage-macos-languages.sh [--dry-run|-n] [--restart|-r] [--target account|login-window|both] language [language...]
+./manage-macos-languages.sh account [--dry-run|-n] [--restart|-r] [language ...]
 ```
 
 ```bash
-./manage-macos-languages.sh
+./manage-macos-languages.sh login-window [--dry-run|-n] [--restart|-r] [language ...]
 ```
 
 ```bash
-./manage-macos-languages.sh --target login-window
+./manage-macos-languages.sh both [--dry-run|-n] [--restart|-r] [language ...]
 ```
 
 Manages the macOS preferred language list by moving selected languages to the front and adding missing ones when needed.
@@ -43,80 +43,84 @@ Options:
 
 - `--dry-run`, `-n`: prints the resulting language order without writing `AppleLanguages`
 - `--restart`, `-r`: requests an immediate restart after evaluating the command
-- `--target`, `-t`: chooses where to read or write languages: `account`, `login-window`, or `both`
-- `--apply-to-login-window`, `-l`: compatibility alias for `--target both`
 - `--help`, `-h`: prints the built-in help output
+
+Targets:
+
+- `account`: reads or writes the current account language order
+- `login-window`: reads or writes the login window language order
+- `both`: reads or writes both the current account and the login window language order
 
 Examples:
 
 ```bash
-./manage-macos-languages.sh
+./manage-macos-languages.sh account
 ```
 
 Prints the current account language order without making changes.
 
 ```bash
-./manage-macos-languages.sh --target login-window
+./manage-macos-languages.sh login-window
 ```
 
 Prints the current login window language order.
 
 ```bash
-./manage-macos-languages.sh --target both
+./manage-macos-languages.sh both
 ```
 
 Prints both the current account language order and the current login window language order.
 
 ```bash
-./manage-macos-languages.sh cs en
+./manage-macos-languages.sh account cs en
 ```
 
 Moves Czech and English to the front of the current macOS language list.
 
 ```bash
-./manage-macos-languages.sh --dry-run ko ja
+./manage-macos-languages.sh account --dry-run ko ja
 ```
 
 Shows the reordered list for Korean and Japanese without saving it. If `ja` is missing and the system locale is `cs_CZ`, the inserted value becomes `ja-CZ`.
 
 ```bash
-./manage-macos-languages.sh -n ko ja
+./manage-macos-languages.sh account -n ko ja
 ```
 
 Short form of `--dry-run`.
 
 ```bash
-./manage-macos-languages.sh en-US de
+./manage-macos-languages.sh account en-US de
 ```
 
 Prioritizes `en-US` and German, then keeps the rest of the configured languages in their previous order.
 
 ```bash
-./manage-macos-languages.sh fr cs
+./manage-macos-languages.sh account fr cs
 ```
 
 Moves French and Czech to the front and adds either language if it is missing from the current macOS list.
 
 ```bash
-./manage-macos-languages.sh --restart ja ko
+./manage-macos-languages.sh account --restart ja ko
 ```
 
 Requests a system restart after calculating the new order.
 
 ```bash
-./manage-macos-languages.sh --target login-window de ko
+./manage-macos-languages.sh login-window de ko
 ```
 
 Writes the new language order only to the login window and refreshes APFS preboot data. This may prompt for administrator privileges.
 
 ```bash
-./manage-macos-languages.sh --target both de ko
+./manage-macos-languages.sh both de ko
 ```
 
 Writes the new language order to both the current account and the login window, then refreshes APFS preboot data.
 
 ```bash
-./manage-macos-languages.sh ja ko -r
+./manage-macos-languages.sh account ja ko -r
 ```
 
 Short form of `--restart`.
@@ -136,7 +140,8 @@ Short form of `--restart`.
 
 - The script prints its status messages in English.
 - macOS may require logging out and back in before the change is fully reflected everywhere.
-- `--target login-window` and `--target both` update the system-wide language list and run `diskutil apfs updatePreboot /` to help FileVault and preboot screens pick up the change.
+- `login-window` and `both` update the system-wide language list and run `diskutil apfs updatePreboot /` to help FileVault and preboot screens pick up the change.
+- The script suppresses noisy `updatePreboot` output and only prints it if the refresh actually fails.
 - Use `--restart` or `-r` if you want the script to request an immediate restart, including together with `--dry-run`.
 - Test with `--dry-run` or `-n` first if you want to confirm the final order.
 

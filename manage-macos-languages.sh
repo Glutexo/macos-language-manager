@@ -2,23 +2,24 @@
 set -eo pipefail
 
 display_command="./manage-macos-languages.sh"
-default_target="account"
-target_mode="$default_target"
+target_mode=""
 
 show_usage() {
   echo "Manage the macOS preferred language list."
   echo "Move selected languages to the front and add missing ones when needed."
   echo
-  echo "Usage: $display_command [--dry-run|-n] [--restart|-r] [--target account|login-window|both] language [language...]"
-  echo "       $display_command [--target account|login-window|both]"
+  echo "Usage: $display_command account [--dry-run|-n] [--restart|-r] [language ...]"
+  echo "       $display_command login-window [--dry-run|-n] [--restart|-r] [language ...]"
+  echo "       $display_command both [--dry-run|-n] [--restart|-r] [language ...]"
+  echo
+  echo "Targets:"
+  echo "  account        Read or write the current account language order."
+  echo "  login-window   Read or write the login window language order."
+  echo "  both           Read or write both account and login window language order."
   echo
   echo "Options:"
   echo "  --dry-run, -n   Print the new language order without saving changes."
   echo "  --restart, -r   Restart the Mac after evaluating the command."
-  echo "  --target, -t    Choose where to write or list languages:"
-  echo "                   account, login-window, or both."
-  echo "  --apply-to-login-window, -l"
-  echo "                   Compatibility alias for '--target both'."
   echo "  --help, -h      Show this help message."
   echo
   echo "Notes:"
@@ -28,16 +29,16 @@ show_usage() {
   echo "  Writing to the login window may prompt for administrator privileges."
   echo
   echo "Examples:"
-  echo "  $display_command"
-  echo "  $display_command --target login-window"
-  echo "  $display_command --target both"
-  echo "  $display_command cs en"
-  echo "  $display_command --dry-run ko ja"
-  echo "  $display_command -n ko ja"
-  echo "  $display_command --restart ja ko"
-  echo "  $display_command --target login-window de ko"
-  echo "  $display_command --target both de ko"
-  echo "  $display_command -r ja ko"
+  echo "  $display_command account"
+  echo "  $display_command login-window"
+  echo "  $display_command both"
+  echo "  $display_command account cs en"
+  echo "  $display_command account --dry-run ko ja"
+  echo "  $display_command account -n ko ja"
+  echo "  $display_command account --restart ja ko"
+  echo "  $display_command login-window de ko"
+  echo "  $display_command both de ko"
+  echo "  $display_command account -r ja ko"
   echo "  $display_command --help"
 }
 
@@ -45,6 +46,7 @@ dry_run=false
 restart_after_change=false
 requested_languages=()
 parse_options=true
+target_set=false
 
 run_privileged() {
   if [ "$(id -u)" -eq 0 ]; then
@@ -52,6 +54,21 @@ run_privileged() {
   else
     sudo "$@"
   fi
+}
+
+run_preboot_refresh() {
+  local temp_output=""
+
+  temp_output="$(mktemp)"
+  if run_privileged diskutil apfs updatePreboot / >"$temp_output" 2>&1; then
+    rm -f "$temp_output"
+    return 0
+  fi
+
+  echo "Failed to refresh APFS preboot data."
+  cat "$temp_output"
+  rm -f "$temp_output"
+  return 1
 }
 
 is_valid_configured_language() {
@@ -123,6 +140,31 @@ load_primary_languages() {
 }
 
 while [ "$#" -gt 0 ]; do
+  if [ "$target_set" = false ]; then
+    case "$1" in
+      --help|-h)
+        show_usage
+        exit 0
+        ;;
+      --*)
+        echo "The first argument must be a target: account, login-window, or both."
+        show_usage
+        exit 1
+        ;;
+      -*)
+        echo "The first argument must be a target: account, login-window, or both."
+        show_usage
+        exit 1
+        ;;
+      *)
+        set_target_mode "$1"
+        target_set=true
+        shift
+        continue
+        ;;
+    esac
+  fi
+
   if [ "$parse_options" = true ]; then
     case "$1" in
       --dry-run|-n)
@@ -132,21 +174,6 @@ while [ "$#" -gt 0 ]; do
         ;;
       --restart|-r)
         restart_after_change=true
-        shift
-        continue
-        ;;
-      --target|-t)
-        if [ "$#" -lt 2 ]; then
-          echo "Missing value for $1"
-          show_usage
-          exit 1
-        fi
-        set_target_mode "$2"
-        shift 2
-        continue
-        ;;
-      --apply-to-login-window|-l)
-        target_mode="both"
         shift
         continue
         ;;
@@ -189,8 +216,10 @@ if [ "${#requested_languages[@]}" -lt 1 ]; then
     exit 1
   fi
 
-  if should_use_login_window_target && ! should_use_account_target; then
+  if [ "$target_mode" = "login-window" ]; then
     echo "Current login window language order:"
+  elif [ "$target_mode" = "both" ]; then
+    echo "Current account language order:"
   else
     echo "Current account language order:"
   fi
@@ -377,7 +406,7 @@ else
     echo "Applying language order to the login window."
     run_privileged defaults write /Library/Preferences/.GlobalPreferences AppleLanguages -array "${result[@]}"
     echo "Refreshing APFS preboot data."
-    run_privileged diskutil apfs updatePreboot /
+    run_preboot_refresh
   fi
 fi
 
