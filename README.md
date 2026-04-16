@@ -28,6 +28,10 @@ The script is useful when you want to quickly change language priority for apps 
 ./manage-macos-languages.sh [--dry-run|-n] [--restart|-r] language [language...]
 ```
 
+```bash
+./manage-macos-languages.sh
+```
+
 Manages the macOS preferred language list by moving selected languages to the front and adding missing ones when needed.
 
 Options:
@@ -37,6 +41,12 @@ Options:
 - `--help`, `-h`: prints the built-in help output
 
 Examples:
+
+```bash
+./manage-macos-languages.sh
+```
+
+Prints the current macOS language order without making changes.
 
 ```bash
 ./manage-macos-languages.sh cs en

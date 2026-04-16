@@ -8,6 +8,7 @@ show_usage() {
   echo "Move selected languages to the front and add missing ones when needed."
   echo
   echo "Usage: $display_command [--dry-run|-n] [--restart|-r] language [language...]"
+  echo "       $display_command"
   echo
   echo "Options:"
   echo "  --dry-run, -n   Print the new language order without saving changes."
@@ -20,6 +21,7 @@ show_usage() {
   echo "  Example: with locale cs_CZ, 'ja' is added as 'ja-CZ'."
   echo
   echo "Examples:"
+  echo "  $display_command"
   echo "  $display_command cs en"
   echo "  $display_command --dry-run ko ja"
   echo "  $display_command -n ko ja"
@@ -67,11 +69,6 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-if [ "${#requested_languages[@]}" -lt 1 ]; then
-  show_usage
-  exit 1
-fi
-
 tmp_languages_file="$(mktemp)"
 trap 'rm -f "$tmp_languages_file"' EXIT
 
@@ -87,6 +84,17 @@ done < "$tmp_languages_file"
 if [ "${#current_languages[@]}" -eq 0 ]; then
   echo "Failed to read AppleLanguages."
   exit 1
+fi
+
+if [ "${#requested_languages[@]}" -lt 1 ]; then
+  if [ "$dry_run" = true ] || [ "$restart_after_change" = true ]; then
+    show_usage
+    exit 1
+  fi
+
+  echo "Current language order:"
+  printf '  %s\n' "${current_languages[@]}"
+  exit 0
 fi
 
 result=()
