@@ -7,33 +7,78 @@ show_usage() {
   echo "Manage the macOS preferred language list."
   echo "Move selected languages to the front and add missing ones when needed."
   echo
-  echo "Usage: $display_command [--dry-run|-n] [--restart|-r] language [language...]"
-  echo "       $display_command"
+  echo "Usage: $display_command [--dry-run|-n] [--restart|-r] [--apply-to-login-window|-l] language [language...]"
+  echo "       $display_command [--apply-to-login-window|-l]"
   echo
   echo "Options:"
   echo "  --dry-run, -n   Print the new language order without saving changes."
   echo "  --restart, -r   Restart the Mac after evaluating the command."
+  echo "  --apply-to-login-window, -l"
+  echo "                   Also write the language order to the system login window settings."
   echo "  --help, -h      Show this help message."
   echo
   echo "Notes:"
   echo "  If you request a language that is not in the list yet, the script adds it."
   echo "  For short tags like 'ja', it also adds the system locale region when available."
   echo "  Example: with locale cs_CZ, 'ja' is added as 'ja-CZ'."
+  echo "  Applying to the login window may prompt for administrator privileges."
   echo
   echo "Examples:"
   echo "  $display_command"
+  echo "  $display_command -l"
   echo "  $display_command cs en"
   echo "  $display_command --dry-run ko ja"
   echo "  $display_command -n ko ja"
   echo "  $display_command --restart ja ko"
+  echo "  $display_command --apply-to-login-window de ko"
   echo "  $display_command -r ja ko"
   echo "  $display_command --help"
 }
 
 dry_run=false
 restart_after_change=false
+apply_to_login_window=false
 requested_languages=()
 parse_options=true
+
+run_privileged() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  else
+    sudo "$@"
+  fi
+}
+
+is_valid_configured_language() {
+  local language="$1"
+
+  case "$language" in
+    [A-Za-z]*)
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
+read_languages() {
+  local output=""
+  local language=""
+
+  output="$("$@" 2>/dev/null || true)"
+  if [ -z "$output" ]; then
+    return 1
+  fi
+
+  while IFS= read -r language; do
+    language="${language//[()\", ]/}"
+    if [ -n "$language" ] && is_valid_configured_language "$language"; then
+      printf '%s\n' "$language"
+    fi
+  done <<EOF
+$output
+EOF
+}
 
 while [ "$#" -gt 0 ]; do
   if [ "$parse_options" = true ]; then
@@ -45,6 +90,11 @@ while [ "$#" -gt 0 ]; do
         ;;
       --restart|-r)
         restart_after_change=true
+        shift
+        continue
+        ;;
+      --apply-to-login-window|-l)
+        apply_to_login_window=true
         shift
         continue
         ;;
@@ -69,31 +119,12 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-tmp_languages_file="$(mktemp)"
-trap 'rm -f "$tmp_languages_file"' EXIT
-
-defaults read -g AppleLanguages 2>/dev/null \
-  | tr -d '()",'\'' ' \
-  | sed '/^$/d' > "$tmp_languages_file"
-
-is_valid_configured_language() {
-  local language="$1"
-
-  case "$language" in
-    [A-Za-z]*)
-      return 0
-      ;;
-  esac
-
-  return 1
-}
-
 current_languages=()
 while IFS= read -r language; do
-  if is_valid_configured_language "$language"; then
-    current_languages+=("$language")
-  fi
-done < "$tmp_languages_file"
+  current_languages+=("$language")
+done <<EOF
+$(read_languages defaults read -g AppleLanguages)
+EOF
 
 if [ "${#current_languages[@]}" -eq 0 ]; then
   echo "Failed to read AppleLanguages."
@@ -108,6 +139,24 @@ if [ "${#requested_languages[@]}" -lt 1 ]; then
 
   echo "Current language order:"
   printf '  %s\n' "${current_languages[@]}"
+
+  if [ "$apply_to_login_window" = true ]; then
+    login_window_languages=()
+    while IFS= read -r language; do
+      login_window_languages+=("$language")
+    done <<EOF
+$(read_languages defaults read /Library/Preferences/.GlobalPreferences AppleLanguages)
+EOF
+
+    echo
+    echo "Current login window language order:"
+    if [ "${#login_window_languages[@]}" -gt 0 ]; then
+      printf '  %s\n' "${login_window_languages[@]}"
+    else
+      echo "  unavailable"
+    fi
+  fi
+
   exit 0
 fi
 
@@ -264,6 +313,13 @@ if [ "$dry_run" = true ]; then
   echo "Dry run: no changes were saved."
 else
   defaults write -g AppleLanguages -array "${result[@]}"
+
+  if [ "$apply_to_login_window" = true ]; then
+    echo "Applying language order to the login window."
+    run_privileged defaults write /Library/Preferences/.GlobalPreferences AppleLanguages -array "${result[@]}"
+    echo "Refreshing APFS preboot data."
+    run_privileged diskutil apfs updatePreboot /
+  fi
 fi
 
 if [ "$restart_after_change" = true ]; then
