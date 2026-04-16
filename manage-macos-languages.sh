@@ -8,7 +8,7 @@ display_target_list() {
   echo "  account        Read or write the current account language order."
   echo "  login-window   Read or write the login window language order."
   echo "  locale         Read or write locale settings derived from the first language."
-  echo "  all            Read or write account, login window, and locale settings."
+  echo "  all            Read or write account, login window, locale, and startup NVRAM settings."
 }
 
 show_usage() {
@@ -33,6 +33,7 @@ show_usage() {
   echo "  For short tags like 'ja', it also adds the system locale region when available."
   echo "  Example: with locale cs_CZ, 'ja' is added as 'ja-CZ'."
   echo "  The locale target derives AppleLocale from the first language, for example 'ja-CZ' -> 'ja_CZ'."
+  echo "  The all target also updates NVRAM prev-lang:kbd for the startup screen."
   echo "  Writing login-window or system locale settings may prompt for administrator privileges."
   echo
   echo "Examples:"
@@ -155,6 +156,49 @@ read_system_locale() {
   read_locale_value defaults read /Library/Preferences/.GlobalPreferences AppleLocale
 }
 
+read_startup_language_value() {
+  nvram prev-lang:kbd 2>/dev/null | awk -F'\t' 'NF {print $NF}'
+}
+
+read_selected_keyboard_layout_id() {
+  defaults read com.apple.HIToolbox AppleSelectedInputSources 2>/dev/null \
+    | awk -F'= ' '/KeyboardLayout ID/ {gsub(/[^0-9-]/, "", $2); print $2; exit}'
+}
+
+startup_value_to_language_tag() {
+  local startup_value="$1"
+  local language_part=""
+
+  [ -z "$startup_value" ] && return 1
+
+  language_part="${startup_value%%:*}"
+  [ -z "$language_part" ] && return 1
+
+  printf '%s\n' "$language_part"
+}
+
+get_startup_keyboard_layout_id() {
+  local startup_value=""
+  local layout_id=""
+
+  startup_value="$(read_startup_language_value)"
+  if [ -n "$startup_value" ] && [ "$startup_value" != "${startup_value#*:}" ]; then
+    layout_id="${startup_value#*:}"
+    if [ -n "$layout_id" ]; then
+      printf '%s\n' "$layout_id"
+      return 0
+    fi
+  fi
+
+  layout_id="$(read_selected_keyboard_layout_id)"
+  if [ -n "$layout_id" ]; then
+    printf '%s\n' "$layout_id"
+    return 0
+  fi
+
+  return 1
+}
+
 is_in_list() {
   local needle="$1"
   shift
@@ -213,6 +257,11 @@ EOLOGIN
   fi
 
   locale_language="$(locale_to_language_tag "$(read_system_locale)" || true)"
+  if [ -n "$locale_language" ] && ! is_in_list "$locale_language" "${merged_languages[@]}"; then
+    merged_languages+=("$locale_language")
+  fi
+
+  locale_language="$(startup_value_to_language_tag "$(read_startup_language_value)" || true)"
   if [ -n "$locale_language" ] && ! is_in_list "$locale_language" "${merged_languages[@]}"; then
     merged_languages+=("$locale_language")
   fi
@@ -340,6 +389,24 @@ build_locale_value() {
 
   normalized="$(build_missing_language_tag "$language")"
   printf '%s\n' "${normalized//-/_}"
+}
+
+build_startup_language_value() {
+  local language="$1"
+  local normalized=""
+  local language_code=""
+  local layout_id=""
+
+  normalized="$(build_missing_language_tag "$language")"
+  language_code="${normalized%%-*}"
+  [ -z "$language_code" ] && language_code="$normalized"
+  layout_id="$(get_startup_keyboard_layout_id || true)"
+
+  if [ -n "$layout_id" ]; then
+    printf '%s:%s\n' "$language_code" "$layout_id"
+  else
+    printf '%s\n' "$language_code"
+  fi
 }
 
 matches_requested_language() {
@@ -480,6 +547,8 @@ EOLOGIN
       print_locale_value "Current account locale:" "$(read_account_locale)"
       echo
       print_locale_value "Current system locale:" "$(read_system_locale)"
+      echo
+      print_locale_value "Current startup language setting:" "$(read_startup_language_value)"
       ;;
   esac
 
@@ -528,6 +597,13 @@ if should_use_locale_target; then
   echo
 fi
 
+new_startup_value="$(build_startup_language_value "${requested_languages[0]}")"
+if [ "$target_mode" = "all" ]; then
+  echo "New startup language setting:"
+  echo "  $new_startup_value"
+  echo
+fi
+
 if [ "$dry_run" = true ]; then
   echo "Dry run: no changes were saved."
 else
@@ -548,6 +624,13 @@ else
     defaults write -g AppleLocale "$new_locale"
     echo "Applying locale to the system."
     run_privileged defaults write /Library/Preferences/.GlobalPreferences AppleLocale "$new_locale"
+  fi
+
+  if [ "$target_mode" = "all" ]; then
+    echo "Applying startup language setting."
+    run_privileged nvram "prev-lang:kbd=$new_startup_value"
+    echo "Syncing NVRAM."
+    run_privileged nvram -s
   fi
 fi
 
