@@ -262,6 +262,9 @@ EOLOGIN
   fi
 
   locale_language="$(startup_value_to_language_tag "$(read_startup_language_value)" || true)"
+  if [ -n "$locale_language" ]; then
+    locale_language="$(build_missing_language_tag "$locale_language")"
+  fi
   if [ -n "$locale_language" ] && ! is_in_list "$locale_language" "${merged_languages[@]}"; then
     merged_languages+=("$locale_language")
   fi
