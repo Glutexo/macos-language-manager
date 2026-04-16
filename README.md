@@ -12,7 +12,7 @@ This repository currently provides one script:
 - It uses the system locale region for missing base language tags such as `ja` -> `ja-CZ`.
 - It keeps the remaining languages in their original order.
 - It can preview the result with `--dry-run` or `-n` before writing changes.
-- It can target `account`, `login-window`, `locale`, or `all` via the first argument.
+- It can target `account`, `login-window`, `locale`, `startup`, or `all` via the first argument.
 - It can restart the Mac with `--restart` or `-r`, even when used together with `--dry-run`.
 
 The script is useful when you want to quickly change language priority for apps and system components that follow the global macOS language preference order.
@@ -39,6 +39,10 @@ The script is useful when you want to quickly change language priority for apps 
 ```
 
 ```bash
+./manage-macos-languages.sh startup [--dry-run|-n] [--restart|-r] [language ...]
+```
+
+```bash
 ./manage-macos-languages.sh all [--dry-run|-n] [--restart|-r] [language ...]
 ```
 
@@ -49,6 +53,7 @@ Manages the macOS preferred language list by moving selected languages to the fr
 - `account`: reads or writes the current account language order
 - `login-window`: reads or writes the login window language order
 - `locale`: reads or writes locale settings derived from the first requested language
+- `startup`: reads or writes startup NVRAM language settings
 - `all`: reads or writes account, login window, locale, and startup NVRAM settings together, using a merged language list from all relevant sources
 
 ## Options
@@ -76,6 +81,12 @@ Prints the current login window language order.
 ```
 
 Prints the current account and system locale values.
+
+```bash
+./manage-macos-languages.sh startup
+```
+
+Prints the current startup NVRAM language setting.
 
 ```bash
 ./manage-macos-languages.sh all
@@ -106,6 +117,12 @@ Writes the new language order only to the login window and refreshes APFS preboo
 ```
 
 Sets account and system `AppleLocale` to `ja_CZ` if the available region is `CZ`.
+
+```bash
+./manage-macos-languages.sh startup ja
+```
+
+Sets NVRAM `prev-lang:kbd` to the requested startup language while preserving the current keyboard layout ID when available.
 
 ```bash
 ./manage-macos-languages.sh all ja ko
@@ -141,7 +158,7 @@ Requests a system restart after calculating the new order.
 - The script prints its status messages in English.
 - `login-window` and `all` update the system-wide language list and run `diskutil apfs updatePreboot /` to help FileVault and preboot screens pick up the change.
 - `locale` and `all` update both the current account locale and the system locale.
-- `all` also updates NVRAM `prev-lang:kbd`, which appears to influence the startup / FileVault language on this Mac.
+- `startup` and `all` update NVRAM `prev-lang:kbd`, which appears to influence the startup / FileVault language on this Mac.
 - `all` merges languages from account `AppleLanguages`, login window `AppleLanguages`, locale-derived language tags, and the startup NVRAM language before building the new order.
 - The script suppresses noisy `updatePreboot` output and only prints it if the refresh actually fails.
 - Use `--restart` or `-r` if you want the script to request an immediate restart, including together with `--dry-run`.

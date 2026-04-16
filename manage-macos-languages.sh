@@ -8,6 +8,7 @@ display_target_list() {
   echo "  account        Read or write the current account language order."
   echo "  login-window   Read or write the login window language order."
   echo "  locale         Read or write locale settings derived from the first language."
+  echo "  startup        Read or write startup NVRAM language settings."
   echo "  all            Read or write account, login window, locale, and startup NVRAM settings."
 }
 
@@ -18,6 +19,7 @@ show_usage() {
   echo "Usage: $display_command account [--dry-run|-n] [--restart|-r] [language ...]"
   echo "       $display_command login-window [--dry-run|-n] [--restart|-r] [language ...]"
   echo "       $display_command locale [--dry-run|-n] [--restart|-r] [language ...]"
+  echo "       $display_command startup [--dry-run|-n] [--restart|-r] [language ...]"
   echo "       $display_command all [--dry-run|-n] [--restart|-r] [language ...]"
   echo
   echo "Targets:"
@@ -34,17 +36,19 @@ show_usage() {
   echo "  Example: with locale cs_CZ, 'ja' is added as 'ja-CZ'."
   echo "  The locale target derives AppleLocale from the first language, for example 'ja-CZ' -> 'ja_CZ'."
   echo "  The all target also updates NVRAM prev-lang:kbd for the startup screen."
-  echo "  Writing login-window or system locale settings may prompt for administrator privileges."
+  echo "  Writing login-window, startup, or system locale settings may prompt for administrator privileges."
   echo
   echo "Examples:"
   echo "  $display_command account"
   echo "  $display_command login-window"
   echo "  $display_command locale"
+  echo "  $display_command startup"
   echo "  $display_command all"
   echo "  $display_command account cs en"
   echo "  $display_command account --dry-run ko ja"
   echo "  $display_command login-window de ko"
   echo "  $display_command locale ja"
+  echo "  $display_command startup ja"
   echo "  $display_command all ja ko"
   echo "  $display_command account --restart ja ko"
   echo "  $display_command --help"
@@ -116,7 +120,7 @@ read_locale_value() {
 
 set_target_mode() {
   case "$1" in
-    account|login-window|locale|all)
+    account|login-window|locale|startup|all)
       target_mode="$1"
       return 0
       ;;
@@ -138,6 +142,10 @@ should_use_login_window_languages() {
 
 should_use_locale_target() {
   [ "$target_mode" = "locale" ] || [ "$target_mode" = "all" ]
+}
+
+should_use_startup_target() {
+  [ "$target_mode" = "startup" ] || [ "$target_mode" = "all" ]
 }
 
 read_account_languages() {
@@ -275,6 +283,8 @@ EOLOGIN
 load_primary_languages() {
   if [ "$target_mode" = "all" ]; then
     read_all_languages
+  elif [ "$target_mode" = "startup" ]; then
+    startup_value_to_language_tag "$(read_startup_language_value)" || true
   elif should_use_login_window_languages && ! should_use_account_languages; then
     read_login_window_languages
   else
@@ -452,7 +462,7 @@ while [ "$#" -gt 0 ]; do
         exit 0
         ;;
       --*|-*)
-        echo "The first argument must be a target: account, login-window, locale, or all."
+        echo "The first argument must be a target: account, login-window, locale, startup, or all."
         show_usage
         exit 1
         ;;
@@ -505,7 +515,7 @@ done <<EOLOAD
 $(load_primary_languages)
 EOLOAD
 
-if ! should_use_locale_target && [ "${#current_languages[@]}" -eq 0 ]; then
+if ! should_use_locale_target && ! should_use_startup_target && [ "${#current_languages[@]}" -eq 0 ]; then
   echo "Failed to read language settings."
   exit 1
 fi
@@ -527,6 +537,9 @@ if [ "${#requested_languages[@]}" -lt 1 ]; then
       print_locale_value "Current account locale:" "$(read_account_locale)"
       echo
       print_locale_value "Current system locale:" "$(read_system_locale)"
+      ;;
+    startup)
+      print_locale_value "Current startup language setting:" "$(read_startup_language_value)"
       ;;
     all)
       account_languages=()
@@ -601,7 +614,7 @@ if should_use_locale_target; then
 fi
 
 new_startup_value="$(build_startup_language_value "${requested_languages[0]}")"
-if [ "$target_mode" = "all" ]; then
+if should_use_startup_target; then
   echo "New startup language setting:"
   echo "  $new_startup_value"
   echo
@@ -629,7 +642,7 @@ else
     run_privileged defaults write /Library/Preferences/.GlobalPreferences AppleLocale "$new_locale"
   fi
 
-  if [ "$target_mode" = "all" ]; then
+  if should_use_startup_target; then
     echo "Applying startup language setting."
     run_privileged nvram "prev-lang:kbd=$new_startup_value"
     echo "Syncing NVRAM."
