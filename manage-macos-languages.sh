@@ -4,21 +4,27 @@ set -eo pipefail
 display_command="./manage-macos-languages.sh"
 target_mode=""
 
+display_target_list() {
+  echo "  account        Read or write the current account language order."
+  echo "  login-window   Read or write the login window language order."
+  echo "  locale         Read or write locale settings derived from the first language."
+  echo "  all            Read or write account, login window, and locale settings."
+}
+
 show_usage() {
   echo "Manage the macOS preferred language list."
   echo "Move selected languages to the front and add missing ones when needed."
   echo
   echo "Usage: $display_command account [--dry-run|-n] [--restart|-r] [language ...]"
   echo "       $display_command login-window [--dry-run|-n] [--restart|-r] [language ...]"
-  echo "       $display_command both [--dry-run|-n] [--restart|-r] [language ...]"
+  echo "       $display_command locale [--dry-run|-n] [--restart|-r] [language ...]"
+  echo "       $display_command all [--dry-run|-n] [--restart|-r] [language ...]"
   echo
   echo "Targets:"
-  echo "  account        Read or write the current account language order."
-  echo "  login-window   Read or write the login window language order."
-  echo "  both           Read or write both account and login window language order."
+  display_target_list
   echo
   echo "Options:"
-  echo "  --dry-run, -n   Print the new language order without saving changes."
+  echo "  --dry-run, -n   Print the new values without saving changes."
   echo "  --restart, -r   Restart the Mac after evaluating the command."
   echo "  --help, -h      Show this help message."
   echo
@@ -26,19 +32,20 @@ show_usage() {
   echo "  If you request a language that is not in the list yet, the script adds it."
   echo "  For short tags like 'ja', it also adds the system locale region when available."
   echo "  Example: with locale cs_CZ, 'ja' is added as 'ja-CZ'."
-  echo "  Writing to the login window may prompt for administrator privileges."
+  echo "  The locale target derives AppleLocale from the first language, for example 'ja-CZ' -> 'ja_CZ'."
+  echo "  Writing login-window or system locale settings may prompt for administrator privileges."
   echo
   echo "Examples:"
   echo "  $display_command account"
   echo "  $display_command login-window"
-  echo "  $display_command both"
+  echo "  $display_command locale"
+  echo "  $display_command all"
   echo "  $display_command account cs en"
   echo "  $display_command account --dry-run ko ja"
-  echo "  $display_command account -n ko ja"
-  echo "  $display_command account --restart ja ko"
   echo "  $display_command login-window de ko"
-  echo "  $display_command both de ko"
-  echo "  $display_command account -r ja ko"
+  echo "  $display_command locale ja"
+  echo "  $display_command all ja ko"
+  echo "  $display_command account --restart ja ko"
   echo "  $display_command --help"
 }
 
@@ -97,30 +104,39 @@ read_languages() {
     if [ -n "$language" ] && is_valid_configured_language "$language"; then
       printf '%s\n' "$language"
     fi
-  done <<EOF
+  done <<EOREAD
 $output
-EOF
+EOREAD
+}
+
+read_locale_value() {
+  "$@" 2>/dev/null || true
 }
 
 set_target_mode() {
   case "$1" in
-    account|login-window|both)
+    account|login-window|locale|all)
       target_mode="$1"
       return 0
       ;;
   esac
 
   echo "Unknown target: $1"
-  show_usage
+  echo "Available targets:"
+  display_target_list
   exit 1
 }
 
-should_use_account_target() {
-  [ "$target_mode" = "account" ] || [ "$target_mode" = "both" ]
+should_use_account_languages() {
+  [ "$target_mode" = "account" ] || [ "$target_mode" = "all" ]
 }
 
-should_use_login_window_target() {
-  [ "$target_mode" = "login-window" ] || [ "$target_mode" = "both" ]
+should_use_login_window_languages() {
+  [ "$target_mode" = "login-window" ] || [ "$target_mode" = "all" ]
+}
+
+should_use_locale_target() {
+  [ "$target_mode" = "locale" ] || [ "$target_mode" = "all" ]
 }
 
 read_account_languages() {
@@ -131,12 +147,164 @@ read_login_window_languages() {
   read_languages defaults read /Library/Preferences/.GlobalPreferences AppleLanguages
 }
 
+read_account_locale() {
+  read_locale_value defaults read -g AppleLocale
+}
+
+read_system_locale() {
+  read_locale_value defaults read /Library/Preferences/.GlobalPreferences AppleLocale
+}
+
 load_primary_languages() {
-  if should_use_login_window_target && ! should_use_account_target; then
+  if should_use_login_window_languages && ! should_use_account_languages; then
     read_login_window_languages
   else
     read_account_languages
   fi
+}
+
+print_language_list() {
+  local heading="$1"
+  shift
+
+  echo "$heading"
+  if [ "$#" -gt 0 ]; then
+    printf '  %s\n' "$@"
+  else
+    echo "  unavailable"
+  fi
+}
+
+print_locale_value() {
+  local heading="$1"
+  local value="$2"
+
+  echo "$heading"
+  if [ -n "$value" ]; then
+    echo "  $value"
+  else
+    echo "  unavailable"
+  fi
+}
+
+extract_locale_region() {
+  local locale_value="$1"
+  local normalized=""
+  local region_part=""
+  local first_subtag=""
+
+  normalized="${locale_value%%.*}"
+  normalized="${normalized%%@*}"
+  normalized="${normalized//_/-}"
+  region_part="${normalized#*-}"
+
+  if [ "$region_part" = "$normalized" ] || [ -z "$region_part" ]; then
+    return 1
+  fi
+
+  first_subtag="${region_part%%-*}"
+  case "${#first_subtag}" in
+    2|3)
+      printf '%s\n' "$first_subtag" | tr '[:lower:]' '[:upper:]'
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
+get_system_locale_region() {
+  local locale_value=""
+  local region=""
+
+  locale_value="$(read_account_locale)"
+  if [ -n "$locale_value" ]; then
+    region="$(extract_locale_region "$locale_value" || true)"
+    if [ -n "$region" ]; then
+      printf '%s\n' "$region"
+      return 0
+    fi
+  fi
+
+  locale_value="$(read_system_locale)"
+  if [ -n "$locale_value" ]; then
+    region="$(extract_locale_region "$locale_value" || true)"
+    if [ -n "$region" ]; then
+      printf '%s\n' "$region"
+      return 0
+    fi
+  fi
+
+  for locale_value in "${LC_ALL:-}" "${LC_MESSAGES:-}" "${LANG:-}"; do
+    if [ -n "$locale_value" ]; then
+      region="$(extract_locale_region "$locale_value" || true)"
+      if [ -n "$region" ]; then
+        printf '%s\n' "$region"
+        return 0
+      fi
+    fi
+  done
+
+  return 1
+}
+
+build_missing_language_tag() {
+  local requested="$1"
+  local region=""
+
+  case "$requested" in
+    *-*)
+      printf '%s\n' "$requested"
+      return 0
+      ;;
+  esac
+
+  region="$(get_system_locale_region || true)"
+  if [ -n "$region" ]; then
+    printf '%s-%s\n' "$requested" "$region"
+  else
+    printf '%s\n' "$requested"
+  fi
+}
+
+build_locale_value() {
+  local language="$1"
+  local normalized=""
+
+  normalized="$(build_missing_language_tag "$language")"
+  printf '%s\n' "${normalized//-/_}"
+}
+
+matches_requested_language() {
+  local requested="$1"
+  local language="$2"
+  local suffix=""
+  local first_subtag=""
+
+  if [ "$language" = "$requested" ]; then
+    return 0
+  fi
+
+  case "$requested" in
+    *-*)
+      case "$language" in
+        "$requested"-*) return 0 ;;
+      esac
+      ;;
+    *)
+      case "$language" in
+        "$requested"-*)
+          suffix="${language#"$requested"-}"
+          first_subtag="${suffix%%-*}"
+          case "${#first_subtag}" in
+            2|3) return 0 ;;
+          esac
+          ;;
+      esac
+      ;;
+  esac
+
+  return 1
 }
 
 while [ "$#" -gt 0 ]; do
@@ -146,13 +314,8 @@ while [ "$#" -gt 0 ]; do
         show_usage
         exit 0
         ;;
-      --*)
-        echo "The first argument must be a target: account, login-window, or both."
-        show_usage
-        exit 1
-        ;;
-      -*)
-        echo "The first argument must be a target: account, login-window, or both."
+      --*|-*)
+        echo "The first argument must be a target: account, login-window, locale, or all."
         show_usage
         exit 1
         ;;
@@ -201,11 +364,11 @@ done
 current_languages=()
 while IFS= read -r language; do
   current_languages+=("$language")
-done <<EOF
+done <<EOLOAD
 $(load_primary_languages)
-EOF
+EOLOAD
 
-if [ "${#current_languages[@]}" -eq 0 ]; then
+if ! should_use_locale_target && [ "${#current_languages[@]}" -eq 0 ]; then
   echo "Failed to read language settings."
   exit 1
 fi
@@ -216,31 +379,34 @@ if [ "${#requested_languages[@]}" -lt 1 ]; then
     exit 1
   fi
 
-  if [ "$target_mode" = "login-window" ]; then
-    echo "Current login window language order:"
-  elif [ "$target_mode" = "both" ]; then
-    echo "Current account language order:"
-  else
-    echo "Current account language order:"
-  fi
-  printf '  %s\n' "${current_languages[@]}"
-
-  if [ "$target_mode" = "both" ]; then
-    login_window_languages=()
-    while IFS= read -r language; do
-      login_window_languages+=("$language")
-    done <<EOF
+  case "$target_mode" in
+    account)
+      print_language_list "Current account language order:" "${current_languages[@]}"
+      ;;
+    login-window)
+      print_language_list "Current login window language order:" "${current_languages[@]}"
+      ;;
+    locale)
+      print_locale_value "Current account locale:" "$(read_account_locale)"
+      echo
+      print_locale_value "Current system locale:" "$(read_system_locale)"
+      ;;
+    all)
+      login_window_languages=()
+      while IFS= read -r language; do
+        login_window_languages+=("$language")
+      done <<EOLOGIN
 $(read_login_window_languages)
-EOF
-
-    echo
-    echo "Current login window language order:"
-    if [ "${#login_window_languages[@]}" -gt 0 ]; then
-      printf '  %s\n' "${login_window_languages[@]}"
-    else
-      echo "  unavailable"
-    fi
-  fi
+EOLOGIN
+      print_language_list "Current account language order:" "${current_languages[@]}"
+      echo
+      print_language_list "Current login window language order:" "${login_window_languages[@]}"
+      echo
+      print_locale_value "Current account locale:" "$(read_account_locale)"
+      echo
+      print_locale_value "Current system locale:" "$(read_system_locale)"
+      ;;
+  esac
 
   exit 0
 fi
@@ -260,153 +426,66 @@ is_in_list() {
   return 1
 }
 
-extract_locale_region() {
-  local locale_value="$1"
-  local normalized=""
-  local region_part=""
-  local first_subtag=""
+if should_use_account_languages || should_use_login_window_languages; then
+  for requested in "${requested_languages[@]}"; do
+    found_match=false
 
-  normalized="${locale_value%%.*}"
-  normalized="${normalized%%@*}"
-  normalized="${normalized//_/-}"
-  region_part="${normalized#*-}"
+    for lang in "${current_languages[@]}"; do
+      if matches_requested_language "$requested" "$lang"; then
+        found_match=true
+        if ! is_in_list "$lang" "${result[@]}"; then
+          result+=("$lang")
+        fi
+        break
+      fi
+    done
 
-  if [ "$region_part" = "$normalized" ] || [ -z "$region_part" ]; then
-    return 1
-  fi
-
-  first_subtag="${region_part%%-*}"
-  case "${#first_subtag}" in
-    2|3)
-      printf '%s\n' "$first_subtag" | tr '[:lower:]' '[:upper:]'
-      return 0
-      ;;
-  esac
-
-  return 1
-}
-
-get_system_locale_region() {
-  local locale_value=""
-  local region=""
-
-  locale_value="$(defaults read -g AppleLocale 2>/dev/null || true)"
-  if [ -n "$locale_value" ]; then
-    region="$(extract_locale_region "$locale_value" || true)"
-    if [ -n "$region" ]; then
-      printf '%s\n' "$region"
-      return 0
-    fi
-  fi
-
-  for locale_value in "${LC_ALL:-}" "${LC_MESSAGES:-}" "${LANG:-}"; do
-    if [ -n "$locale_value" ]; then
-      region="$(extract_locale_region "$locale_value" || true)"
-      if [ -n "$region" ]; then
-        printf '%s\n' "$region"
-        return 0
+    if [ "$found_match" = false ]; then
+      missing_language="$(build_missing_language_tag "$requested")"
+      if ! is_in_list "$missing_language" "${result[@]}"; then
+        result+=("$missing_language")
       fi
     fi
   done
-
-  return 1
-}
-
-build_missing_language_tag() {
-  local requested="$1"
-  local region=""
-
-  case "$requested" in
-    *-*)
-      printf '%s\n' "$requested"
-      return 0
-      ;;
-  esac
-
-  region="$(get_system_locale_region || true)"
-  if [ -n "$region" ]; then
-    printf '%s-%s\n' "$requested" "$region"
-  else
-    printf '%s\n' "$requested"
-  fi
-}
-
-matches_requested_language() {
-  local requested="$1"
-  local language="$2"
-  local suffix=""
-  local first_subtag=""
-
-  if [ "$language" = "$requested" ]; then
-    return 0
-  fi
-
-  case "$requested" in
-    *-*)
-      case "$language" in
-        "$requested"-*) return 0 ;;
-      esac
-      ;;
-    *)
-      case "$language" in
-        "$requested"-*)
-          suffix="${language#"$requested"-}"
-          first_subtag="${suffix%%-*}"
-          case "${#first_subtag}" in
-            2|3) return 0 ;;
-          esac
-          ;;
-      esac
-      ;;
-  esac
-
-  return 1
-}
-
-for requested in "${requested_languages[@]}"; do
-  found_match=false
 
   for lang in "${current_languages[@]}"; do
-    if matches_requested_language "$requested" "$lang"; then
-      found_match=true
-      if ! is_in_list "$lang" "${result[@]}"; then
-        result+=("$lang")
-      fi
-      break
+    if ! is_in_list "$lang" "${result[@]}"; then
+      result+=("$lang")
     fi
   done
 
-  if [ "$found_match" = false ]; then
-    missing_language="$(build_missing_language_tag "$requested")"
-    if ! is_in_list "$missing_language" "${result[@]}"; then
-      result+=("$missing_language")
-    fi
-  fi
-done
+  echo "New language order:"
+  printf '  %s\n' "${result[@]}"
+  echo
+fi
 
-for lang in "${current_languages[@]}"; do
-  if ! is_in_list "$lang" "${result[@]}"; then
-    result+=("$lang")
-  fi
-done
-
-echo "New language order:"
-printf '  %s\n' "${result[@]}"
-echo
+new_locale="$(build_locale_value "${requested_languages[0]}")"
+if should_use_locale_target; then
+  echo "New locale value:"
+  echo "  $new_locale"
+  echo
+fi
 
 if [ "$dry_run" = true ]; then
   echo "Dry run: no changes were saved."
 else
-  if should_use_account_target; then
+  if should_use_account_languages; then
     echo "Applying language order to the current account."
     defaults write -g AppleLanguages -array "${result[@]}"
   fi
 
-  if should_use_login_window_target; then
+  if should_use_login_window_languages; then
     echo "Applying language order to the login window."
     run_privileged defaults write /Library/Preferences/.GlobalPreferences AppleLanguages -array "${result[@]}"
     echo "Refreshing APFS preboot data."
     run_preboot_refresh
+  fi
+
+  if should_use_locale_target; then
+    echo "Applying locale to the current account."
+    defaults write -g AppleLocale "$new_locale"
+    echo "Applying locale to the system."
+    run_privileged defaults write /Library/Preferences/.GlobalPreferences AppleLocale "$new_locale"
   fi
 fi
 
