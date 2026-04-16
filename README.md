@@ -49,7 +49,7 @@ Manages the macOS preferred language list by moving selected languages to the fr
 - `account`: reads or writes the current account language order
 - `login-window`: reads or writes the login window language order
 - `locale`: reads or writes locale settings derived from the first requested language
-- `all`: reads or writes account, login window, and locale settings together
+- `all`: reads or writes account, login window, and locale settings together, using a merged language list from all three sources
 
 ## Options
 
@@ -81,7 +81,7 @@ Prints the current account and system locale values.
 ./manage-macos-languages.sh all
 ```
 
-Prints all currently relevant values: account languages, login window languages, account locale, and system locale.
+Prints a merged language list from account languages, login window languages, and locale-derived languages, followed by the individual source values.
 
 ```bash
 ./manage-macos-languages.sh account cs en
@@ -111,7 +111,7 @@ Sets account and system `AppleLocale` to `ja_CZ` if the available region is `CZ`
 ./manage-macos-languages.sh all ja ko
 ```
 
-Writes account languages, login window languages, account locale, and system locale in one command.
+Writes account languages, login window languages, account locale, and system locale in one command, starting from the merged language list of all three sources.
 
 ```bash
 ./manage-macos-languages.sh account --restart ja ko
@@ -141,6 +141,7 @@ Requests a system restart after calculating the new order.
 - The script prints its status messages in English.
 - `login-window` and `all` update the system-wide language list and run `diskutil apfs updatePreboot /` to help FileVault and preboot screens pick up the change.
 - `locale` and `all` update both the current account locale and the system locale.
+- `all` merges languages from account `AppleLanguages`, login window `AppleLanguages`, and locale-derived language tags before building the new order.
 - The script suppresses noisy `updatePreboot` output and only prints it if the refresh actually fails.
 - Use `--restart` or `-r` if you want the script to request an immediate restart, including together with `--dry-run`.
 - Test with `--dry-run` or `-n` first if you want to confirm the final values.

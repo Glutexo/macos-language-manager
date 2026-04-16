@@ -155,8 +155,75 @@ read_system_locale() {
   read_locale_value defaults read /Library/Preferences/.GlobalPreferences AppleLocale
 }
 
+is_in_list() {
+  local needle="$1"
+  shift
+
+  for item in "$@"; do
+    if [ "$item" = "$needle" ]; then
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+locale_to_language_tag() {
+  local locale_value="$1"
+  local normalized=""
+
+  [ -z "$locale_value" ] && return 1
+
+  normalized="${locale_value%%.*}"
+  normalized="${normalized%%@*}"
+  normalized="${normalized//_/-}"
+
+  if is_valid_configured_language "$normalized"; then
+    printf '%s\n' "$normalized"
+    return 0
+  fi
+
+  return 1
+}
+
+read_all_languages() {
+  local merged_languages=()
+  local language=""
+  local locale_language=""
+
+  while IFS= read -r language; do
+    if [ -n "$language" ] && ! is_in_list "$language" "${merged_languages[@]}"; then
+      merged_languages+=("$language")
+    fi
+  done <<EOACCOUNT
+$(read_account_languages)
+EOACCOUNT
+
+  while IFS= read -r language; do
+    if [ -n "$language" ] && ! is_in_list "$language" "${merged_languages[@]}"; then
+      merged_languages+=("$language")
+    fi
+  done <<EOLOGIN
+$(read_login_window_languages)
+EOLOGIN
+
+  locale_language="$(locale_to_language_tag "$(read_account_locale)" || true)"
+  if [ -n "$locale_language" ] && ! is_in_list "$locale_language" "${merged_languages[@]}"; then
+    merged_languages+=("$locale_language")
+  fi
+
+  locale_language="$(locale_to_language_tag "$(read_system_locale)" || true)"
+  if [ -n "$locale_language" ] && ! is_in_list "$locale_language" "${merged_languages[@]}"; then
+    merged_languages+=("$locale_language")
+  fi
+
+  printf '%s\n' "${merged_languages[@]}"
+}
+
 load_primary_languages() {
-  if should_use_login_window_languages && ! should_use_account_languages; then
+  if [ "$target_mode" = "all" ]; then
+    read_all_languages
+  elif should_use_login_window_languages && ! should_use_account_languages; then
     read_login_window_languages
   else
     read_account_languages
@@ -392,13 +459,21 @@ if [ "${#requested_languages[@]}" -lt 1 ]; then
       print_locale_value "Current system locale:" "$(read_system_locale)"
       ;;
     all)
+      account_languages=()
+      while IFS= read -r language; do
+        account_languages+=("$language")
+      done <<EOACCOUNT
+$(read_account_languages)
+EOACCOUNT
       login_window_languages=()
       while IFS= read -r language; do
         login_window_languages+=("$language")
       done <<EOLOGIN
 $(read_login_window_languages)
 EOLOGIN
-      print_language_list "Current account language order:" "${current_languages[@]}"
+      print_language_list "Current merged language order:" "${current_languages[@]}"
+      echo
+      print_language_list "Current account language order:" "${account_languages[@]}"
       echo
       print_language_list "Current login window language order:" "${login_window_languages[@]}"
       echo
@@ -412,19 +487,6 @@ EOLOGIN
 fi
 
 result=()
-
-is_in_list() {
-  local needle="$1"
-  shift
-
-  for item in "$@"; do
-    if [ "$item" = "$needle" ]; then
-      return 0
-    fi
-  done
-
-  return 1
-}
 
 if should_use_account_languages || should_use_login_window_languages; then
   for requested in "${requested_languages[@]}"; do
