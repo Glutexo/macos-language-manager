@@ -163,7 +163,7 @@ is_in_list() {
     if [ "$item" = "$needle" ]; then
       return 0
     fi
-  fi
+  done
 
   return 1
 }
