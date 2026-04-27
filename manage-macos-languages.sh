@@ -455,26 +455,6 @@ matches_requested_language() {
 }
 
 while [ "$#" -gt 0 ]; do
-  if [ "$target_set" = false ]; then
-    case "$1" in
-      --help|-h)
-        show_usage
-        exit 0
-        ;;
-      --*|-*)
-        echo "The first argument must be a target: account, login-window, locale, startup, or all."
-        show_usage
-        exit 1
-        ;;
-      *)
-        set_target_mode "$1"
-        target_set=true
-        shift
-        continue
-        ;;
-    esac
-  fi
-
   if [ "$parse_options" = true ]; then
     case "$1" in
       --dry-run|-n)
@@ -504,9 +484,21 @@ while [ "$#" -gt 0 ]; do
     esac
   fi
 
+  if [ "$target_set" = false ]; then
+    set_target_mode "$1"
+    target_set=true
+    shift
+    continue
+  fi
+
   requested_languages+=("$1")
   shift
 done
+
+if [ "$target_set" = false ]; then
+  show_usage
+  exit 1
+fi
 
 current_languages=()
 while IFS= read -r language; do
