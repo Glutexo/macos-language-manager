@@ -177,7 +177,10 @@ if [[ "$output" == *$'  Base
   echo "FAIL: verbose help should skip Base localization directories"
   exit 1
 fi
-assert_contains "$output" "accepts missing tags such as ja or en-US" "verbose help should explain non-whitelist behavior"
+if [[ "$output" == *"accepts missing tags such as ja or en-US"* ]]; then
+  echo "FAIL: verbose help should not repeat notes about inserting missing tags"
+  exit 1
+fi
 
 output="$(run_case all --dry-run -en ko:cs)"
 assert_contains "$output" $'New language order:

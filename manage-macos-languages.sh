@@ -234,7 +234,6 @@ print_verbose_help_languages() {
     echo "  unavailable"
   fi
   echo "  Source: $source_path"
-  echo "  The script also accepts missing tags such as ja or en-US and inserts them when needed."
 }
 
 read_selected_keyboard_layout_id() {
