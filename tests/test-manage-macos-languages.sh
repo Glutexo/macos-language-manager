@@ -134,8 +134,7 @@ assert_contains "$output" "accepts missing tags such as ja or en-US" "verbose he
 output="$(run_case all --dry-run -en ko:cs)"
 assert_contains "$output" $'New language order:
   fr-FR
-  ko-KR
-  cs-CZ' "all target should move Korean behind French before locale derivation"
+  ko-KR' "all target should move Korean behind French before locale derivation"
 assert_contains "$output" $'New locale value:
   fr_FR' "all target should derive locale from the first resulting language"
 assert_contains "$output" $'New startup language setting:

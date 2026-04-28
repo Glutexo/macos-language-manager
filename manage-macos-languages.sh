@@ -87,6 +87,7 @@ entity_base_indexes=()
 entity_parents=()
 entity_root_sections=()
 entity_orders=()
+resolved_entity_index=""
 
 run_privileged() {
   if [ "$(id -u)" -eq 0 ]; then
@@ -575,9 +576,11 @@ find_matching_entity() {
   local requested="$1"
   local index=0
 
+  resolved_entity_index=""
+
   while [ "$index" -lt "${#entity_languages[@]}" ]; do
     if matches_requested_language "$requested" "${entity_languages[$index]}"; then
-      printf '%s\n' "$index"
+      resolved_entity_index="$index"
       return 0
     fi
     index=$((index + 1))
@@ -598,20 +601,16 @@ create_entity() {
   entity_parents+=(-1)
   entity_root_sections+=("$root_section")
   entity_orders+=("$order")
-
-  printf '%s\n' "$new_index"
+  resolved_entity_index="$new_index"
 }
 
 ensure_entity() {
   local requested="$1"
   local default_section="$2"
   local default_order="$3"
-  local found_index=""
   local created_language=""
 
-  found_index="$(find_matching_entity "$requested" || true)"
-  if [ -n "$found_index" ]; then
-    printf '%s\n' "$found_index"
+  if find_matching_entity "$requested"; then
     return 0
   fi
 
@@ -881,7 +880,8 @@ while [ "$operation_index" -lt "${#operation_kinds[@]}" ]; do
   source_request="${operation_sources[$operation_index]}"
   anchor_request="${operation_anchors[$operation_index]}"
 
-  source_entity="$(ensure_entity "$source_request" front "$operation_order")"
+  ensure_entity "$source_request" front "$operation_order"
+  source_entity="$resolved_entity_index"
 
   case "$kind" in
     front)
@@ -891,7 +891,8 @@ while [ "$operation_index" -lt "${#operation_kinds[@]}" ]; do
       set_entity_root "$source_entity" end "$operation_order"
       ;;
     before)
-      anchor_entity="$(ensure_entity "$anchor_request" front "$operation_order")"
+      ensure_entity "$anchor_request" front "$operation_order"
+      anchor_entity="$resolved_entity_index"
       set_entity_parent "$source_entity" "$anchor_entity" "$operation_order"
       ;;
   esac
@@ -918,9 +919,14 @@ if should_use_account_languages || should_use_login_window_languages; then
   echo
 fi
 
+effective_locale_language="${requested_languages[0]}"
+if [ "${#result[@]}" -gt 0 ]; then
+  effective_locale_language="${result[0]}"
+fi
+
 new_locale=""
 if should_use_locale_target; then
-  new_locale="$(build_locale_value "${requested_languages[0]}")"
+  new_locale="$(build_locale_value "$effective_locale_language")"
   echo "New locale value:"
   echo "  $new_locale"
   echo
@@ -928,7 +934,7 @@ fi
 
 new_startup_value=""
 if should_use_startup_target; then
-  new_startup_value="$(build_startup_language_value "${requested_languages[0]}")"
+  new_startup_value="$(build_startup_language_value "$effective_locale_language")"
   echo "New startup language setting:"
   echo "  $new_startup_value"
   echo
