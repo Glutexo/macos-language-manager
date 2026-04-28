@@ -152,8 +152,8 @@ assert_eq "en-US,ja-CZ,fr-FR,cs-CZ" "$order" "ja:ko -ko should keep Japanese in 
 order="$(run_and_capture_order -ko ja:ko)"
 assert_eq "en-US,ja-CZ,fr-FR,cs-CZ" "$order" "-ko ja:ko should match ja:ko -ko"
 
-order="$(run_and_capture_order ja: ko: cs)"
-assert_eq "ja-CZ,en-US,fr-FR,cs-CZ,ko-KR" "$order" "ja ko: cs should keep Korean at the end"
+order="$(run_and_capture_order ja ko: cs)"
+assert_eq "ja-CZ,cs-CZ,en-US,fr-FR,ko-KR" "$order" "ja ko: cs should keep Korean at the end after Czech moves to the front section"
 
 order="$(run_and_capture_order ja: ko:)"
 assert_eq "en-US,fr-FR,cs-CZ,ja-CZ,ko-KR" "$order" "multiple end placements should preserve their argument order"
