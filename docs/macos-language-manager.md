@@ -278,38 +278,31 @@ Consequences:
 
 Verbose help does not use a hardcoded in-repo whitelist.
 
-### Source 1: `.lproj` directories
-
-The script scans localization bundle directories and normalizes their names.
-
-Lookup strategy:
-
-- if `MACOS_LANGUAGE_LPROJ_DIRS` is set, scan those directories
-- otherwise use `mdfind` for `*.lproj` under `/System/Library` when available
-- otherwise use `find /System/Library`
-
-Normalization:
-
-- strip `.lproj`
-- replace `_` with `-`
-- skip generic directories such as `Base`
-
-### Source 2: Perl locale catalog
+### Renderable UI languages
 
 Default file:
 
 ```text
-/System/Library/Perl/Extras/5.34/DateTime/Locale/Catalog.pm
+/System/Library/PrivateFrameworks/IntlPreferences.framework/Resources/RenderableUILanguages.plist
 ```
 
 Behavior:
 
-- Parses language tags with script subtags such as `az-Cyrl` or `sr-Cyrl`.
-- Adds them to the verbose help output if they are not already present.
+- Reads the same renderable-language identifier list used by System Settings > Language & Region.
+- Preserves the order from Apple's plist.
+- Normalizes `_` to `-` when printing tags.
+- Includes broad UI language identifiers such as `ale`, `apw`, `tlh`, `yue-Hans`, and `zun`.
+
+Why this source:
+
+- System Settings loads `com.apple.Localization-Settings.extension` from `/System/Library/ExtensionKit/Extensions/Localization.appex`.
+- That extension links against `IntlPreferences.framework` and uses language-provider code around `availableLanguages(activeLanguages:)` and `renderableUILanguages`.
+- The plist contained 444 renderable language identifiers on macOS 26.4.1; the add-language UI showed 432 because 12 were already in the preferred-language list.
+- Display names are resolved through Foundation/CoreFoundation locale APIs backed by ICU data, for example `/usr/share/icu/icudt78l.dat`.
 
 Override hook:
 
-- `MACOS_LANGUAGE_CATALOG_PATH` can point to a different catalog file.
+- `MACOS_LANGUAGE_RENDERABLE_UI_LANGUAGES_PATH` can point to a different plist file for tests or investigation.
 
 ## Privilege Boundaries
 

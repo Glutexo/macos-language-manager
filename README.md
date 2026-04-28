@@ -25,6 +25,8 @@ Technical details:
 
 - [macos-language-manager.md](docs/macos-language-manager.md)
 
+Verbose supported-language help uses Apple's renderable UI language list from `IntlPreferences.framework`.
+
 ### `extract-system-settings-languages.swift`
 
 Extracts the preferred language list and the full addable-language list from System Settings > Language & Region via Accessibility.

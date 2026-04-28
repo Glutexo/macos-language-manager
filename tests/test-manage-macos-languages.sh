@@ -9,17 +9,20 @@ trap 'rm -rf "$tmp_dir"' EXIT
 
 stub_dir="$tmp_dir/stubs"
 mkdir -p "$stub_dir"
-lproj_root_one="$tmp_dir/SystemFolderLocalizations"
-lproj_root_two="$tmp_dir/LanguageChooserResources"
-mkdir -p "$lproj_root_one" "$lproj_root_two"
-mkdir -p "$lproj_root_one/en.lproj" "$lproj_root_one/cs.lproj" "$lproj_root_one/zh_TW.lproj" "$lproj_root_one/Base.lproj"
-mkdir -p "$lproj_root_two/pt_BR.lproj" "$lproj_root_two/ja.lproj" "$lproj_root_two/az.lproj"
-
-catalog_file="$tmp_dir/DateTime-Locale-Catalog.pm"
-cat > "$catalog_file" <<'EOS'
-  az-Cyrl          Azerbaijani Cyrillic
-  az-Latn          Azerbaijani Latin
-  sr-Cyrl          Serbian Cyrillic
+renderable_languages_file="$tmp_dir/RenderableUILanguages.plist"
+cat > "$renderable_languages_file" <<'EOS'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<array>
+  <string>en</string>
+  <string>az</string>
+  <string>az-Cyrl</string>
+  <string>az-Latn</string>
+  <string>pt_BR</string>
+  <string>tlh</string>
+</array>
+</plist>
 EOS
 
 cat > "$stub_dir/defaults" <<'EOS'
@@ -125,8 +128,7 @@ assert_contains() {
 
 run_case() {
   PATH="$stub_dir:$PATH" \
-    MACOS_LANGUAGE_LPROJ_DIRS="$lproj_root_one:$lproj_root_two" \
-    MACOS_LANGUAGE_CATALOG_PATH="$catalog_file" \
+    MACOS_LANGUAGE_RENDERABLE_UI_LANGUAGES_PATH="$renderable_languages_file" \
     "$script" "$@"
 }
 
@@ -145,9 +147,11 @@ output="$(run_case --verbose)"
 assert_contains "$output" "Supported macOS language tags:" "verbose help should show supported language tags"
 assert_contains "$output" "  en" "verbose help should include supported tags"
 assert_contains "$output" "  az" "verbose help should include base Azerbaijani"
-assert_contains "$output" "  az-Cyrl" "verbose help should include script variants from the locale catalog"
-assert_contains "$output" "  az-Latn" "verbose help should include additional script variants from the locale catalog"
+assert_contains "$output" "  az-Cyrl" "verbose help should include script variants from the renderable UI list"
+assert_contains "$output" "  az-Latn" "verbose help should include additional script variants from the renderable UI list"
 assert_contains "$output" "  pt-BR" "verbose help should normalize underscore tags"
+assert_contains "$output" "  tlh" "verbose help should include renderable UI-only language tags"
+assert_contains "$output" "Source: $renderable_languages_file" "verbose help should show the renderable UI source"
 if [[ "$output" == *$'  Base
 '* ]]; then
   echo "FAIL: verbose help should skip Base localization directories"

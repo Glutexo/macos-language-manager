@@ -198,59 +198,17 @@ read_startup_language_value() {
 }
 
 print_verbose_help_languages() {
-  local search_paths="${MACOS_LANGUAGE_LPROJ_DIRS:-}"
   local languages=()
   local language=""
-  local lproj_entries=""
-  local catalog_entries=""
-  local catalog_path="${MACOS_LANGUAGE_CATALOG_PATH:-/System/Library/Perl/Extras/5.34/DateTime/Locale/Catalog.pm}"
-  local search_path=""
+  local source_path="${MACOS_LANGUAGE_RENDERABLE_UI_LANGUAGES_PATH:-/System/Library/PrivateFrameworks/IntlPreferences.framework/Resources/RenderableUILanguages.plist}"
 
-  if [ -n "$search_paths" ]; then
-    IFS=':' read -r -a verbose_language_paths <<< "$search_paths"
-    for search_path in "${verbose_language_paths[@]}"; do
-      [ -d "$search_path" ] || continue
-      lproj_entries="$lproj_entries"$'
-'"$(find "$search_path" -maxdepth 6 -type d -name '*.lproj' -exec basename {} \; 2>/dev/null | sort -u)"
-    done
-  elif command -v mdfind >/dev/null 2>&1; then
-    lproj_entries="$(mdfind 'kMDItemFSName == "*.lproj"c' 2>/dev/null | awk -F/ '/^\/System\/Library\// {print $NF}' | sort -u)"
-  else
-    lproj_entries="$(find /System/Library -type d -name '*.lproj' -exec basename {} \; 2>/dev/null | sort -u)"
-  fi
-
-  while IFS= read -r language; do
-    language="${language%.lproj}"
-    language="${language//_/-}"
-    case "$language" in
-      ""|Base|English|French|German|Italian|Japanese|Spanish|Dutch)
-        continue
-        ;;
-    esac
-    if is_valid_configured_language "$language" && ! is_in_list "$language" "${languages[@]}"; then
-      languages+=("$language")
-    fi
-  done <<EOLANGS
-$lproj_entries
-EOLANGS
-
-  if [ -f "$catalog_path" ]; then
-    catalog_entries="$(awk '
-      /^[[:space:]]*[a-z]{2,3}-[A-Z][a-z]{3}[[:space:]]/ {
-        tag = $1
-        sub(/[[:space:]]+$/, "", tag)
-        print tag
-      }
-    ' "$catalog_path" | sort -u)"
-
+  if [ -f "$source_path" ]; then
     while IFS= read -r language; do
-      [ -n "$language" ] || continue
-      if ! is_in_list "$language" "${languages[@]}"; then
+      language="${language//_/-}"
+      if is_valid_configured_language "$language" && ! is_in_list "$language" "${languages[@]}"; then
         languages+=("$language")
       fi
-    done <<EOCATALOG
-$catalog_entries
-EOCATALOG
+    done < <(plutil -p "$source_path" 2>/dev/null | awk -F'"' '/=>/ {print $2}')
   fi
 
   echo "Supported macOS language tags:"
@@ -259,6 +217,7 @@ EOCATALOG
   else
     echo "  unavailable"
   fi
+  echo "  Source: $source_path"
   echo "  The script also accepts missing tags such as ja or en-US and inserts them when needed."
 }
 
