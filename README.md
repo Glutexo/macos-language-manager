@@ -1,10 +1,10 @@
 # macos-language-manager
 
-Simple shell tooling for managing the preferred language order on macOS.
+Simple shell tooling for managing the preferred language order on macOS and the Steam interface language on macOS.
 
 ## Overview
 
-This repository currently provides one script:
+This repository currently provides two scripts:
 
 - `manage-macos-languages.sh` reads the current `AppleLanguages` setting.
 - It moves the requested languages to the front of the list.
@@ -18,8 +18,14 @@ This repository currently provides one script:
 - It can preview the result with `--dry-run` or `-n` before writing changes.
 - It can target `account`, `login-window`, `locale`, `startup`, or `all` via the first argument.
 - It can restart the Mac with `--restart` or `-r`, even when used together with `--dry-run`.
+- `manage-steam-language.sh` reads the current Steam interface language from `registry.vdf`.
+- It updates the Steam client language value in place.
+- It can preview the planned change with `--dry-run` or `-n`.
+- It refuses unsupported Steam language values.
 
 The script is useful when you want to quickly change language priority for apps and system components that follow the global macOS language preference order.
+
+The Steam script is useful when you want to inspect or change the Steam client interface language without navigating the Steam settings UI.
 
 ## Requirements
 
@@ -29,6 +35,8 @@ The script is useful when you want to quickly change language priority for apps 
 - `sudo` access for `login-window` and `all`
 
 ## Usage
+
+### macOS language order
 
 ```bash
 ./manage-macos-languages.sh account [--dry-run|-n] [--restart|-r] [language ...]
@@ -51,6 +59,14 @@ The script is useful when you want to quickly change language priority for apps 
 ```
 
 Manages the macOS preferred language list by moving selected languages to the front, placing them before another language or at the end, adding missing ones when needed, and removing matching entries when requested.
+
+### Steam interface language
+
+```bash
+./manage-steam-language.sh [--dry-run|-n] [--force|-f] [language]
+```
+
+Reads the current Steam interface language, or writes a new supported Steam language value into Steam's `registry.vdf`.
 
 ## Targets
 
@@ -199,6 +215,66 @@ Requests a system restart after calculating the new order.
 - The script suppresses noisy `updatePreboot` output and only prints it if the refresh actually fails.
 - Use `--restart` or `-r` if you want the script to request an immediate restart, including together with `--dry-run`.
 - Test with `--dry-run` or `-n` first if you want to confirm the final values.
+
+## Steam Language Script
+
+### Options
+
+- `--dry-run`, `-n`: prints the planned Steam language change without writing it
+- `--force`, `-f`: writes even if the Steam process appears to be running
+- `--help`, `-h`: prints the built-in help output
+
+### Examples
+
+```bash
+./manage-steam-language.sh
+```
+
+Prints the current Steam interface language.
+
+```bash
+./manage-steam-language.sh czech
+```
+
+Changes the Steam interface language to Czech.
+
+```bash
+./manage-steam-language.sh --dry-run japanese
+```
+
+Shows the planned change to Japanese without writing it.
+
+### Supported Steam Language Values
+
+- `bulgarian`
+- `schinese`
+- `tchinese`
+- `czech`
+- `danish`
+- `dutch`
+- `english`
+- `finnish`
+- `french`
+- `german`
+- `greek`
+- `hungarian`
+- `indonesian`
+- `italian`
+- `japanese`
+- `koreana`
+- `norwegian`
+- `polish`
+- `portuguese`
+- `brazilian`
+- `romanian`
+- `russian`
+- `spanish`
+- `latam`
+- `swedish`
+- `thai`
+- `turkish`
+- `ukrainian`
+- `vietnamese`
 
 ## Repository Workflow
 
