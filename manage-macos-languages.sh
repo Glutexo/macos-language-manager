@@ -202,6 +202,8 @@ print_verbose_help_languages() {
   local languages=()
   local language=""
   local lproj_entries=""
+  local catalog_entries=""
+  local catalog_path="${MACOS_LANGUAGE_CATALOG_PATH:-/System/Library/Perl/Extras/5.34/DateTime/Locale/Catalog.pm}"
   local search_path=""
 
   if [ -n "$search_paths" ]; then
@@ -231,6 +233,25 @@ print_verbose_help_languages() {
   done <<EOLANGS
 $lproj_entries
 EOLANGS
+
+  if [ -f "$catalog_path" ]; then
+    catalog_entries="$(awk '
+      /^[[:space:]]*[a-z]{2,3}-[A-Z][a-z]{3}[[:space:]]/ {
+        tag = $1
+        sub(/[[:space:]]+$/, "", tag)
+        print tag
+      }
+    ' "$catalog_path" | sort -u)"
+
+    while IFS= read -r language; do
+      [ -n "$language" ] || continue
+      if ! is_in_list "$language" "${languages[@]}"; then
+        languages+=("$language")
+      fi
+    done <<EOCATALOG
+$catalog_entries
+EOCATALOG
+  fi
 
   echo "Supported macOS language tags:"
   if [ "${#languages[@]}" -gt 0 ]; then
