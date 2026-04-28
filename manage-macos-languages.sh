@@ -219,7 +219,7 @@ print_verbose_help_languages() {
         languages+=("$language")
       fi
     done <<EOLANGS
-$(find "$search_path" -maxdepth 4 -type d -name '*.lproj' -exec basename {} \; | sort -u)
+$(find "$search_path" -maxdepth 4 -type d -name '*.lproj' -exec basename {} \; 2>/dev/null | sort -u)
 EOLANGS
   done
 
