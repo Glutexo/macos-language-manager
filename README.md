@@ -9,6 +9,8 @@ This repository currently provides one script:
 - `manage-macos-languages.sh` reads the current `AppleLanguages` setting.
 - It moves the requested languages to the front of the list.
 - It adds a requested language if it is not already present.
+- It removes requested languages from the list when prefixed with `-`.
+- It accepts optional `+` prefixes for move/add operations.
 - It uses the system locale region for missing base language tags such as `ja` -> `ja-CZ`.
 - It keeps the remaining languages in their original order.
 - It can preview the result with `--dry-run` or `-n` before writing changes.
@@ -46,13 +48,13 @@ The script is useful when you want to quickly change language priority for apps 
 ./manage-macos-languages.sh all [--dry-run|-n] [--restart|-r] [language ...]
 ```
 
-Manages the macOS preferred language list by moving selected languages to the front and adding missing ones when needed.
+Manages the macOS preferred language list by moving selected languages to the front, adding missing ones when needed, and removing matching entries when requested.
 
 ## Targets
 
 - `account`: reads or writes the current account language order
 - `login-window`: reads or writes the login window language order
-- `locale`: reads or writes locale settings derived from the first requested language
+- `locale`: reads or writes locale settings derived from the first added language
 - `startup`: reads or writes startup NVRAM language settings
 - `all`: reads or writes account, login window, locale, and startup NVRAM settings together, using a merged language list from all relevant sources
 
@@ -61,6 +63,14 @@ Manages the macOS preferred language list by moving selected languages to the fr
 - `--dry-run`, `-n`: prints the resulting values without writing changes
 - `--restart`, `-r`: requests an immediate restart after evaluating the command
 - `--help`, `-h`: prints the built-in help output
+
+## Language Argument Syntax
+
+- `xx`: move the language to the front or add it if missing
+- `+xx`: same as `xx`; explicit move/add syntax
+- `-xx`: remove matching language entries from the list
+
+For `locale`, `startup`, and `all`, the locale/startup value is derived from the first added language argument. A command that only removes languages is therefore rejected for those targets.
 
 ## Examples
 
@@ -101,10 +111,10 @@ Prints a merged language list from account languages, login window languages, lo
 Moves Czech and English to the front of the current account language list.
 
 ```bash
-./manage-macos-languages.sh account --dry-run ko ja
+./manage-macos-languages.sh account --dry-run +ko ja -en
 ```
 
-Shows the reordered language list without saving it. If `ja` is missing and the current locale is `cs_CZ`, the inserted value becomes `ja-CZ`.
+Shows the reordered language list without saving it, explicitly adds or moves Korean and Japanese, and removes matching English entries.
 
 ```bash
 ./manage-macos-languages.sh login-window de ko
@@ -125,10 +135,10 @@ Sets account and system `AppleLocale` to `ja_CZ` if the available region is `CZ`
 Sets NVRAM `prev-lang:kbd` to the requested startup language while preserving the current keyboard layout ID when available.
 
 ```bash
-./manage-macos-languages.sh all ja ko
+./manage-macos-languages.sh all ja ko -en
 ```
 
-Writes account languages, login window languages, account locale, system locale, and startup NVRAM language in one command, starting from the merged language list of all relevant sources.
+Writes account languages, login window languages, account locale, system locale, and startup NVRAM language in one command, starting from the merged language list of all relevant sources while also removing matching English entries.
 
 ```bash
 ./manage-macos-languages.sh account --restart ja ko
@@ -144,12 +154,13 @@ Requests a system restart after calculating the new order.
 - For short tags such as `ja`, it also appends the current system locale region when available.
 - Example: if the current locale is `cs_CZ`, requesting `ja` inserts `ja-CZ`.
 - If no configured language matches a fully qualified tag such as `en-US`, that exact tag is inserted.
-- Only the first matching configured language is moved for each requested item.
-- Languages not requested stay in the list and preserve their relative order.
+- Only the first matching configured language is moved for each added item.
+- A removed base language such as `-en` removes matching region-specific variants such as `en-US`.
+- Languages not removed stay in the list and preserve their relative order.
 
 ## Locale Behavior
 
-- The `locale` and `all` targets derive `AppleLocale` from the first requested language.
+- The `locale` and `all` targets derive `AppleLocale` from the first added language.
 - Hyphens are converted to underscores, so `ja-CZ` becomes `ja_CZ`.
 - This intentionally changes locale formatting behavior too.
 
@@ -172,4 +183,4 @@ Requests a system restart after calculating the new order.
 
 ## License
 
-CC0 1.0 Universal. See the `LICENSE` file.
+MIT. See the `LICENSE` file.

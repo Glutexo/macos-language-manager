@@ -14,7 +14,7 @@ display_target_list() {
 
 show_usage() {
   echo "Manage the macOS preferred language list."
-  echo "Move selected languages to the front and add missing ones when needed."
+  echo "Move selected languages to the front, add missing ones, and remove entries when requested."
   echo
   echo "Usage: $display_command account [--dry-run|-n] [--restart|-r] [language ...]"
   echo "       $display_command login-window [--dry-run|-n] [--restart|-r] [language ...]"
@@ -30,11 +30,16 @@ show_usage() {
   echo "  --restart, -r   Restart the Mac after evaluating the command."
   echo "  --help, -h      Show this help message."
   echo
+  echo "Language arguments:"
+  echo "  xx     Move or add the language."
+  echo "  +xx    Move or add the language."
+  echo "  -xx    Remove matching language entries."
+  echo
   echo "Notes:"
   echo "  If you request a language that is not in the list yet, the script adds it."
   echo "  For short tags like 'ja', it also adds the system locale region when available."
   echo "  Example: with locale cs_CZ, 'ja' is added as 'ja-CZ'."
-  echo "  The locale target derives AppleLocale from the first language, for example 'ja-CZ' -> 'ja_CZ'."
+  echo "  The locale target derives AppleLocale from the first added language, for example 'ja-CZ' -> 'ja_CZ'."
   echo "  The all target also updates NVRAM prev-lang:kbd for the startup screen."
   echo "  Writing login-window, startup, or system locale settings may prompt for administrator privileges."
   echo
@@ -45,11 +50,11 @@ show_usage() {
   echo "  $display_command startup"
   echo "  $display_command all"
   echo "  $display_command account cs en"
-  echo "  $display_command account --dry-run ko ja"
+  echo "  $display_command account --dry-run +ko ja -en"
   echo "  $display_command login-window de ko"
   echo "  $display_command locale ja"
   echo "  $display_command startup ja"
-  echo "  $display_command all ja ko"
+  echo "  $display_command all ja ko -en"
   echo "  $display_command account --restart ja ko"
   echo "  $display_command --help"
 }
@@ -57,6 +62,7 @@ show_usage() {
 dry_run=false
 restart_after_change=false
 requested_languages=()
+removed_languages=()
 parse_options=true
 target_set=false
 
@@ -454,6 +460,46 @@ matches_requested_language() {
   return 1
 }
 
+parse_language_argument() {
+  local token="$1"
+  local operation="add"
+  local language="$token"
+
+  case "$token" in
+    +*)
+      language="${token#+}"
+      ;;
+    -*)
+      operation="remove"
+      language="${token#-}"
+      ;;
+  esac
+
+  if ! is_valid_configured_language "$language"; then
+    echo "Invalid language value: $token"
+    exit 1
+  fi
+
+  if [ "$operation" = "remove" ]; then
+    removed_languages+=("$language")
+  else
+    requested_languages+=("$language")
+  fi
+}
+
+should_remove_language() {
+  local language="$1"
+  local removed=""
+
+  for removed in "${removed_languages[@]}"; do
+    if matches_requested_language "$removed" "$language"; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 while [ "$#" -gt 0 ]; do
   if [ "$parse_options" = true ]; then
     case "$1" in
@@ -476,7 +522,12 @@ while [ "$#" -gt 0 ]; do
         shift
         continue
         ;;
-      -*)
+      -* )
+        if [ "$target_set" = true ]; then
+          parse_language_argument "$1"
+          shift
+          continue
+        fi
         echo "Unknown option: $1"
         show_usage
         exit 1
@@ -491,7 +542,7 @@ while [ "$#" -gt 0 ]; do
     continue
   fi
 
-  requested_languages+=("$1")
+  parse_language_argument "$1"
   shift
 done
 
@@ -512,7 +563,7 @@ if ! should_use_locale_target && ! should_use_startup_target && [ "${#current_la
   exit 1
 fi
 
-if [ "${#requested_languages[@]}" -lt 1 ]; then
+if [ "${#requested_languages[@]}" -lt 1 ] && [ "${#removed_languages[@]}" -lt 1 ]; then
   if [ "$dry_run" = true ] || [ "$restart_after_change" = true ]; then
     show_usage
     exit 1
@@ -563,6 +614,11 @@ EOLOGIN
   exit 0
 fi
 
+if [ "${#requested_languages[@]}" -lt 1 ] && (should_use_locale_target || should_use_startup_target); then
+  echo "The $target_mode target requires at least one added language argument for locale/startup updates."
+  exit 1
+fi
+
 result=()
 
 if should_use_account_languages || should_use_login_window_languages; then
@@ -572,7 +628,7 @@ if should_use_account_languages || should_use_login_window_languages; then
     for lang in "${current_languages[@]}"; do
       if matches_requested_language "$requested" "$lang"; then
         found_match=true
-        if ! is_in_list "$lang" "${result[@]}"; then
+        if ! should_remove_language "$lang" && ! is_in_list "$lang" "${result[@]}"; then
           result+=("$lang")
         fi
         break
@@ -581,32 +637,41 @@ if should_use_account_languages || should_use_login_window_languages; then
 
     if [ "$found_match" = false ]; then
       missing_language="$(build_missing_language_tag "$requested")"
-      if ! is_in_list "$missing_language" "${result[@]}"; then
+      if ! should_remove_language "$missing_language" && ! is_in_list "$missing_language" "${result[@]}"; then
         result+=("$missing_language")
       fi
     fi
   done
 
   for lang in "${current_languages[@]}"; do
+    if should_remove_language "$lang"; then
+      continue
+    fi
     if ! is_in_list "$lang" "${result[@]}"; then
       result+=("$lang")
     fi
   done
 
   echo "New language order:"
-  printf '  %s\n' "${result[@]}"
+  if [ "${#result[@]}" -gt 0 ]; then
+    printf '  %s\n' "${result[@]}"
+  else
+    echo "  empty"
+  fi
   echo
 fi
 
-new_locale="$(build_locale_value "${requested_languages[0]}")"
+new_locale=""
 if should_use_locale_target; then
+  new_locale="$(build_locale_value "${requested_languages[0]}")"
   echo "New locale value:"
   echo "  $new_locale"
   echo
 fi
 
-new_startup_value="$(build_startup_language_value "${requested_languages[0]}")"
+new_startup_value=""
 if should_use_startup_target; then
+  new_startup_value="$(build_startup_language_value "${requested_languages[0]}")"
   echo "New startup language setting:"
   echo "  $new_startup_value"
   echo
