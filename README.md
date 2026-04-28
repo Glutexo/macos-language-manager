@@ -16,7 +16,7 @@ This repository currently provides two scripts:
 - It uses the system locale region for missing base language tags such as `ja` -> `ja-CZ`.
 - It keeps the remaining languages in their original order unless explicitly repositioned.
 - It can preview the result with `--dry-run` or `-n` before writing changes.
-- It can show detected macOS language tags in verbose help via `--verbose` or `-v`.
+- It can show supported macOS language tags in verbose help via `--verbose` or `-v`.
 - It can target `account`, `login-window`, `locale`, `startup`, or `all` via the first argument.
 - It can restart the Mac with `--restart` or `-r`, even when used together with `--dry-run`.
 - `manage-steam-language.sh` reads the current Steam interface language from `registry.vdf`.
@@ -83,7 +83,7 @@ Reads the current Steam interface language, or writes a new supported Steam lang
 - `--dry-run`, `-n`: prints the resulting values without writing changes
 - `--restart`, `-r`: requests an immediate restart after evaluating the command
 - `--help`, `-h`: prints the built-in help output
-- `--verbose`, `-v`: prints help together with detected macOS language tags
+- `--verbose`, `-v`: prints help together with supported macOS language tags
 - `--verbose`, `-v`: prints help together with the supported Steam language values
 
 ## Language Argument Syntax
@@ -98,7 +98,7 @@ If `yy` from `xx:yy` is missing, it is treated like an implicit added language, 
 
 For `locale`, `startup`, and `all`, the locale/startup value is derived from the first added language argument. A command that only removes languages is therefore rejected for those targets.
 
-The macOS script does not use a fixed built-in language whitelist. Verbose help prints the language tags currently detected from account, login window, locale-derived, and startup language sources, and the script can still accept additional missing tags such as `ja` or `en-US`.
+The macOS script does not use a hardcoded in-repo whitelist. Verbose help prints the supported language tags detected from macOS system localization bundles, and the script can still accept additional missing tags such as `ja` or `en-US`.
 
 ## Examples
 
@@ -196,7 +196,7 @@ Requests a system restart after calculating the new order.
 ./manage-macos-languages.sh --verbose
 ```
 
-Prints help together with the currently detected macOS language tags.
+Prints help together with the supported macOS language tags detected from the current macOS installation.
 
 ## How Matching Works
 
@@ -227,7 +227,7 @@ Prints help together with the currently detected macOS language tags.
 - The script suppresses noisy `updatePreboot` output and only prints it if the refresh actually fails.
 - Use `--restart` or `-r` if you want the script to request an immediate restart, including together with `--dry-run`.
 - Test with `--dry-run` or `-n` first if you want to confirm the final values.
-- Run `./tests/test-manage-macos-languages.sh` to verify parser, verbose help, and ordering behavior against stubbed macOS settings.
+- Run `./tests/test-manage-macos-languages.sh` to verify parser, verbose help, and ordering behavior against stubbed macOS settings and localization bundles.
 - Run `./tests/test-manage-steam-language.sh` to verify Steam registry parsing, verbose help, and updates against a temporary registry fixture.
 
 ## Steam Language Script

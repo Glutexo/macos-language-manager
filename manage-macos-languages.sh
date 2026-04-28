@@ -29,8 +29,8 @@ show_usage() {
   echo "Options:"
   echo "  --dry-run, -n   Print the new values without saving changes."
   echo "  --restart, -r   Restart the Mac after evaluating the command."
-  echo "  --help, -h      Show this help message. Use --verbose or -v for detected language tags."
-  echo "  --verbose, -v   Show help together with detected macOS language tags."
+  echo "  --help, -h      Show this help message. Use --verbose or -v for supported language tags."
+  echo "  --verbose, -v   Show help together with supported macOS language tags."
   echo
   echo "Language arguments:"
   echo "  xx        Move or add the language at the front."
@@ -198,18 +198,27 @@ read_startup_language_value() {
 }
 
 print_verbose_help_languages() {
+  local search_paths="${MACOS_LANGUAGE_LPROJ_DIRS:-/System/Library/CoreServices/SystemFolderLocalizations:/System/Library/CoreServices/Language Chooser.app/Contents/Resources}"
   local languages=()
   local language=""
+  local search_path=""
 
-  while IFS= read -r language; do
-    if [ -n "$language" ] && ! is_in_list "$language" "${languages[@]}"; then
-      languages+=("$language")
-    fi
-  done <<EOLANGS
-$(read_all_languages)
+  IFS=':' read -r -a verbose_language_paths <<< "$search_paths"
+  for search_path in "${verbose_language_paths[@]}"; do
+    [ -d "$search_path" ] || continue
+
+    while IFS= read -r language; do
+      language="${language%.lproj}"
+      language="${language//_/-}"
+      if [ -n "$language" ] && is_valid_configured_language "$language" && ! is_in_list "$language" "${languages[@]}"; then
+        languages+=("$language")
+      fi
+    done <<EOLANGS
+$(find "$search_path" -maxdepth 1 -type d -name '*.lproj' -exec basename {} \; | sort)
 EOLANGS
+  done
 
-  echo "Detected macOS language tags:"
+  echo "Supported macOS language tags:"
   if [ "${#languages[@]}" -gt 0 ]; then
     printf '  %s\n' "${languages[@]}"
   else

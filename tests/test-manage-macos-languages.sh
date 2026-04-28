@@ -9,6 +9,11 @@ trap 'rm -rf "$tmp_dir"' EXIT
 
 stub_dir="$tmp_dir/stubs"
 mkdir -p "$stub_dir"
+lproj_root_one="$tmp_dir/SystemFolderLocalizations"
+lproj_root_two="$tmp_dir/LanguageChooserResources"
+mkdir -p "$lproj_root_one" "$lproj_root_two"
+mkdir -p "$lproj_root_one/en.lproj" "$lproj_root_one/cs.lproj" "$lproj_root_one/zh_TW.lproj"
+mkdir -p "$lproj_root_two/pt_BR.lproj" "$lproj_root_two/ja.lproj"
 
 cat > "$stub_dir/defaults" <<'EOS'
 #!/bin/bash
@@ -112,7 +117,9 @@ assert_contains() {
 }
 
 run_case() {
-  PATH="$stub_dir:$PATH" "$script" "$@"
+  PATH="$stub_dir:$PATH" \
+    MACOS_LANGUAGE_LPROJ_DIRS="$lproj_root_one:$lproj_root_two" \
+    "$script" "$@"
 }
 
 run_and_capture_order() {
@@ -120,15 +127,16 @@ run_and_capture_order() {
 }
 
 output="$(run_case --help)"
-assert_contains "$output" "Use --verbose or -v for detected language tags." "help should mention verbose help"
-if [[ "$output" == *"Detected macOS language tags:"* ]]; then
+assert_contains "$output" "Use --verbose or -v for supported language tags." "help should mention verbose help"
+if [[ "$output" == *"Supported macOS language tags:"* ]]; then
   echo "FAIL: plain help should stay concise"
   exit 1
 fi
 
 output="$(run_case --verbose)"
-assert_contains "$output" "Detected macOS language tags:" "verbose help should show detected language tags"
-assert_contains "$output" "  en-US" "verbose help should include detected tags"
+assert_contains "$output" "Supported macOS language tags:" "verbose help should show supported language tags"
+assert_contains "$output" "  en" "verbose help should include supported tags"
+assert_contains "$output" "  pt-BR" "verbose help should normalize underscore tags"
 assert_contains "$output" "accepts missing tags such as ja or en-US" "verbose help should explain non-whitelist behavior"
 
 output="$(run_case all --dry-run -en ko:cs)"
