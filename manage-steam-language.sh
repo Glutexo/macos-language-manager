@@ -6,6 +6,7 @@ steam_dir="${STEAM_DIR:-$HOME/Library/Application Support/Steam}"
 registry_file="$steam_dir/registry.vdf"
 dry_run=false
 force_write=false
+verbose_help=false
 supported_languages=(
   bulgarian
   schinese
@@ -47,14 +48,18 @@ show_usage() {
   echo "  --dry-run, -n   Print the planned change without writing it."
   echo "  --force, -f     Write even if Steam appears to be running."
   echo "  --help, -h      Show this help message."
+  echo "  --verbose, -v   Show help together with supported language values."
   echo
   echo "Examples:"
   echo "  $display_command"
   echo "  $display_command czech"
   echo "  $display_command --dry-run japanese"
-  echo
-  echo "Supported Steam interface language values:"
-  printf '  %s\n' "${supported_languages[@]}"
+
+  if $verbose_help; then
+    echo
+    echo "Supported Steam interface language values:"
+    printf '  %s\n' "${supported_languages[@]}"
+  fi
 }
 
 fail() {
@@ -128,6 +133,11 @@ while [ "$#" -gt 0 ]; do
       force_write=true
       ;;
     --help|-h)
+      show_usage
+      exit 0
+      ;;
+    --verbose|-v)
+      verbose_help=true
       show_usage
       exit 0
       ;;

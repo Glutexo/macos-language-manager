@@ -21,6 +21,7 @@ This repository currently provides two scripts:
 - `manage-steam-language.sh` reads the current Steam interface language from `registry.vdf`.
 - It updates the Steam client language value in place.
 - It can preview the planned change with `--dry-run` or `-n`.
+- It shows supported Steam language values in verbose help via `--verbose` or `-v`.
 - It refuses unsupported Steam language values.
 
 The script is useful when you want to quickly change language priority for apps and system components that follow the global macOS language preference order.
@@ -81,6 +82,7 @@ Reads the current Steam interface language, or writes a new supported Steam lang
 - `--dry-run`, `-n`: prints the resulting values without writing changes
 - `--restart`, `-r`: requests an immediate restart after evaluating the command
 - `--help`, `-h`: prints the built-in help output
+- `--verbose`, `-v`: prints help together with the supported Steam language values
 
 ## Language Argument Syntax
 
@@ -216,7 +218,7 @@ Requests a system restart after calculating the new order.
 - Use `--restart` or `-r` if you want the script to request an immediate restart, including together with `--dry-run`.
 - Test with `--dry-run` or `-n` first if you want to confirm the final values.
 - Run `./tests/test-manage-macos-languages.sh` to verify parser and ordering behavior against stubbed macOS settings.
-- Run `./tests/test-manage-steam-language.sh` to verify Steam registry parsing and updates against a temporary registry fixture.
+- Run `./tests/test-manage-steam-language.sh` to verify Steam registry parsing, verbose help, and updates against a temporary registry fixture.
 
 ## Steam Language Script
 
@@ -225,6 +227,7 @@ Requests a system restart after calculating the new order.
 - `--dry-run`, `-n`: prints the planned Steam language change without writing it
 - `--force`, `-f`: writes even if the Steam process appears to be running
 - `--help`, `-h`: prints the built-in help output
+- `--verbose`, `-v`: prints help together with the supported Steam language values
 
 ### Examples
 
@@ -245,6 +248,12 @@ Changes the Steam interface language to Czech.
 ```
 
 Shows the planned change to Japanese without writing it.
+
+```bash
+./manage-steam-language.sh --verbose
+```
+
+Prints help together with the supported Steam language values.
 
 ### Supported Steam Language Values
 

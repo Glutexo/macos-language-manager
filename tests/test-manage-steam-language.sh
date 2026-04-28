@@ -74,6 +74,17 @@ write_registry
 output="$(run_case)"
 assert_eq "Current Steam interface language: english" "$output" "script should print current Steam language"
 
+output="$(run_case --help)"
+assert_contains "$output" "Usage: ./manage-steam-language.sh [--dry-run|-n] [--force|-f] [language]" "help should show usage"
+if [[ "$output" == *"Supported Steam interface language values:"* ]]; then
+  echo "FAIL: plain help should stay concise"
+  exit 1
+fi
+
+output="$(run_case --verbose)"
+assert_contains "$output" "Supported Steam interface language values:" "verbose help should show supported languages"
+assert_contains "$output" "  japanese" "verbose help should include language list entries"
+
 write_registry
 output="$(run_case --dry-run japanese)"
 assert_eq "Would change Steam interface language from english to japanese." "$output" "dry-run should report planned language change"
