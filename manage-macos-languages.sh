@@ -198,30 +198,39 @@ read_startup_language_value() {
 }
 
 print_verbose_help_languages() {
-  local search_paths="${MACOS_LANGUAGE_LPROJ_DIRS:-/System/Library}"
+  local search_paths="${MACOS_LANGUAGE_LPROJ_DIRS:-}"
   local languages=()
   local language=""
+  local lproj_entries=""
   local search_path=""
 
-  IFS=':' read -r -a verbose_language_paths <<< "$search_paths"
-  for search_path in "${verbose_language_paths[@]}"; do
-    [ -d "$search_path" ] || continue
+  if [ -n "$search_paths" ]; then
+    IFS=':' read -r -a verbose_language_paths <<< "$search_paths"
+    for search_path in "${verbose_language_paths[@]}"; do
+      [ -d "$search_path" ] || continue
+      lproj_entries="$lproj_entries"$'
+'"$(find "$search_path" -maxdepth 6 -type d -name '*.lproj' -exec basename {} \; 2>/dev/null | sort -u)"
+    done
+  elif command -v mdfind >/dev/null 2>&1; then
+    lproj_entries="$(mdfind 'kMDItemFSName == "*.lproj"c' 2>/dev/null | awk -F/ '/^\/System\/Library\// {print $NF}' | sort -u)"
+  else
+    lproj_entries="$(find /System/Library -type d -name '*.lproj' -exec basename {} \; 2>/dev/null | sort -u)"
+  fi
 
-    while IFS= read -r language; do
-      language="${language%.lproj}"
-      language="${language//_/-}"
-      case "$language" in
-        Base|English|French|German|Italian|Japanese|Spanish|Dutch)
-          continue
-          ;;
-      esac
-      if [ -n "$language" ] && is_valid_configured_language "$language" && ! is_in_list "$language" "${languages[@]}"; then
-        languages+=("$language")
-      fi
-    done <<EOLANGS
-$(find "$search_path" -maxdepth 4 -type d -name '*.lproj' -exec basename {} \; 2>/dev/null | sort -u)
+  while IFS= read -r language; do
+    language="${language%.lproj}"
+    language="${language//_/-}"
+    case "$language" in
+      ""|Base|English|French|German|Italian|Japanese|Spanish|Dutch)
+        continue
+        ;;
+    esac
+    if is_valid_configured_language "$language" && ! is_in_list "$language" "${languages[@]}"; then
+      languages+=("$language")
+    fi
+  done <<EOLANGS
+$lproj_entries
 EOLANGS
-  done
 
   echo "Supported macOS language tags:"
   if [ "${#languages[@]}" -gt 0 ]; then
