@@ -83,7 +83,7 @@ If `yy` from `xx:yy` is missing, it is treated like an implicit added language, 
 
 For `locale`, `startup`, and `all`, the locale/startup value is derived from the first added language argument. A command that only removes languages is therefore rejected for those targets.
 
-The macOS script does not use a hardcoded in-repo whitelist. Verbose help prints the supported language tags detected from macOS system localization bundles, and the script can still accept additional missing tags such as `ja` or `en-US`.
+The macOS script does not use a hardcoded in-repo whitelist. Verbose help prints supported language tags detected from macOS system localization bundles and supplements script variants such as `az-Cyrl` from the system locale catalog, while the script can still accept additional missing tags such as `ja` or `en-US`.
 
 ### Examples
 

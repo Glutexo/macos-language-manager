@@ -15,6 +15,13 @@ mkdir -p "$lproj_root_one" "$lproj_root_two"
 mkdir -p "$lproj_root_one/en.lproj" "$lproj_root_one/cs.lproj" "$lproj_root_one/zh_TW.lproj" "$lproj_root_one/Base.lproj"
 mkdir -p "$lproj_root_two/pt_BR.lproj" "$lproj_root_two/ja.lproj" "$lproj_root_two/az.lproj"
 
+catalog_file="$tmp_dir/DateTime-Locale-Catalog.pm"
+cat > "$catalog_file" <<'EOS'
+  az-Cyrl          Azerbaijani Cyrillic
+  az-Latn          Azerbaijani Latin
+  sr-Cyrl          Serbian Cyrillic
+EOS
+
 cat > "$stub_dir/defaults" <<'EOS'
 #!/bin/bash
 set -euo pipefail
@@ -119,6 +126,7 @@ assert_contains() {
 run_case() {
   PATH="$stub_dir:$PATH" \
     MACOS_LANGUAGE_LPROJ_DIRS="$lproj_root_one:$lproj_root_two" \
+    MACOS_LANGUAGE_CATALOG_PATH="$catalog_file" \
     "$script" "$@"
 }
 
@@ -136,7 +144,9 @@ fi
 output="$(run_case --verbose)"
 assert_contains "$output" "Supported macOS language tags:" "verbose help should show supported language tags"
 assert_contains "$output" "  en" "verbose help should include supported tags"
-assert_contains "$output" "  az" "verbose help should include languages found outside the previous narrow directories"
+assert_contains "$output" "  az" "verbose help should include base Azerbaijani"
+assert_contains "$output" "  az-Cyrl" "verbose help should include script variants from the locale catalog"
+assert_contains "$output" "  az-Latn" "verbose help should include additional script variants from the locale catalog"
 assert_contains "$output" "  pt-BR" "verbose help should normalize underscore tags"
 if [[ "$output" == *$'  Base
 '* ]]; then
