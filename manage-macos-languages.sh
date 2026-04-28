@@ -198,7 +198,7 @@ read_startup_language_value() {
 }
 
 print_verbose_help_languages() {
-  local search_paths="${MACOS_LANGUAGE_LPROJ_DIRS:-/System/Library/CoreServices/SystemFolderLocalizations:/System/Library/CoreServices/Language Chooser.app/Contents/Resources}"
+  local search_paths="${MACOS_LANGUAGE_LPROJ_DIRS:-/System/Library}"
   local languages=()
   local language=""
   local search_path=""
@@ -210,6 +210,11 @@ print_verbose_help_languages() {
     while IFS= read -r language; do
       language="${language%.lproj}"
       language="${language//_/-}"
+      case "$language" in
+        Base|English|French|German|Italian|Japanese|Spanish|Dutch)
+          continue
+          ;;
+      esac
       if [ -n "$language" ] && is_valid_configured_language "$language" && ! is_in_list "$language" "${languages[@]}"; then
         languages+=("$language")
       fi

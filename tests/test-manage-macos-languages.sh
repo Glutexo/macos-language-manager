@@ -12,8 +12,8 @@ mkdir -p "$stub_dir"
 lproj_root_one="$tmp_dir/SystemFolderLocalizations"
 lproj_root_two="$tmp_dir/LanguageChooserResources"
 mkdir -p "$lproj_root_one" "$lproj_root_two"
-mkdir -p "$lproj_root_one/en.lproj" "$lproj_root_one/cs.lproj" "$lproj_root_one/zh_TW.lproj"
-mkdir -p "$lproj_root_two/pt_BR.lproj" "$lproj_root_two/ja.lproj"
+mkdir -p "$lproj_root_one/en.lproj" "$lproj_root_one/cs.lproj" "$lproj_root_one/zh_TW.lproj" "$lproj_root_one/Base.lproj"
+mkdir -p "$lproj_root_two/pt_BR.lproj" "$lproj_root_two/ja.lproj" "$lproj_root_two/az.lproj"
 
 cat > "$stub_dir/defaults" <<'EOS'
 #!/bin/bash
@@ -136,7 +136,13 @@ fi
 output="$(run_case --verbose)"
 assert_contains "$output" "Supported macOS language tags:" "verbose help should show supported language tags"
 assert_contains "$output" "  en" "verbose help should include supported tags"
+assert_contains "$output" "  az" "verbose help should include languages found outside the previous narrow directories"
 assert_contains "$output" "  pt-BR" "verbose help should normalize underscore tags"
+if [[ "$output" == *$'  Base
+'* ]]; then
+  echo "FAIL: verbose help should skip Base localization directories"
+  exit 1
+fi
 assert_contains "$output" "accepts missing tags such as ja or en-US" "verbose help should explain non-whitelist behavior"
 
 output="$(run_case all --dry-run -en ko:cs)"
