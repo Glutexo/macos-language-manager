@@ -14,7 +14,7 @@ cat > "$stub_dir/defaults" <<'EOS'
 #!/bin/bash
 set -euo pipefail
 
-if [ "$#" -ge 4 ] && [ "$1" = "read" ] && [ "$2" = "-g" ] && [ "$3" = "AppleLanguages" ]; then
+if [ "$#" -ge 3 ] && [ "$1" = "read" ] && [ "$2" = "-g" ] && [ "$3" = "AppleLanguages" ]; then
   cat <<'EOOUT'
 (
     "en-US",
@@ -26,12 +26,12 @@ EOOUT
   exit 0
 fi
 
-if [ "$#" -ge 4 ] && [ "$1" = "read" ] && [ "$2" = "-g" ] && [ "$3" = "AppleLocale" ]; then
+if [ "$#" -ge 3 ] && [ "$1" = "read" ] && [ "$2" = "-g" ] && [ "$3" = "AppleLocale" ]; then
   echo "cs_CZ"
   exit 0
 fi
 
-if [ "$#" -ge 4 ] && [ "$1" = "read" ] && [ "$2" = "/Library/Preferences/.GlobalPreferences" ] && [ "$3" = "AppleLanguages" ]; then
+if [ "$#" -ge 3 ] && [ "$1" = "read" ] && [ "$2" = "/Library/Preferences/.GlobalPreferences" ] && [ "$3" = "AppleLanguages" ]; then
   cat <<'EOOUT'
 (
     "en-US",
@@ -43,7 +43,7 @@ EOOUT
   exit 0
 fi
 
-if [ "$#" -ge 4 ] && [ "$1" = "read" ] && [ "$2" = "/Library/Preferences/.GlobalPreferences" ] && [ "$3" = "AppleLocale" ]; then
+if [ "$#" -ge 3 ] && [ "$1" = "read" ] && [ "$2" = "/Library/Preferences/.GlobalPreferences" ] && [ "$3" = "AppleLocale" ]; then
   echo "cs_CZ"
   exit 0
 fi
