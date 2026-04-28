@@ -1,44 +1,38 @@
 # macos-language-manager
 
-Simple shell tooling for managing the preferred language order on macOS and the Steam interface language on macOS.
+Simple shell tooling for two separate tasks on macOS:
 
-## Overview
+- managing the preferred macOS language order
+- managing the Steam interface language
 
-This repository currently provides two scripts:
+## macOS Language Manager
 
-- `manage-macos-languages.sh` reads the current `AppleLanguages` setting.
-- It moves the requested languages to the front of the list.
-- It can place a language immediately before another language.
-- It can place a language at the very end of the list.
-- It adds a requested language if it is not already present.
-- It removes requested languages from the list when prefixed with `-`.
-- It accepts optional `+` prefixes for move/add operations.
-- It uses the system locale region for missing base language tags such as `ja` → `ja-CZ`.
-- It keeps the remaining languages in their original order unless explicitly repositioned.
-- It can preview the result with `--dry-run` or `-n` before writing changes.
-- It can show supported macOS language tags in verbose help via `--verbose` or `-v`.
-- It can target `account`, `login-window`, `locale`, `startup`, or `all` via the first argument.
-- It can restart the Mac with `--restart` or `-r`, even when used together with `--dry-run`.
-- `manage-steam-language.sh` reads the current Steam interface language from `registry.vdf`.
-- It updates the Steam client language value in place.
-- It can preview the planned change with `--dry-run` or `-n`.
-- It shows supported Steam language values in verbose help via `--verbose` or `-v`.
-- It refuses unsupported Steam language values.
+Use `manage-macos-languages.sh` when you want to quickly change language priority for apps and system components that follow the global macOS language preference order.
 
-The script is useful when you want to quickly change language priority for apps and system components that follow the global macOS language preference order.
+### Overview
 
-The Steam script is useful when you want to inspect or change the Steam client interface language without navigating the Steam settings UI.
+- Reads the current `AppleLanguages` setting.
+- Moves the requested languages to the front of the list.
+- Places a language immediately before another language.
+- Places a language at the very end of the list.
+- Adds a requested language if it is not already present.
+- Removes requested languages from the list when prefixed with `-`.
+- Accepts optional `+` prefixes for move/add operations.
+- Uses the system locale region for missing base language tags such as `ja` → `ja-CZ`.
+- Keeps the remaining languages in their original order unless explicitly repositioned.
+- Previews the result with `--dry-run` or `-n` before writing changes.
+- Shows supported macOS language tags in verbose help via `--verbose` or `-v`.
+- Targets `account`, `login-window`, `locale`, `startup`, or `all` via the first argument.
+- Restarts the Mac with `--restart` or `-r`, even when used together with `--dry-run`.
 
-## Requirements
+### Requirements
 
 - macOS
 - `bash`
 - The built-in `defaults` command
 - `sudo` access for `login-window` and `all`
 
-## Usage
-
-### macOS language order
+### Usage
 
 ```bash
 ./manage-macos-languages.sh account [--dry-run|-n] [--restart|-r] [language ...]
@@ -62,15 +56,7 @@ The Steam script is useful when you want to inspect or change the Steam client i
 
 Manages the macOS preferred language list by moving selected languages to the front, placing them before another language or at the end, adding missing ones when needed, and removing matching entries when requested.
 
-### Steam interface language
-
-```bash
-./manage-steam-language.sh [--dry-run|-n] [--force|-f] [language]
-```
-
-Reads the current Steam interface language, or writes a new supported Steam language value into Steam's `registry.vdf`.
-
-## Targets
+### Targets
 
 - `account`: reads or writes the current account language order
 - `login-window`: reads or writes the login window language order
@@ -78,15 +64,14 @@ Reads the current Steam interface language, or writes a new supported Steam lang
 - `startup`: reads or writes startup NVRAM language settings
 - `all`: reads or writes account, login window, locale, and startup NVRAM settings together, using a merged language list from all relevant sources
 
-## Options
+### Options
 
 - `--dry-run`, `-n`: prints the resulting values without writing changes
 - `--restart`, `-r`: requests an immediate restart after evaluating the command
 - `--help`, `-h`: prints the built-in help output
 - `--verbose`, `-v`: prints help together with supported macOS language tags
-- `--verbose`, `-v`: prints help together with the supported Steam language values
 
-## Language Argument Syntax
+### Language Argument Syntax
 
 - `xx`: move the language to the front or add it if missing
 - `+xx`: same as `xx`; explicit move/add syntax
@@ -98,9 +83,9 @@ If `yy` from `xx:yy` is missing, it is treated like an implicit added language, 
 
 For `locale`, `startup`, and `all`, the locale/startup value is derived from the first added language argument. A command that only removes languages is therefore rejected for those targets.
 
-The macOS script does not use a hardcoded in-repo whitelist. Verbose help prints the supported language tags detected from macOS system localization bundles under `/System/Library`, and the script can still accept additional missing tags such as `ja` or `en-US`.
+The macOS script does not use a hardcoded in-repo whitelist. Verbose help prints the supported language tags detected from macOS system localization bundles, and the script can still accept additional missing tags such as `ja` or `en-US`.
 
-## Examples
+### Examples
 
 ```bash
 ./manage-macos-languages.sh account
@@ -198,7 +183,7 @@ Requests a system restart after calculating the new order.
 
 Prints help together with the supported macOS language tags detected from the current macOS installation.
 
-## How Matching Works
+### How Matching Works
 
 - An exact language tag such as `en-US` matches the same tag first.
 - A base language such as `en` can match region-specific variants such as `en-US`.
@@ -211,13 +196,13 @@ Prints help together with the supported macOS language tags detected from the cu
 - Anchored placements are resolved before removals, so `ja:ko -ko` and `-ko ja:ko` produce the same placement for Japanese.
 - Languages not removed stay in the list and preserve their relative order unless explicitly repositioned.
 
-## Locale Behavior
+### Locale Behavior
 
 - The `locale` and `all` targets derive `AppleLocale` from the first added language.
 - Hyphens are converted to underscores, so `ja-CZ` becomes `ja_CZ`.
 - This intentionally changes locale formatting behavior too.
 
-## Notes
+### Notes
 
 - The script prints its status messages in English.
 - `login-window` and `all` update the system-wide language list and run `diskutil apfs updatePreboot /` to help FileVault and preboot screens pick up the change.
@@ -228,9 +213,31 @@ Prints help together with the supported macOS language tags detected from the cu
 - Use `--restart` or `-r` if you want the script to request an immediate restart, including together with `--dry-run`.
 - Test with `--dry-run` or `-n` first if you want to confirm the final values.
 - Run `./tests/test-manage-macos-languages.sh` to verify parser, verbose help, and ordering behavior against stubbed macOS settings and localization bundles.
-- Run `./tests/test-manage-steam-language.sh` to verify Steam registry parsing, verbose help, and updates against a temporary registry fixture.
 
-## Steam Language Script
+## Steam Language Manager
+
+Use `manage-steam-language.sh` when you want to inspect or change the Steam client interface language without navigating the Steam settings UI.
+
+### Overview
+
+- Reads the current Steam interface language from `registry.vdf`.
+- Updates the Steam client language value in place.
+- Previews the planned change with `--dry-run` or `-n`.
+- Shows supported Steam language values in verbose help via `--verbose` or `-v`.
+- Refuses unsupported Steam language values.
+
+### Requirements
+
+- macOS
+- `bash`
+
+### Usage
+
+```bash
+./manage-steam-language.sh [--dry-run|-n] [--force|-f] [language]
+```
+
+Reads the current Steam interface language, or writes a new supported Steam language value into Steam's `registry.vdf`.
 
 ### Options
 
@@ -296,6 +303,10 @@ Prints help together with the supported Steam language values.
 - `turkish`
 - `ukrainian`
 - `vietnamese`
+
+### Notes
+
+- Run `./tests/test-manage-steam-language.sh` to verify Steam registry parsing, verbose help, and updates against a temporary registry fixture.
 
 ## Repository Workflow
 
