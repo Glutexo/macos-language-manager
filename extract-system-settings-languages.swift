@@ -255,33 +255,6 @@ func closeAddDialogIfPresent(window: AXUIElement) {
     })
 }
 
-func preferredLanguagesFromDefaults() -> [LanguageEntry] {
-    let process = Process()
-    let pipe = Pipe()
-    process.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-    process.arguments = ["read", "-g", "AppleLanguages"]
-    process.standardOutput = pipe
-    process.standardError = Pipe()
-    do {
-        try process.run()
-    } catch {
-        return []
-    }
-    process.waitUntilExit()
-    guard process.terminationStatus == 0 else {
-        return []
-    }
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    guard let text = String(data: data, encoding: .utf8) else {
-        return []
-    }
-    let tags = text
-        .split(whereSeparator: { $0.isNewline })
-        .map { String($0).replacingOccurrences(of: "[()\", ]", with: "", options: .regularExpression) }
-        .filter { !$0.isEmpty }
-    return tags.map { LanguageEntry(primary: $0, secondary: "AppleLanguages tag") }
-}
-
 func printText(preferred: [LanguageEntry], available: [LanguageEntry]) {
     print("Preferred Languages:")
     for entry in preferred {
@@ -308,8 +281,7 @@ do {
     closeAddDialogIfPresent(window: window)
     let content = try contentRoot(in: window)
     waitForPreferredLanguages(in: window)
-    let preferredFromUI = preferredLanguages(from: window)
-    let preferred = preferredFromUI.isEmpty ? preferredLanguagesFromDefaults() : preferredFromUI
+    let preferred = preferredLanguages(from: window)
     let openedNow = try openAddDialogIfNeeded(window: window, content: content)
     let available = availableLanguages(from: window)
     if openedNow {
