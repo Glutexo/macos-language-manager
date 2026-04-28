@@ -14,7 +14,7 @@ display_target_list() {
 
 show_usage() {
   echo "Manage the macOS preferred language list."
-  echo "Move selected languages to the front, add missing ones, and remove entries when requested."
+  echo "Move selected languages to the front, place them before another language or at the end, add missing ones, and remove entries when requested."
   echo
   echo "Usage: $display_command account [--dry-run|-n] [--restart|-r] [language ...]"
   echo "       $display_command login-window [--dry-run|-n] [--restart|-r] [language ...]"
@@ -31,14 +31,17 @@ show_usage() {
   echo "  --help, -h      Show this help message."
   echo
   echo "Language arguments:"
-  echo "  xx     Move or add the language."
-  echo "  +xx    Move or add the language."
-  echo "  -xx    Remove matching language entries."
+  echo "  xx        Move or add the language at the front."
+  echo "  +xx       Move or add the language at the front."
+  echo "  -xx       Remove matching language entries."
+  echo "  xx:yy     Move or add xx immediately before yy."
+  echo "  xx:       Move or add xx at the end of the list."
   echo
   echo "Notes:"
   echo "  If you request a language that is not in the list yet, the script adds it."
   echo "  For short tags like 'ja', it also adds the system locale region when available."
   echo "  Example: with locale cs_CZ, 'ja' is added as 'ja-CZ'."
+  echo "  A missing anchor in xx:yy is treated like an implicit request for yy, so xx:yy behaves like xx yy."
   echo "  The locale target derives AppleLocale from the first added language, for example 'ja-CZ' -> 'ja_CZ'."
   echo "  The all target also updates NVRAM prev-lang:kbd for the startup screen."
   echo "  Writing login-window, startup, or system locale settings may prompt for administrator privileges."
@@ -51,6 +54,9 @@ show_usage() {
   echo "  $display_command all"
   echo "  $display_command account cs en"
   echo "  $display_command account --dry-run +ko ja -en"
+  echo "  $display_command account --dry-run ja:cs"
+  echo "  $display_command account --dry-run ja:ko -ko"
+  echo "  $display_command account --dry-run ja ko: cs"
   echo "  $display_command login-window de ko"
   echo "  $display_command locale ja"
   echo "  $display_command startup ja"
@@ -63,8 +69,17 @@ dry_run=false
 restart_after_change=false
 requested_languages=()
 removed_languages=()
+operation_kinds=()
+operation_sources=()
+operation_anchors=()
 parse_options=true
 target_set=false
+
+entity_languages=()
+entity_base_indexes=()
+entity_parents=()
+entity_root_sections=()
+entity_orders=()
 
 run_privileged() {
   if [ "$(id -u)" -eq 0 ]; then
@@ -462,29 +477,222 @@ matches_requested_language() {
 
 parse_language_argument() {
   local token="$1"
-  local operation="add"
-  local language="$token"
+  local normalized_token="$token"
+  local source=""
+  local anchor=""
 
-  case "$token" in
+  case "$normalized_token" in
     +*)
-      language="${token#+}"
-      ;;
-    -*)
-      operation="remove"
-      language="${token#-}"
+      normalized_token="${normalized_token#+}"
       ;;
   esac
 
-  if ! is_valid_configured_language "$language"; then
+  case "$normalized_token" in
+    -* )
+      source="${normalized_token#-}"
+      if [[ "$source" == *:* ]]; then
+        echo "Removal syntax does not support anchors: $token"
+        exit 1
+      fi
+      if ! is_valid_configured_language "$source"; then
+        echo "Invalid language value: $token"
+        exit 1
+      fi
+      removed_languages+=("$source")
+      return 0
+      ;;
+  esac
+
+  if [[ "$normalized_token" == *:* ]]; then
+    source="${normalized_token%%:*}"
+    anchor="${normalized_token#*:}"
+    if [ -z "$source" ]; then
+      echo "Invalid language value: $token"
+      exit 1
+    fi
+    if ! is_valid_configured_language "$source"; then
+      echo "Invalid language value: $token"
+      exit 1
+    fi
+    if [ -n "$anchor" ] && ! is_valid_configured_language "$anchor"; then
+      echo "Invalid language value: $token"
+      exit 1
+    fi
+
+    if [ -n "$anchor" ]; then
+      operation_kinds+=("before")
+      operation_sources+=("$source")
+      operation_anchors+=("$anchor")
+    else
+      operation_kinds+=("end")
+      operation_sources+=("$source")
+      operation_anchors+=("")
+    fi
+    requested_languages+=("$source")
+    return 0
+  fi
+
+  if ! is_valid_configured_language "$normalized_token"; then
     echo "Invalid language value: $token"
     exit 1
   fi
 
-  if [ "$operation" = "remove" ]; then
-    removed_languages+=("$language")
-  else
-    requested_languages+=("$language")
+  operation_kinds+=("front")
+  operation_sources+=("$normalized_token")
+  operation_anchors+=("")
+  requested_languages+=("$normalized_token")
+}
+
+find_matching_entity() {
+  local requested="$1"
+  local index=0
+
+  while [ "$index" -lt "${#entity_languages[@]}" ]; do
+    if matches_requested_language "$requested" "${entity_languages[$index]}"; then
+      printf '%s\n' "$index"
+      return 0
+    fi
+    index=$((index + 1))
+  done
+
+  return 1
+}
+
+create_entity() {
+  local language="$1"
+  local base_index="$2"
+  local root_section="$3"
+  local order="$4"
+  local new_index="${#entity_languages[@]}"
+
+  entity_languages+=("$language")
+  entity_base_indexes+=("$base_index")
+  entity_parents+=(-1)
+  entity_root_sections+=("$root_section")
+  entity_orders+=("$order")
+
+  printf '%s\n' "$new_index"
+}
+
+ensure_entity() {
+  local requested="$1"
+  local default_section="$2"
+  local default_order="$3"
+  local found_index=""
+  local created_language=""
+
+  found_index="$(find_matching_entity "$requested" || true)"
+  if [ -n "$found_index" ]; then
+    printf '%s\n' "$found_index"
+    return 0
   fi
+
+  created_language="$(build_missing_language_tag "$requested")"
+  create_entity "$created_language" -1 "$default_section" "$default_order"
+}
+
+is_ancestor_entity() {
+  local potential_ancestor="$1"
+  local entity_index="$2"
+  local parent_index=""
+
+  parent_index="${entity_parents[$entity_index]}"
+  while [ "$parent_index" -ge 0 ]; do
+    if [ "$parent_index" -eq "$potential_ancestor" ]; then
+      return 0
+    fi
+    parent_index="${entity_parents[$parent_index]}"
+  done
+
+  return 1
+}
+
+set_entity_root() {
+  local entity_index="$1"
+  local root_section="$2"
+  local order="$3"
+
+  entity_parents[$entity_index]=-1
+  entity_root_sections[$entity_index]="$root_section"
+  entity_orders[$entity_index]="$order"
+}
+
+set_entity_parent() {
+  local entity_index="$1"
+  local parent_index="$2"
+  local order="$3"
+
+  if [ "$entity_index" -eq "$parent_index" ]; then
+    echo "A language cannot be placed relative to itself: ${entity_languages[$entity_index]}"
+    exit 1
+  fi
+
+  if is_ancestor_entity "$entity_index" "$parent_index"; then
+    echo "Cannot create a placement cycle involving ${entity_languages[$entity_index]} and ${entity_languages[$parent_index]}."
+    exit 1
+  fi
+
+  entity_parents[$entity_index]="$parent_index"
+  entity_orders[$entity_index]="$order"
+}
+
+get_sorted_entity_ids() {
+  local mode="$1"
+  local needle="$2"
+  local index=0
+  local sort_key=""
+
+  while [ "$index" -lt "${#entity_languages[@]}" ]; do
+    if [ "$mode" = "root" ]; then
+      if [ "${entity_parents[$index]}" -eq -1 ] && [ "${entity_root_sections[$index]}" = "$needle" ]; then
+        if [ "$needle" = "base" ]; then
+          sort_key="${entity_base_indexes[$index]}"
+        else
+          sort_key="${entity_orders[$index]}"
+        fi
+        printf '%012d:%s\n' "$sort_key" "$index"
+      fi
+    else
+      if [ "${entity_parents[$index]}" -eq "$needle" ]; then
+        sort_key="${entity_orders[$index]}"
+        printf '%012d:%s\n' "$sort_key" "$index"
+      fi
+    fi
+    index=$((index + 1))
+  done | sort -n | cut -d: -f2
+}
+
+ordered_languages=()
+
+append_flattened_entity() {
+  local entity_index="$1"
+  local child_index=""
+
+  while IFS= read -r child_index; do
+    if [ -n "$child_index" ]; then
+      append_flattened_entity "$child_index"
+    fi
+  done <<EOCHILDREN
+$(get_sorted_entity_ids child "$entity_index")
+EOCHILDREN
+
+  ordered_languages+=("${entity_languages[$entity_index]}")
+}
+
+build_ordered_languages() {
+  local root_index=""
+
+  ordered_languages=()
+
+  for section in front base end; do
+    while IFS= read -r root_index; do
+      if [ -n "$root_index" ]; then
+        append_flattened_entity "$root_index"
+      fi
+    done <<EOROOTS
+$(get_sorted_entity_ids root "$section")
+EOROOTS
+  done
 }
 
 should_remove_language() {
@@ -619,35 +827,51 @@ if [ "${#requested_languages[@]}" -lt 1 ] && (should_use_locale_target || should
   exit 1
 fi
 
+entity_languages=()
+entity_base_indexes=()
+entity_parents=()
+entity_root_sections=()
+entity_orders=()
+
+base_index=0
+for language in "${current_languages[@]}"; do
+  create_entity "$language" "$base_index" base "$base_index" >/dev/null
+  base_index=$((base_index + 1))
+done
+
+operation_order=0
+operation_index=0
+while [ "$operation_index" -lt "${#operation_kinds[@]}" ]; do
+  operation_order=$((operation_order + 1))
+
+  kind="${operation_kinds[$operation_index]}"
+  source_request="${operation_sources[$operation_index]}"
+  anchor_request="${operation_anchors[$operation_index]}"
+
+  source_entity="$(ensure_entity "$source_request" front "$operation_order")"
+
+  case "$kind" in
+    front)
+      set_entity_root "$source_entity" front "$operation_order"
+      ;;
+    end)
+      set_entity_root "$source_entity" end "$operation_order"
+      ;;
+    before)
+      anchor_entity="$(ensure_entity "$anchor_request" front "$operation_order")"
+      set_entity_parent "$source_entity" "$anchor_entity" "$operation_order"
+      ;;
+  esac
+
+  operation_index=$((operation_index + 1))
+done
+
+build_ordered_languages
+
 result=()
-
 if should_use_account_languages || should_use_login_window_languages; then
-  for requested in "${requested_languages[@]}"; do
-    found_match=false
-
-    for lang in "${current_languages[@]}"; do
-      if matches_requested_language "$requested" "$lang"; then
-        found_match=true
-        if ! should_remove_language "$lang" && ! is_in_list "$lang" "${result[@]}"; then
-          result+=("$lang")
-        fi
-        break
-      fi
-    done
-
-    if [ "$found_match" = false ]; then
-      missing_language="$(build_missing_language_tag "$requested")"
-      if ! should_remove_language "$missing_language" && ! is_in_list "$missing_language" "${result[@]}"; then
-        result+=("$missing_language")
-      fi
-    fi
-  done
-
-  for lang in "${current_languages[@]}"; do
-    if should_remove_language "$lang"; then
-      continue
-    fi
-    if ! is_in_list "$lang" "${result[@]}"; then
+  for lang in "${ordered_languages[@]}"; do
+    if ! should_remove_language "$lang"; then
       result+=("$lang")
     fi
   done

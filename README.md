@@ -8,11 +8,13 @@ This repository currently provides one script:
 
 - `manage-macos-languages.sh` reads the current `AppleLanguages` setting.
 - It moves the requested languages to the front of the list.
+- It can place a language immediately before another language.
+- It can place a language at the very end of the list.
 - It adds a requested language if it is not already present.
 - It removes requested languages from the list when prefixed with `-`.
 - It accepts optional `+` prefixes for move/add operations.
 - It uses the system locale region for missing base language tags such as `ja` -> `ja-CZ`.
-- It keeps the remaining languages in their original order.
+- It keeps the remaining languages in their original order unless explicitly repositioned.
 - It can preview the result with `--dry-run` or `-n` before writing changes.
 - It can target `account`, `login-window`, `locale`, `startup`, or `all` via the first argument.
 - It can restart the Mac with `--restart` or `-r`, even when used together with `--dry-run`.
@@ -48,7 +50,7 @@ The script is useful when you want to quickly change language priority for apps 
 ./manage-macos-languages.sh all [--dry-run|-n] [--restart|-r] [language ...]
 ```
 
-Manages the macOS preferred language list by moving selected languages to the front, adding missing ones when needed, and removing matching entries when requested.
+Manages the macOS preferred language list by moving selected languages to the front, placing them before another language or at the end, adding missing ones when needed, and removing matching entries when requested.
 
 ## Targets
 
@@ -69,6 +71,10 @@ Manages the macOS preferred language list by moving selected languages to the fr
 - `xx`: move the language to the front or add it if missing
 - `+xx`: same as `xx`; explicit move/add syntax
 - `-xx`: remove matching language entries from the list
+- `xx:yy`: move or add `xx` immediately before `yy`
+- `xx:`: move or add `xx` at the end of the list
+
+If `yy` from `xx:yy` is missing, it is treated like an implicit added language, so `ja:cs` behaves like `ja cs`.
 
 For `locale`, `startup`, and `all`, the locale/startup value is derived from the first added language argument. A command that only removes languages is therefore rejected for those targets.
 
@@ -117,6 +123,24 @@ Moves Czech and English to the front of the current account language list.
 Shows the reordered language list without saving it, explicitly adds or moves Korean and Japanese, and removes matching English entries.
 
 ```bash
+./manage-macos-languages.sh account --dry-run ja:cs
+```
+
+Adds or moves Japanese immediately before Czech. If Czech is missing, the result behaves like `ja cs`.
+
+```bash
+./manage-macos-languages.sh account --dry-run ja:ko -ko
+```
+
+Places Japanese where Korean was positioned before removals are applied, then removes matching Korean entries.
+
+```bash
+./manage-macos-languages.sh account --dry-run ja ko: cs
+```
+
+Moves or adds Japanese to the front, keeps Czech in the front section after it, and puts Korean at the end.
+
+```bash
 ./manage-macos-languages.sh login-window de ko
 ```
 
@@ -154,9 +178,10 @@ Requests a system restart after calculating the new order.
 - For short tags such as `ja`, it also appends the current system locale region when available.
 - Example: if the current locale is `cs_CZ`, requesting `ja` inserts `ja-CZ`.
 - If no configured language matches a fully qualified tag such as `en-US`, that exact tag is inserted.
-- Only the first matching configured language is moved for each added item.
+- Only the first matching configured language is moved or anchored for each added item.
 - A removed base language such as `-en` removes matching region-specific variants such as `en-US`.
-- Languages not removed stay in the list and preserve their relative order.
+- Anchored placements are resolved before removals, so `ja:ko -ko` and `-ko ja:ko` produce the same placement for Japanese.
+- Languages not removed stay in the list and preserve their relative order unless explicitly repositioned.
 
 ## Locale Behavior
 
