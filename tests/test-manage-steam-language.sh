@@ -76,6 +76,7 @@ assert_eq "Current Steam interface language: english" "$output" "script should p
 
 output="$(run_case --help)"
 assert_contains "$output" "Usage: ./manage-steam-language.sh [--dry-run|-n] [--force|-f] [language]" "help should show usage"
+assert_contains "$output" "Use --verbose or -v for the supported language list." "help should mention verbose help"
 if [[ "$output" == *"Supported Steam interface language values:"* ]]; then
   echo "FAIL: plain help should stay concise"
   exit 1

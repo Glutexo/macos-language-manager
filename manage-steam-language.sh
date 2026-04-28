@@ -47,7 +47,7 @@ show_usage() {
   echo "Options:"
   echo "  --dry-run, -n   Print the planned change without writing it."
   echo "  --force, -f     Write even if Steam appears to be running."
-  echo "  --help, -h      Show this help message."
+  echo "  --help, -h      Show this help message. Use --verbose or -v for the supported language list."
   echo "  --verbose, -v   Show help together with supported language values."
   echo
   echo "Examples:"
