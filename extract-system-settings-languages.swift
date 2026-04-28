@@ -41,6 +41,7 @@ func shell(_ launchPath: String, _ arguments: [String]) throws {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: launchPath)
     process.arguments = arguments
+    process.standardOutput = FileHandle.nullDevice
     try process.run()
     process.waitUntilExit()
     if process.terminationStatus != 0 {
@@ -164,30 +165,45 @@ func contentRoot(in window: AXUIElement) throws -> AXUIElement {
           let splitGroup = child(rootGroup, 0),
           let rightGroup = child(splitGroup, 3),
           let wrapper = child(rightGroup, 0),
-          let outerScroll = child(wrapper, 0),
-          let content = child(outerScroll, 0) else {
+          let outerScroll = child(wrapper, 0) else {
         throw ToolError.message("Could not locate the Language & Region content panel.")
     }
-    return content
+    return outerScroll
+}
+
+func rowCount(in outline: AXUIElement) -> Int {
+    children(of: outline).filter { role(of: $0) == kAXRowRole as String }.count
+}
+
+func preferredLanguagesOutline(in content: AXUIElement) -> AXUIElement? {
+    firstDescendant(of: content, where: {
+        role(of: $0) == kAXOutlineRole as String && rowCount(in: $0) > 0
+    })
+}
+
+func preferredLanguagesGroup(in content: AXUIElement) -> AXUIElement? {
+    firstDescendant(of: content, where: { element in
+        guard role(of: element) == kAXGroupRole as String else { return false }
+        let hasOutline = descendants(of: element, where: {
+            role(of: $0) == kAXOutlineRole as String && rowCount(in: $0) > 0
+        }).isEmpty == false
+        let hasButton = children(of: element).contains(where: { role(of: $0) == kAXButtonRole as String })
+        return hasOutline && hasButton
+    })
 }
 
 func waitForPreferredLanguages(in window: AXUIElement) {
     _ = waitUntil(timeout: 5.0, condition: {
-        guard let content = try? contentRoot(in: window),
-              let preferredGroup = child(content, 0),
-              let scrollArea = child(preferredGroup, 1),
-              let outline = child(scrollArea, 0) else {
+        guard let content = try? contentRoot(in: window) else {
             return false
         }
-        return children(of: outline).contains(where: { role(of: $0) == kAXRowRole as String })
+        return preferredLanguagesOutline(in: content) != nil
     })
 }
 
 func preferredLanguages(from window: AXUIElement) -> [LanguageEntry] {
     guard let content = try? contentRoot(in: window),
-          let preferredGroup = child(content, 0),
-          let scrollArea = child(preferredGroup, 1),
-          let outline = child(scrollArea, 0) else {
+          let outline = preferredLanguagesOutline(in: content) else {
         return []
     }
 
@@ -204,7 +220,8 @@ func openAddDialogIfNeeded(window: AXUIElement, content: AXUIElement) throws -> 
     if firstDescendant(of: window, where: { role(of: $0) == kAXTableRole as String }) != nil {
         return false
     }
-    guard let preferredGroup = child(content, 0), let addButton = child(preferredGroup, 2) else {
+    guard let preferredGroup = preferredLanguagesGroup(in: content),
+          let addButton = children(of: preferredGroup).first(where: { role(of: $0) == kAXButtonRole as String }) else {
         throw ToolError.message("Could not locate the add-language button.")
     }
     guard AXUIElementPerformAction(addButton, kAXPressAction as CFString) == .success else {
@@ -239,17 +256,12 @@ func availableLanguages(from window: AXUIElement) -> [LanguageEntry] {
 }
 
 func closeAddDialogIfPresent(window: AXUIElement) {
-    guard let sheet = firstDescendant(of: window, where: { role(of: $0) == kAXSheetRole as String }) else {
+    guard firstDescendant(of: window, where: { role(of: $0) == kAXSheetRole as String }) != nil else {
         return
     }
-    let buttons = descendants(of: sheet, where: { role(of: $0) == kAXButtonRole as String })
-    if let firstButton = buttons.first {
-        _ = AXUIElementPerformAction(firstButton, kAXPressAction as CFString)
-    } else {
-        _ = try? shell("/usr/bin/osascript", [
-            "-e", "tell application \"System Events\" to key code 53"
-        ])
-    }
+    _ = try? shell("/usr/bin/osascript", [
+        "-e", "tell application \"System Events\" to key code 53"
+    ])
     _ = waitUntil(timeout: 3.0, condition: {
         firstDescendant(of: window, where: { role(of: $0) == kAXSheetRole as String }) == nil
     })
