@@ -13,7 +13,7 @@ This repository currently provides two scripts:
 - It adds a requested language if it is not already present.
 - It removes requested languages from the list when prefixed with `-`.
 - It accepts optional `+` prefixes for move/add operations.
-- It uses the system locale region for missing base language tags such as `ja` -> `ja-CZ`.
+- It uses the system locale region for missing base language tags such as `ja` → `ja-CZ`.
 - It keeps the remaining languages in their original order unless explicitly repositioned.
 - It can preview the result with `--dry-run` or `-n` before writing changes.
 - It can show supported macOS language tags in verbose help via `--verbose` or `-v`.
