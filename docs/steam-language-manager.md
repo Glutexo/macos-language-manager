@@ -78,6 +78,12 @@ Important characteristics:
 
 The script uses a hardcoded allowlist.
 
+Source:
+
+- Steamworks documentation, Languages Supported on Steam: https://partner.steamgames.com/doc/store/localization/languages?language=english
+- The list in `supported_languages` mirrors the `Full Platform Supported Languages` API language codes from that page, except `arabic`.
+- Steamworks notes that Arabic is available for game depots and per-game language selection, but the Steam UI itself is not currently translated into Arabic, so players cannot select it as a Steam client interface language.
+
 Supported values:
 
 - `bulgarian`
