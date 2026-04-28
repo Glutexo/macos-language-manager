@@ -172,4 +172,4 @@ Requests a system restart after calculating the new order.
 
 ## License
 
-MIT. See the `LICENSE` file.
+CC0 1.0 Universal. See the `LICENSE` file.
