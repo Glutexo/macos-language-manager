@@ -6,6 +6,37 @@ steam_dir="${STEAM_DIR:-$HOME/Library/Application Support/Steam}"
 registry_file="$steam_dir/registry.vdf"
 dry_run=false
 force_write=false
+supported_languages=(
+  bulgarian
+  schinese
+  tchinese
+  czech
+  danish
+  dutch
+  english
+  finnish
+  french
+  german
+  greek
+  hungarian
+  indonesian
+  italian
+  japanese
+  koreana
+  norwegian
+  polish
+  portuguese
+  brazilian
+  romanian
+  russian
+  spanish
+  latam
+  swedish
+  thai
+  turkish
+  ukrainian
+  vietnamese
+)
 
 show_usage() {
   echo "Read or change the Steam interface language on macOS."
@@ -21,6 +52,9 @@ show_usage() {
   echo "  $display_command"
   echo "  $display_command czech"
   echo "  $display_command --dry-run japanese"
+  echo
+  echo "Supported Steam interface language values:"
+  printf '  %s\n' "${supported_languages[@]}"
 }
 
 fail() {
@@ -34,14 +68,23 @@ ensure_registry_exists() {
 
 validate_language() {
   local language="$1"
+  local supported_language
 
   case "$language" in
-    [A-Za-z0-9_-]*)
-      return 0
+    [a-z]*)
+      ;;
+    *)
+      fail "Invalid Steam language value: $language"
       ;;
   esac
 
-  fail "Invalid Steam language value: $language"
+  for supported_language in "${supported_languages[@]}"; do
+    if [ "$language" = "$supported_language" ]; then
+      return 0
+    fi
+  done
+
+  fail "Unsupported Steam interface language: $language"
 }
 
 is_steam_running() {
