@@ -147,10 +147,10 @@ order="$(run_and_capture_order ja:pl)"
 assert_eq "ja-CZ,pl-CZ,en-US,ko-KR,fr-FR,cs-CZ" "$order" "ja:pl should behave like explicit ja pl when the anchor is missing"
 
 order="$(run_and_capture_order ja:ko -ko)"
-assert_eq "en-US,fr-FR,ja-CZ,cs-CZ" "$order" "ja:ko -ko should keep Japanese in Korean's former position"
+assert_eq "en-US,ja-CZ,fr-FR,cs-CZ" "$order" "ja:ko -ko should keep Japanese in Korean's former position"
 
 order="$(run_and_capture_order -ko ja:ko)"
-assert_eq "en-US,fr-FR,ja-CZ,cs-CZ" "$order" "-ko ja:ko should match ja:ko -ko"
+assert_eq "en-US,ja-CZ,fr-FR,cs-CZ" "$order" "-ko ja:ko should match ja:ko -ko"
 
 order="$(run_and_capture_order ja: ko: cs)"
 assert_eq "ja-CZ,en-US,fr-FR,cs-CZ,ko-KR" "$order" "ja ko: cs should keep Korean at the end"
