@@ -215,6 +215,7 @@ Requests a system restart after calculating the new order.
 - The script suppresses noisy `updatePreboot` output and only prints it if the refresh actually fails.
 - Use `--restart` or `-r` if you want the script to request an immediate restart, including together with `--dry-run`.
 - Test with `--dry-run` or `-n` first if you want to confirm the final values.
+- Run `./tests/test-manage-macos-languages.sh` to verify parser and ordering behavior against stubbed macOS settings.
 
 ## Steam Language Script
 
