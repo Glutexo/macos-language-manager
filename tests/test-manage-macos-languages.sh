@@ -131,6 +131,16 @@ assert_contains "$output" "Detected macOS language tags:" "verbose help should s
 assert_contains "$output" "  en-US" "verbose help should include detected tags"
 assert_contains "$output" "accepts missing tags such as ja or en-US" "verbose help should explain non-whitelist behavior"
 
+output="$(run_case all --dry-run -en ko:cs)"
+assert_contains "$output" $'New language order:
+  fr-FR
+  ko-KR
+  cs-CZ' "all target should move Korean behind French before locale derivation"
+assert_contains "$output" $'New locale value:
+  fr_FR' "all target should derive locale from the first resulting language"
+assert_contains "$output" $'New startup language setting:
+  fr:252' "all target should derive startup language from the first resulting language"
+
 order="$(run_and_capture_order ja:cs)"
 assert_eq "en-US,ko-KR,fr-FR,ja-CZ,cs-CZ" "$order" "ja:cs should place Japanese immediately before Czech"
 
