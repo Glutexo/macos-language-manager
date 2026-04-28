@@ -40,7 +40,7 @@ Notes:
 
 - Requires Accessibility permission for the terminal or app that runs it.
 - The addable-language list comes from the `+` dialog in System Settings.
-- If the preferred-language UI list is temporarily unavailable, the script falls back to `defaults read -g AppleLanguages`.
+- Preferred languages are read only from the visible System Settings UI.
 
 ### `manage-steam-language.sh`
 
