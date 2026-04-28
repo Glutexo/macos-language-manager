@@ -3,6 +3,7 @@ set -eo pipefail
 
 display_command="./manage-macos-languages.sh"
 target_mode=""
+verbose_help=false
 
 display_target_list() {
   echo "  account        Read or write the current account language order."
@@ -28,7 +29,8 @@ show_usage() {
   echo "Options:"
   echo "  --dry-run, -n   Print the new values without saving changes."
   echo "  --restart, -r   Restart the Mac after evaluating the command."
-  echo "  --help, -h      Show this help message."
+  echo "  --help, -h      Show this help message. Use --verbose or -v for detected language tags."
+  echo "  --verbose, -v   Show help together with detected macOS language tags."
   echo
   echo "Language arguments:"
   echo "  xx        Move or add the language at the front."
@@ -63,6 +65,11 @@ show_usage() {
   echo "  $display_command all ja ko -en"
   echo "  $display_command account --restart ja ko"
   echo "  $display_command --help"
+
+  if $verbose_help; then
+    echo
+    print_verbose_help_languages
+  fi
 }
 
 dry_run=false
@@ -187,6 +194,27 @@ read_system_locale() {
 
 read_startup_language_value() {
   nvram prev-lang:kbd 2>/dev/null | awk -F'\t' 'NF {print $NF}'
+}
+
+print_verbose_help_languages() {
+  local languages=()
+  local language=""
+
+  while IFS= read -r language; do
+    if [ -n "$language" ] && ! is_in_list "$language" "${languages[@]}"; then
+      languages+=("$language")
+    fi
+  done <<EOLANGS
+$(read_all_languages)
+EOLANGS
+
+  echo "Detected macOS language tags:"
+  if [ "${#languages[@]}" -gt 0 ]; then
+    printf '  %s\n' "${languages[@]}"
+  else
+    echo "  unavailable"
+  fi
+  echo "  The script also accepts missing tags such as ja or en-US and inserts them when needed."
 }
 
 read_selected_keyboard_layout_id() {
@@ -722,6 +750,11 @@ while [ "$#" -gt 0 ]; do
         continue
         ;;
       --help|-h)
+        show_usage
+        exit 0
+        ;;
+      --verbose|-v)
+        verbose_help=true
         show_usage
         exit 0
         ;;

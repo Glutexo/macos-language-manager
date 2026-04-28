@@ -119,6 +119,18 @@ run_and_capture_order() {
   run_case account --dry-run "$@" | extract_languages | paste -sd',' -
 }
 
+output="$(run_case --help)"
+assert_contains "$output" "Use --verbose or -v for detected language tags." "help should mention verbose help"
+if [[ "$output" == *"Detected macOS language tags:"* ]]; then
+  echo "FAIL: plain help should stay concise"
+  exit 1
+fi
+
+output="$(run_case --verbose)"
+assert_contains "$output" "Detected macOS language tags:" "verbose help should show detected language tags"
+assert_contains "$output" "  en-US" "verbose help should include detected tags"
+assert_contains "$output" "accepts missing tags such as ja or en-US" "verbose help should explain non-whitelist behavior"
+
 order="$(run_and_capture_order ja:cs)"
 assert_eq "en-US,ko-KR,fr-FR,ja-CZ,cs-CZ" "$order" "ja:cs should place Japanese immediately before Czech"
 
