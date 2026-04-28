@@ -278,31 +278,15 @@ Consequences:
 
 Verbose help does not use a hardcoded in-repo whitelist.
 
-### Renderable UI languages
-
-Default file:
+It reads Apple's renderable UI language list:
 
 ```text
 /System/Library/PrivateFrameworks/IntlPreferences.framework/Resources/RenderableUILanguages.plist
 ```
 
-Behavior:
+The script preserves Apple's order, normalizes `_` to `-`, and prints the tags from that plist. This matches the language identifiers used by System Settings > Language & Region for addable UI languages.
 
-- Reads the same renderable-language identifier list used by System Settings > Language & Region.
-- Preserves the order from Apple's plist.
-- Normalizes `_` to `-` when printing tags.
-- Includes broad UI language identifiers such as `ale`, `apw`, `tlh`, `yue-Hans`, and `zun`.
-
-Why this source:
-
-- System Settings loads `com.apple.Localization-Settings.extension` from `/System/Library/ExtensionKit/Extensions/Localization.appex`.
-- That extension links against `IntlPreferences.framework` and uses language-provider code around `availableLanguages(activeLanguages:)` and `renderableUILanguages`.
-- The plist contained 444 renderable language identifiers on macOS 26.4.1; the add-language UI showed 432 because 12 were already in the preferred-language list.
-- Display names are resolved through Foundation/CoreFoundation locale APIs backed by ICU data, for example `/usr/share/icu/icudt78l.dat`.
-
-Override hook:
-
-- `MACOS_LANGUAGE_RENDERABLE_UI_LANGUAGES_PATH` can point to a different plist file for tests or investigation.
+For tests or investigation, `MACOS_LANGUAGE_RENDERABLE_UI_LANGUAGES_PATH` can point to another plist file with the same array format.
 
 ## Privilege Boundaries
 
