@@ -203,12 +203,28 @@ print_verbose_help_languages() {
   local source_path="${MACOS_LANGUAGE_RENDERABLE_UI_LANGUAGES_PATH:-/System/Library/PrivateFrameworks/IntlPreferences.framework/Resources/RenderableUILanguages.plist}"
 
   if [ -f "$source_path" ]; then
+    # Prefer JSON conversion over `plutil -p` because the pretty-printed format
+    # has changed across macOS releases and can leave the verbose list empty.
     while IFS= read -r language; do
       language="${language//_/-}"
       if is_valid_configured_language "$language" && ! is_in_list "$language" "${languages[@]}"; then
         languages+=("$language")
       fi
-    done < <(plutil -p "$source_path" 2>/dev/null | awk -F'"' '/=>/ {print $2}')
+    done < <(
+      plutil -convert json -o - "$source_path" 2>/dev/null \
+        | tr -d '[]' \
+        | tr ',' '\n' \
+        | sed -n 's/^[[:space:]]*"//; s/"[[:space:]]*$//; p'
+    )
+
+    if [ "${#languages[@]}" -eq 0 ]; then
+      while IFS= read -r language; do
+        language="${language//_/-}"
+        if is_valid_configured_language "$language" && ! is_in_list "$language" "${languages[@]}"; then
+          languages+=("$language")
+        fi
+      done < <(plutil -p "$source_path" 2>/dev/null | awk -F'"' '/=>/ {print $2}')
+    fi
   fi
 
   echo "Supported macOS language tags:"

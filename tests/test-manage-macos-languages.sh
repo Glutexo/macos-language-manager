@@ -91,6 +91,26 @@ exit 1
 EOS
 chmod +x "$stub_dir/nvram"
 
+cat > "$stub_dir/plutil" <<'EOS'
+#!/bin/bash
+set -euo pipefail
+
+if [ "$#" -eq 5 ] && [ "$1" = "-convert" ] && [ "$2" = "json" ] && [ "$3" = "-o" ] && [ "$4" = "-" ]; then
+  cat <<'EOOUT'
+["en","az","az-Cyrl","az-Latn","pt_BR","tlh"]
+EOOUT
+  exit 0
+fi
+
+if [ "$#" -eq 2 ] && [ "$1" = "-p" ]; then
+  echo "nonstandard plutil output"
+  exit 0
+fi
+
+exit 1
+EOS
+chmod +x "$stub_dir/plutil"
+
 extract_languages() {
   awk '
     /^New language order:/ {capture=1; next}
