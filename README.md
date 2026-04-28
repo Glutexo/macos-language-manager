@@ -25,6 +25,23 @@ Technical details:
 
 - [macos-language-manager.md](docs/macos-language-manager.md)
 
+### `extract-system-settings-languages.swift`
+
+Extracts the preferred language list and the full addable-language list from System Settings > Language & Region via Accessibility.
+
+Usage:
+
+```bash
+./extract-system-settings-languages.swift
+./extract-system-settings-languages.swift --json
+```
+
+Notes:
+
+- Requires Accessibility permission for the terminal or app that runs it.
+- The addable-language list comes from the `+` dialog in System Settings.
+- If the preferred-language UI list is temporarily unavailable, the script falls back to `defaults read -g AppleLanguages`.
+
 ### `manage-steam-language.sh`
 
 Reads or changes the Steam client interface language on macOS.
