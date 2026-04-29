@@ -269,12 +269,28 @@ func preferredCode(for normalizedName: String, from candidates: [LanguageCodeCan
     return sorted.first?.code
 }
 
+func generalizedLanguageName(_ value: String) -> String {
+    value
+        .replacingOccurrences(of: #"\s*[\(（].*?[\)）]\s*"#, with: "", options: .regularExpression)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
 func languageCode(for primary: String, secondary: String, lookup: [String: [LanguageCodeCandidate]]) -> String? {
     let candidates = [primary, secondary]
         .map(normalizeLanguageName)
         .filter { !$0.isEmpty }
 
     for candidate in candidates {
+        if let matches = lookup[candidate], let code = preferredCode(for: candidate, from: matches) {
+            return code
+        }
+    }
+
+    let generalizedCandidates = candidates
+        .map(generalizedLanguageName)
+        .filter { !$0.isEmpty }
+
+    for candidate in generalizedCandidates {
         if let matches = lookup[candidate], let code = preferredCode(for: candidate, from: matches) {
             return code
         }
