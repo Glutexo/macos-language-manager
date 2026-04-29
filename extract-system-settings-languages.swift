@@ -15,6 +15,7 @@ enum ToolError: Error, CustomStringConvertible {
 }
 
 struct LanguageEntry: Hashable, Encodable {
+    let code: String?
     let primary: String
     let secondary: String
 }
@@ -22,6 +23,11 @@ struct LanguageEntry: Hashable, Encodable {
 struct Output: Encodable {
     let preferred: [LanguageEntry]
     let available: [LanguageEntry]
+}
+
+struct LanguageCodeCandidate {
+    let code: String
+    let specificity: Int
 }
 
 let args = Array(CommandLine.arguments.dropFirst())
@@ -122,6 +128,144 @@ func descendants(of element: AXUIElement, where predicate: (AXUIElement) -> Bool
     return result
 }
 
+func normalizeLanguageName(_ value: String) -> String {
+    let normalized = value
+        .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: nil)
+        .replacingOccurrences(of: "\u{00A0}", with: " ")
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    let aliases = [
+        "(uk)": "(united kingdom)",
+        "(ee. uu.)": "(estados unidos)",
+        "(британия)": "(великобритания)"
+    ]
+
+    return aliases.reduce(normalized) { partial, alias in
+        partial.replacingOccurrences(of: alias.key, with: alias.value)
+    }
+}
+
+func sentenceCase(_ value: String, locale: Locale) -> String {
+    guard let first = value.first else {
+        return value
+    }
+    return String(first).uppercased(with: locale) + value.dropFirst()
+}
+
+func uniquePreferred<T>(_ values: [T?]) -> [T] {
+    var seen: Set<String> = []
+    var result: [T] = []
+
+    for value in values {
+        guard let value else { continue }
+        let key = String(describing: value)
+        if seen.insert(key).inserted {
+            result.append(value)
+        }
+    }
+    return result
+}
+
+func buildLanguageCodeLookup() -> [String: [LanguageCodeCandidate]] {
+    var lookup: [String: [LanguageCodeCandidate]] = [:]
+    let userLocale = Locale.current
+
+    func register(name: String?, code: String, specificity: Int) {
+        guard let name else { return }
+        let normalized = normalizeLanguageName(name)
+        guard !normalized.isEmpty else { return }
+        let candidate = LanguageCodeCandidate(code: code, specificity: specificity)
+        var candidates = lookup[normalized] ?? []
+        if !candidates.contains(where: { $0.code == code }) {
+            candidates.append(candidate)
+            lookup[normalized] = candidates
+        }
+    }
+
+    for rawIdentifier in Locale.availableIdentifiers {
+        let components = NSLocale.components(fromLocaleIdentifier: rawIdentifier)
+        guard let languageCode = components[NSLocale.Key.languageCode.rawValue], !languageCode.isEmpty else {
+            continue
+        }
+
+        let scriptCode = components[NSLocale.Key.scriptCode.rawValue]
+        let countryCode = components[NSLocale.Key.countryCode.rawValue]
+
+        let codeParts = [languageCode, scriptCode, countryCode].compactMap { $0 }.filter { !$0.isEmpty }
+        let canonicalCode = codeParts.joined(separator: "-")
+        guard !canonicalCode.isEmpty else { continue }
+        let specificity = codeParts.count - 1
+
+        let locale = Locale(identifier: rawIdentifier)
+        let candidateNames = uniquePreferred([
+            locale.localizedString(forIdentifier: rawIdentifier),
+            locale.localizedString(forIdentifier: canonicalCode),
+            locale.localizedString(forIdentifier: rawIdentifier.replacingOccurrences(of: "_", with: "-")),
+            userLocale.localizedString(forIdentifier: rawIdentifier),
+            userLocale.localizedString(forIdentifier: canonicalCode),
+            userLocale.localizedString(forIdentifier: rawIdentifier.replacingOccurrences(of: "_", with: "-")),
+            locale.localizedString(forLanguageCode: languageCode),
+            userLocale.localizedString(forLanguageCode: languageCode)
+        ])
+
+        for candidate in candidateNames {
+            register(name: candidate, code: canonicalCode, specificity: specificity)
+            register(name: sentenceCase(candidate, locale: locale), code: canonicalCode, specificity: specificity)
+            register(name: sentenceCase(candidate, locale: userLocale), code: canonicalCode, specificity: specificity)
+        }
+
+        if specificity == 0 {
+            let languageNames = uniquePreferred([
+                locale.localizedString(forLanguageCode: languageCode),
+                userLocale.localizedString(forLanguageCode: languageCode)
+            ])
+
+            for candidate in languageNames {
+                register(name: candidate, code: canonicalCode, specificity: specificity)
+                register(name: sentenceCase(candidate, locale: locale), code: canonicalCode, specificity: specificity)
+                register(name: sentenceCase(candidate, locale: userLocale), code: canonicalCode, specificity: specificity)
+            }
+        }
+    }
+
+    return lookup
+}
+
+func preferredCode(for normalizedName: String, from candidates: [LanguageCodeCandidate]) -> String? {
+    let wantsSpecificCode = normalizedName.contains("(") || normalizedName.contains("（")
+    let sorted = candidates.sorted { lhs, rhs in
+        if wantsSpecificCode {
+            if lhs.specificity != rhs.specificity {
+                return lhs.specificity > rhs.specificity
+            }
+        } else if lhs.specificity != rhs.specificity {
+            return lhs.specificity < rhs.specificity
+        }
+
+        if lhs.code.count != rhs.code.count {
+            return lhs.code.count < rhs.code.count
+        }
+
+        return lhs.code < rhs.code
+    }
+
+    return sorted.first?.code
+}
+
+func languageCode(for primary: String, secondary: String, lookup: [String: [LanguageCodeCandidate]]) -> String? {
+    let candidates = [primary, secondary]
+        .map(normalizeLanguageName)
+        .filter { !$0.isEmpty }
+
+    for candidate in candidates {
+        if let matches = lookup[candidate], let code = preferredCode(for: candidate, from: matches) {
+            return code
+        }
+    }
+
+    return nil
+}
+
 func waitUntil(timeout: TimeInterval, poll: TimeInterval = 0.2, condition: () -> Bool) -> Bool {
     let deadline = Date().addingTimeInterval(timeout)
     while Date() < deadline {
@@ -201,7 +345,7 @@ func waitForPreferredLanguages(in window: AXUIElement) {
     })
 }
 
-func preferredLanguages(from window: AXUIElement) -> [LanguageEntry] {
+func preferredLanguages(from window: AXUIElement, lookup: [String: [LanguageCodeCandidate]]) -> [LanguageEntry] {
     guard let content = try? contentRoot(in: window),
           let outline = preferredLanguagesOutline(in: content) else {
         return []
@@ -212,7 +356,11 @@ func preferredLanguages(from window: AXUIElement) -> [LanguageEntry] {
         let texts = collectStaticTexts(from: row).filter { !$0.isEmpty }
         guard let primary = texts.first else { return nil }
         let secondary = texts.dropFirst().joined(separator: " | ")
-        return LanguageEntry(primary: primary, secondary: secondary)
+        return LanguageEntry(
+            code: languageCode(for: primary, secondary: secondary, lookup: lookup),
+            primary: primary,
+            secondary: secondary
+        )
     }
 }
 
@@ -235,7 +383,7 @@ func openAddDialogIfNeeded(window: AXUIElement, content: AXUIElement) throws -> 
     return true
 }
 
-func availableLanguages(from window: AXUIElement) -> [LanguageEntry] {
+func availableLanguages(from window: AXUIElement, lookup: [String: [LanguageCodeCandidate]]) -> [LanguageEntry] {
     guard let table = firstDescendant(of: window, where: { role(of: $0) == kAXTableRole as String }) else {
         return []
     }
@@ -246,7 +394,11 @@ func availableLanguages(from window: AXUIElement) -> [LanguageEntry] {
     for row in children(of: table) where role(of: row) == kAXRowRole as String {
         let texts = collectStaticTexts(from: row).filter { !$0.isEmpty && $0 != "—" }
         guard texts.count >= 2 else { continue }
-        let entry = LanguageEntry(primary: texts[0], secondary: texts[1])
+        let entry = LanguageEntry(
+            code: languageCode(for: texts[0], secondary: texts[1], lookup: lookup),
+            primary: texts[0],
+            secondary: texts[1]
+        )
         if !seen.contains(entry) {
             seen.insert(entry)
             ordered.append(entry)
@@ -270,16 +422,18 @@ func closeAddDialogIfPresent(window: AXUIElement) {
 func printText(preferred: [LanguageEntry], available: [LanguageEntry]) {
     print("Preferred Languages:")
     for entry in preferred {
+        let prefix = entry.code.map { "\($0) | " } ?? ""
         if entry.secondary.isEmpty {
-            print("  \(entry.primary)")
+            print("  \(prefix)\(entry.primary)")
         } else {
-            print("  \(entry.primary) | \(entry.secondary)")
+            print("  \(prefix)\(entry.primary) | \(entry.secondary)")
         }
     }
     print("")
     print("Available To Add:")
     for entry in available {
-        print("  \(entry.primary) | \(entry.secondary)")
+        let prefix = entry.code.map { "\($0) | " } ?? ""
+        print("  \(prefix)\(entry.primary) | \(entry.secondary)")
     }
 }
 
@@ -293,9 +447,10 @@ do {
     closeAddDialogIfPresent(window: window)
     let content = try contentRoot(in: window)
     waitForPreferredLanguages(in: window)
-    let preferred = preferredLanguages(from: window)
+    let languageLookup = buildLanguageCodeLookup()
+    let preferred = preferredLanguages(from: window, lookup: languageLookup)
     let openedNow = try openAddDialogIfNeeded(window: window, content: content)
-    let available = availableLanguages(from: window)
+    let available = availableLanguages(from: window, lookup: languageLookup)
     if openedNow {
         closeAddDialogIfPresent(window: window)
     }
