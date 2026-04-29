@@ -44,6 +44,10 @@ Notes:
 - The addable-language list comes from the `+` dialog in System Settings.
 - Preferred languages are read only from the visible System Settings UI.
 
+Technical details:
+
+- [extract-system-settings-languages.md](docs/extract-system-settings-languages.md)
+
 ### `manage-steam-language.sh`
 
 Reads or changes the Steam client interface language on macOS.

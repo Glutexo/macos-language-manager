@@ -32,6 +32,7 @@ struct LanguageCodeCandidate {
 
 let args = Array(CommandLine.arguments.dropFirst())
 let wantsJSON = args.contains("--json")
+let renderableUILanguagesPath = "/System/Library/PrivateFrameworks/IntlPreferences.framework/Resources/RenderableUILanguages.plist"
 if args.contains("--help") || args.contains("-h") {
     print("Extracts preferred and addable languages from System Settings > Language & Region.")
     print("")
@@ -166,6 +167,26 @@ func uniquePreferred<T>(_ values: [T?]) -> [T] {
     return result
 }
 
+func readRenderableUILanguageCodes() -> [String] {
+    guard let data = FileManager.default.contents(atPath: renderableUILanguagesPath) else {
+        return []
+    }
+
+    guard let values = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String] else {
+        return []
+    }
+
+    var seen: Set<String> = []
+    var result: [String] = []
+    for value in values {
+        let normalized = value.replacingOccurrences(of: "_", with: "-")
+        if seen.insert(normalized).inserted {
+            result.append(normalized)
+        }
+    }
+    return result
+}
+
 func buildLanguageCodeLookup() -> [String: [LanguageCodeCandidate]] {
     var lookup: [String: [LanguageCodeCandidate]] = [:]
     let userLocale = Locale.current
@@ -230,6 +251,22 @@ func buildLanguageCodeLookup() -> [String: [LanguageCodeCandidate]] {
 
     for language in Locale.LanguageCode.isoLanguageCodes {
         let languageCode = language.identifier
+        let locale = Locale(identifier: languageCode)
+        let candidateNames = uniquePreferred([
+            locale.localizedString(forIdentifier: languageCode),
+            userLocale.localizedString(forIdentifier: languageCode),
+            locale.localizedString(forLanguageCode: languageCode),
+            userLocale.localizedString(forLanguageCode: languageCode)
+        ])
+
+        for candidate in candidateNames {
+            register(name: candidate, code: languageCode, specificity: 0)
+            register(name: sentenceCase(candidate, locale: locale), code: languageCode, specificity: 0)
+            register(name: sentenceCase(candidate, locale: userLocale), code: languageCode, specificity: 0)
+        }
+    }
+
+    for languageCode in readRenderableUILanguageCodes() {
         let locale = Locale(identifier: languageCode)
         let candidateNames = uniquePreferred([
             locale.localizedString(forIdentifier: languageCode),
