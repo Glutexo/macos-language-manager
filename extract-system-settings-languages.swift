@@ -228,6 +228,23 @@ func buildLanguageCodeLookup() -> [String: [LanguageCodeCandidate]] {
         }
     }
 
+    for language in Locale.LanguageCode.isoLanguageCodes {
+        let languageCode = language.identifier
+        let locale = Locale(identifier: languageCode)
+        let candidateNames = uniquePreferred([
+            locale.localizedString(forIdentifier: languageCode),
+            userLocale.localizedString(forIdentifier: languageCode),
+            locale.localizedString(forLanguageCode: languageCode),
+            userLocale.localizedString(forLanguageCode: languageCode)
+        ])
+
+        for candidate in candidateNames {
+            register(name: candidate, code: languageCode, specificity: 0)
+            register(name: sentenceCase(candidate, locale: locale), code: languageCode, specificity: 0)
+            register(name: sentenceCase(candidate, locale: userLocale), code: languageCode, specificity: 0)
+        }
+    }
+
     return lookup
 }
 
