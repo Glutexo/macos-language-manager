@@ -234,8 +234,9 @@ flowchart TD
         TokenLoopStart((Start)) --> Token[Token]
         Token[Token] --> LeadingPlus[Normalize leading +]
 
+        Removal[Removal]
+
         subgraph PlacementForms["Placement forms"]
-            Removal[Removal]
             AnchoredPlacement[Anchored placement]
             FrontPlacement[Front placement]
         end
