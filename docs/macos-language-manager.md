@@ -228,9 +228,10 @@ Flow overview:
 ```mermaid
 flowchart TD
     Start((Start)) --> Arguments[Arguments]
-    Arguments --> Token
+    Arguments --> TokenLoopStart
 
     subgraph TokenParsing["Token parsing loop"]
+        TokenLoopStart((Start)) --> Token[Token]
         Token[Token] --> LeadingPlus[Leading +]
 
         subgraph PlacementForms["Placement forms"]
@@ -269,16 +270,18 @@ flowchart TD
         QueueEnd --> NextToken
 
         NextToken -- iterate to next token --> Token
+        Invalid --> TokenLoopInvalidEnd((End))
+        NextToken -- no more tokens --> TokenLoopDoneEnd((End))
     end
 
-    TokenParsing -- invalid input --> InvalidInput[Invalid input]
+    TokenLoopInvalidEnd --> InvalidInput[Invalid input]
     InvalidInput --> End((End))
 
-    TokenParsing -- parsing completed --> Replay
-    TokenParsing -- later apply queued removals --> ApplyRemovals[Apply removals]
+    TokenLoopDoneEnd --> ReplayLoopStart
+    TokenLoopDoneEnd --> ApplyRemovals[Apply removals]
 
     subgraph Replay["Replay placements loop"]
-        Placement[Placement]
+        ReplayLoopStart((Start)) --> Placement[Placement]
 
         subgraph PlacementActions["Placement actions"]
             MoveToFront[Move to front]
@@ -296,9 +299,10 @@ flowchart TD
 
         UpdatedOrder --> NextPlacement[Next placement]
         NextPlacement -- iterate to next placement --> Placement
+        NextPlacement -- no more placements --> ReplayLoopEnd((End))
     end
 
-    Replay --> ApplyRemovals
+    ReplayLoopEnd --> ApplyRemovals
     ApplyRemovals --> End
 ```
 
