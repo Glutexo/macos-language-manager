@@ -328,7 +328,7 @@ Internal argument fields:
 | `source` | Normalized language taken from the token itself, for example `ja` in `+ja`, `-ja`, `ja:cs`, and `ja:`. |
 | `anchor` | Language after `:` in anchored syntax like `ja:cs`; empty for `xx`, `+xx`, `-xx`, and `xx:`. |
 | `requested` | The `requested_languages` array. It records every added or repositioned source language in argument order and later helps derive the effective locale or startup language. |
-| `op` | Operation kind stored in `operation_kinds`. The parser produces `front`, `before`, or `end`. |
+| `operation_kinds` | Parallel array holding the operation kind for each queued operation. The parser produces `front`, `before`, or `end`. |
 | `operation_sources` | Parallel array holding the `source` value for each queued operation. |
 | `operation_anchors` | Parallel array holding the `anchor` value for each queued operation; empty except for `before`. |
 | `removed_languages` | Separate array of removals collected from `-xx`. These removals are applied only after the final ordered list is built. |
