@@ -252,7 +252,7 @@ stateDiagram-v2
         AcceptBefore --> NextToken
         AcceptEnd --> NextToken
 
-        NextToken --> Token: more tokens
+        NextToken --> Token: iterate to next token
         NextToken --> [*]: no more tokens
     }
 
