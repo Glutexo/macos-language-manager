@@ -277,11 +277,11 @@ flowchart TD
     TokenLoopInvalidEnd --> InvalidInput[Invalid input]
     InvalidInput --> End((End))
 
-    TokenLoopDoneEnd --> ReplayLoopStart
+    TokenLoopDoneEnd --> PlacementLoopStart
     TokenLoopDoneEnd --> ApplyRemovals[Apply removals]
 
-    subgraph Replay["Replay placements loop"]
-        ReplayLoopStart((Start)) --> Placement[Placement]
+    subgraph PlacementLoop["Apply queued placements loop"]
+        PlacementLoopStart((Start)) --> Placement[Placement]
 
         subgraph PlacementActions["Placement actions"]
             MoveToFront[Move to front]
@@ -299,10 +299,10 @@ flowchart TD
 
         UpdatedOrder --> NextPlacement[Next placement]
         NextPlacement -- iterate to next placement --> Placement
-        NextPlacement -- no more placements --> ReplayLoopEnd((End))
+        NextPlacement -- no more placements --> PlacementLoopEnd((End))
     end
 
-    ReplayLoopEnd --> ApplyRemovals
+    PlacementLoopEnd --> ApplyRemovals
     ApplyRemovals --> End
 ```
 
