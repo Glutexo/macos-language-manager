@@ -207,7 +207,7 @@ The script does not just prepend values blindly. It builds an internal ordered e
 - `base`
 - `end`
 
-Argument tokens are parsed by the `parse_language_argument` shell function in `manage-macos-languages.sh`. The behavior summary, state diagram, and field table below describe that parser.
+Argument tokens are parsed and normalized before ordering is applied. The behavior summary, state diagram, and field table below describe that parsing step.
 
 Behavior by argument type:
 
@@ -284,7 +284,7 @@ stateDiagram-v2
         Replay --> FindSource: lookup source entity
         FindSource --> UseSource: source found
         FindSource --> CreateSource: source missing
-        CreateSource --> UseSource: build_missing_language_tag and create_entity
+        CreateSource --> UseSource: build and insert missing source language
 
         UseSource --> ApplyFront: op=front
         UseSource --> ApplyEnd: op=end
@@ -292,12 +292,12 @@ stateDiagram-v2
 
         FindAnchor --> UseAnchor: anchor found
         FindAnchor --> CreateAnchor: anchor missing
-        CreateAnchor --> UseAnchor: build_missing_language_tag and create_entity
+        CreateAnchor --> UseAnchor: build and insert missing anchor language
         UseAnchor --> ApplyBefore
 
-        ApplyFront --> MoveFront: set_entity_root front
-        ApplyEnd --> MoveEnd: set_entity_root end
-        ApplyBefore --> PlaceBefore: set_entity_parent source to anchor
+        ApplyFront --> MoveFront: move source to front section
+        ApplyEnd --> MoveEnd: move source to end section
+        ApplyBefore --> PlaceBefore: place source before anchor
         MoveFront --> Ordered
         MoveEnd --> Ordered
         PlaceBefore --> Ordered
@@ -318,7 +318,7 @@ Internal argument fields:
 
 | Field | Meaning |
 | --- | --- |
-| `token` | Original argument string passed into `parse_language_argument`, for example `+ja`, `-ja`, `ja:cs`, or `ja:`. Error messages report this original value. |
+| `token` | Original argument string, for example `+ja`, `-ja`, `ja:cs`, or `ja:`. Error messages report this original value. |
 | `source` | Normalized language taken from the token itself, for example `ja` in `+ja`, `-ja`, `ja:cs`, and `ja:`. |
 | `anchor` | Language after `:` in anchored syntax like `ja:cs`; empty for `xx`, `+xx`, `-xx`, and `xx:`. |
 | `requested_languages` | Array recording every added or repositioned source language in argument order. It later helps derive the effective locale or startup language. |
