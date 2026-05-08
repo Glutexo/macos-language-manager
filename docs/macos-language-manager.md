@@ -235,15 +235,21 @@ stateDiagram-v2
         Token --> LeadingPlus: optionally remove leading "+"
 
         state "Leading +" as LeadingPlus
-        state "Removal" as Removal
-        state "Anchored placement" as AnchoredPlacement
-        state "Front placement" as FrontPlacement
-        state "Queue removal" as QueueRemoval
-        state "Queue front placement" as QueueFront
-        state "Queue before placement" as QueueBefore
-        state "Queue end placement" as QueueEnd
         state "Next token" as NextToken
         state "Invalid" as Invalid
+
+        state "Placement forms" as PlacementForms {
+            state "Removal" as Removal
+            state "Anchored placement" as AnchoredPlacement
+            state "Front placement" as FrontPlacement
+        }
+
+        state "Queued changes" as QueuedChanges {
+            state "Queue removal" as QueueRemoval
+            state "Queue front placement" as QueueFront
+            state "Queue before placement" as QueueBefore
+            state "Queue end placement" as QueueEnd
+        }
 
         LeadingPlus --> Invalid: token had "+" and the remaining token starts with "-"
         LeadingPlus --> Removal: remaining token starts with "-"
@@ -285,11 +291,14 @@ stateDiagram-v2
     state "Replay placements" as Replay {
         [*] --> Placement: next queued placement
 
-        state "Move to front" as MoveToFront
-        state "Move to end" as MoveToEnd
-        state "Place before anchor" as PlaceBeforeAnchor
         state "Updated order" as UpdatedOrder
         state "Next placement" as NextPlacement
+
+        state "Placement actions" as PlacementActions {
+            state "Move to front" as MoveToFront
+            state "Move to end" as MoveToEnd
+            state "Place before anchor" as PlaceBeforeAnchor
+        }
 
         Placement --> MoveToFront: use or insert source, then move it to the front
         Placement --> MoveToEnd: use or insert source, then move it to the end
