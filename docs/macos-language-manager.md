@@ -255,7 +255,7 @@ stateDiagram-v2
         Removal --> QueueRemoval: queue removal
 
         AnchoredPlacement --> Invalid: source is empty or invalid tag
-        AnchoredPlacement --> Invalid: anchor is invalid tag
+        AnchoredPlacement --> Invalid: anchor is empty or invalid tag
         AnchoredPlacement --> QueueEnd: anchor is empty, so queue an end placement
         AnchoredPlacement --> QueueBefore: anchor is present, so queue a before placement
 
