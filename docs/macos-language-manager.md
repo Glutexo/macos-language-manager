@@ -258,7 +258,7 @@ flowchart TD
 
         AnchoredPlacement -- source is empty or invalid tag --> Invalid
         AnchoredPlacement -- anchor is empty or invalid tag --> Invalid
-        AnchoredPlacement -- anchor is empty --> QueueEnd
+        AnchoredPlacement -- anchor is not present --> QueueEnd
         AnchoredPlacement -- anchor is present --> QueueBefore
 
         FrontPlacement -- invalid tag --> Invalid
