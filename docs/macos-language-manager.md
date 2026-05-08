@@ -293,11 +293,9 @@ flowchart TD
         Placement -- use or insert source, then move it to the end --> MoveToEnd
         Placement -- use or insert source and anchor, then move source before anchor --> PlaceBeforeAnchor
 
-        MoveToFront --> UpdatedOrder[Updated order]
-        MoveToEnd --> UpdatedOrder
-        PlaceBeforeAnchor --> UpdatedOrder
-
-        UpdatedOrder --> NextPlacement[Next placement]
+        MoveToFront --> NextPlacement[Next placement]
+        MoveToEnd --> NextPlacement
+        PlaceBeforeAnchor --> NextPlacement
         NextPlacement -- iterate to next placement --> Placement
         NextPlacement -- no more placements --> PlacementLoopEnd((End))
     end
