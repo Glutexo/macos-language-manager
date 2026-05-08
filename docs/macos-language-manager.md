@@ -247,12 +247,12 @@ flowchart TD
             QueueEnd[Queue end placement]
         end
 
-        LeadingPlus -- plus then dash --> Invalid[Invalid]
-        LeadingPlus -- starts with dash --> Removal
-        LeadingPlus -- contains colon --> AnchoredPlacement
+        LeadingPlus -- + then - --> Invalid[Invalid]
+        LeadingPlus -- starts with - --> Removal
+        LeadingPlus -- contains : --> AnchoredPlacement
         LeadingPlus -- otherwise --> FrontPlacement
 
-        Removal -- source contains colon --> Invalid
+        Removal -- source contains : --> Invalid
         Removal -- source is empty or invalid tag --> Invalid
         Removal -- queue removal --> QueueRemoval
 
