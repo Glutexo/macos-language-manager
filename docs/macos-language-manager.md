@@ -246,12 +246,12 @@ flowchart TD
             QueueEnd[Queue end placement]
         end
 
-        LeadingPlus -- token had "+" and the normalized token starts with "-" --> Invalid[Invalid]
-        LeadingPlus -- normalized token starts with "-" --> Removal
-        LeadingPlus -- normalized token contains ":" --> AnchoredPlacement
+        LeadingPlus -- plus then dash --> Invalid[Invalid]
+        LeadingPlus -- starts with dash --> Removal
+        LeadingPlus -- contains colon --> AnchoredPlacement
         LeadingPlus -- otherwise --> FrontPlacement
 
-        Removal -- source contains ":" --> Invalid
+        Removal -- source contains colon --> Invalid
         Removal -- source is empty or invalid tag --> Invalid
         Removal -- queue removal --> QueueRemoval
 
@@ -260,7 +260,7 @@ flowchart TD
         AnchoredPlacement -- anchor is empty --> QueueEnd
         AnchoredPlacement -- anchor is present --> QueueBefore
 
-        FrontPlacement -- token is not a valid tag --> Invalid
+        FrontPlacement -- invalid tag --> Invalid
         FrontPlacement -- queue a front placement --> QueueFront
 
         QueueRemoval --> NextToken[Next token]
