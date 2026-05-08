@@ -263,7 +263,7 @@ stateDiagram-v2
     QueueOperation --> ReplayOperations
 
     state ReplayOperations {
-        [*] --> Replay: next queued operation
+        [*] --> Replay: next operation
         Replay --> FindSource: lookup source entity
         FindSource --> UseSource: source found
         FindSource --> CreateSource: source missing
@@ -281,8 +281,9 @@ stateDiagram-v2
         ApplyFront --> Ordered: move source to front root
         ApplyEnd --> Ordered: move source to end root
         ApplyBefore --> Ordered: place source before anchor
-        Ordered --> Replay: more queued operations
-        Ordered --> FilterRemoved: no more operations; remove matches from ordered_languages
+        Ordered --> NextOperation
+        NextOperation --> Replay: iterate to next operation
+        NextOperation --> FilterRemoved: no more operations; remove matches from ordered_languages
         FilterRemoved --> [*]
     }
 
