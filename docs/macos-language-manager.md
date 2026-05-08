@@ -291,9 +291,9 @@ stateDiagram-v2
         state "Updated order" as UpdatedOrder
         state "Next placement" as NextPlacement
 
-        Placement --> MoveToFront: move source to the front
-        Placement --> MoveToEnd: move source to the end
-        Placement --> PlaceBeforeAnchor: use or insert source and anchor, then place source before anchor
+        Placement --> MoveToFront: use or insert source, then move it to the front
+        Placement --> MoveToEnd: use or insert source, then move it to the end
+        Placement --> PlaceBeforeAnchor: use or insert source and anchor, then move source before anchor
         MoveToFront --> UpdatedOrder
         MoveToEnd --> UpdatedOrder
         PlaceBeforeAnchor --> UpdatedOrder
