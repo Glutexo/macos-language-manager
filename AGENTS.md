@@ -4,3 +4,4 @@
 - `gh` is available and should be used for GitHub-related tasks when appropriate.
 - Use Unicode symbols where appropriate; prefer `→` instead of `->`.
 - After every change, create a git commit and push it to the remote repository.
+- Every token-parsing change must also update the Mermaid state diagram in `docs/macos-language-manager.md`.

@@ -213,6 +213,7 @@ Behavior by argument type:
 - `-xx` → remove matching languages after ordering is resolved
 - `xx:yy` → move or add `xx` immediately before `yy`
 - `xx:` → move or add `xx` at the end section
+- `+-xx` → invalid; a leading `+` cannot prefix removal syntax
 
 Important detail:
 
@@ -231,6 +232,7 @@ stateDiagram-v2
         TokenLoopEntry --> Token: next token
         Token --> StripPlus: normalize leading "+"
 
+        StripPlus --> Invalid: remaining token starts with "-"
         StripPlus --> Remove: starts with "-"
         StripPlus --> Anchored: contains ":"
         StripPlus --> Front: otherwise
