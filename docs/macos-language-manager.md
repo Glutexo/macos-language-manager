@@ -250,18 +250,23 @@ stateDiagram-v2
     AcceptEnd --> QueueOperation: append end op
 
     QueueRemoval --> [*]
-    QueueOperation --> Replay: iterate operation_kinds in argument order
-    Replay --> EnsureSource: ensure source entity exists
-    EnsureSource --> ApplyFront: op=front
-    EnsureSource --> ApplyEnd: op=end
-    EnsureSource --> EnsureAnchor: op=before
-    EnsureAnchor --> ApplyBefore: ensure anchor entity exists
+    QueueOperation --> ReplayOperations
 
-    ApplyFront --> Ordered: move source to front root
-    ApplyEnd --> Ordered: move source to end root
-    ApplyBefore --> Ordered: place source before anchor
-    Ordered --> FilterRemoved: remove matches from ordered_languages
-    FilterRemoved --> [*]
+    state ReplayOperations {
+        [*] --> Replay: iterate operation_kinds in argument order
+        Replay --> EnsureSource: ensure source entity exists
+        EnsureSource --> ApplyFront: op=front
+        EnsureSource --> ApplyEnd: op=end
+        EnsureSource --> EnsureAnchor: op=before
+        EnsureAnchor --> ApplyBefore: ensure anchor entity exists
+
+        ApplyFront --> Ordered: move source to front root
+        ApplyEnd --> Ordered: move source to end root
+        ApplyBefore --> Ordered: place source before anchor
+        Ordered --> FilterRemoved: remove matches from ordered_languages
+        FilterRemoved --> [*]
+    }
+
     Invalid --> [*]
 ```
 
