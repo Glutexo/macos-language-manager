@@ -228,11 +228,10 @@ State machine overview:
 ```mermaid
 stateDiagram-v2
     [*] --> Tokens
-    Tokens --> TokenLoopEntry
+    Tokens --> Token
 
     state TokenLoop {
-        [*] --> TokenLoopEntry
-        TokenLoopEntry --> Token: next token
+        [*] --> Token: next token
         Token --> MaybeStripPlus: optionally normalize leading "+"
 
         MaybeStripPlus --> Invalid: token had "+" and normalized token starts with "-"
@@ -262,12 +261,11 @@ stateDiagram-v2
         TokenLoopDone --> [*]
     }
 
-    TokenLoopDone --> ReplayEntry: replay queued operations
+    TokenLoopDone --> Replay: replay queued operations
     TokenLoopDone --> FilterRemoved: later apply queued removals
 
     state ReplayOperations {
-        [*] --> ReplayEntry
-        ReplayEntry --> Replay: next operation
+        [*] --> Replay: next operation
         Replay --> ApplyFront: op=front
         Replay --> ApplyEnd: op=end
         Replay --> ApplyBefore: op=before, use or insert source and anchor language
