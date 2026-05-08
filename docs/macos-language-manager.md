@@ -232,7 +232,7 @@ flowchart TD
 
     subgraph TokenParsing["Token parsing loop"]
         TokenLoopStart((Start)) --> Token[Token]
-        Token[Token] --> LeadingPlus[Leading +]
+        Token[Token] --> LeadingPlus[Normalize leading +]
 
         subgraph PlacementForms["Placement forms"]
             Removal[Removal]
