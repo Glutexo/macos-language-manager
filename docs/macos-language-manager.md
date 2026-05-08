@@ -228,7 +228,7 @@ State machine overview:
 ```mermaid
 stateDiagram-v2
     [*] --> Tokens
-    Tokens --> Token
+    Tokens --> TokenLoop
 
     state TokenLoop {
         [*] --> Token: next token
@@ -257,12 +257,14 @@ stateDiagram-v2
         EnqueueEndOperation --> NextToken
 
         NextToken --> Token: iterate to next token
-        NextToken --> TokenLoopDone: no more tokens
-        TokenLoopDone --> [*]
+        NextToken --> [*]: no more tokens
+        Invalid --> [*]
     }
 
-    TokenLoopDone --> Replay: replay queued operations
-    TokenLoopDone --> FilterRemoved: later apply queued removals
+    TokenLoop --> InvalidResult: invalid input
+    TokenLoop --> ParsedOK: parsing completed
+    ParsedOK --> ReplayOperations: replay queued operations
+    ParsedOK --> FilterRemoved: later apply queued removals
 
     state ReplayOperations {
         [*] --> Replay: next operation
@@ -274,14 +276,11 @@ stateDiagram-v2
         PlaceBefore --> Ordered
         Ordered --> NextOperation
         NextOperation --> Replay: iterate to next operation
-        NextOperation --> ReplayDone: no more operations
-        ReplayDone --> [*]
+        NextOperation --> [*]: no more operations
     }
 
-    ReplayDone --> FilterRemoved
+    ReplayOperations --> FilterRemoved
     FilterRemoved --> [*]
-
-    Invalid --> [*]
 ```
 
 Internal argument fields:
