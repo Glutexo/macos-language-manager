@@ -251,9 +251,9 @@ stateDiagram-v2
             state "Queue end placement" as QueueEnd
         }
 
-        LeadingPlus --> Invalid: token had "+" and the remaining token starts with "-"
-        LeadingPlus --> Removal: remaining token starts with "-"
-        LeadingPlus --> AnchoredPlacement: remaining token contains ":"
+        LeadingPlus --> Invalid: token had "+" and the normalized token starts with "-"
+        LeadingPlus --> Removal: normalized token starts with "-"
+        LeadingPlus --> AnchoredPlacement: normalized token contains ":"
         LeadingPlus --> FrontPlacement: otherwise
 
         Removal --> Invalid: source contains ":"
@@ -321,12 +321,11 @@ Glossary of diagram terms:
 | Term | Meaning |
 | --- | --- |
 | `token` | One command-line language argument, for example `+ja`, `-ja`, `ja:cs`, or `ja:`. |
-| `remaining token` | The token after optional removal of a leading `+`. |
+| `normalized` | The token after optional removal of a leading `+`. |
 | `source` | The language being moved, added, or removed. In `ja:cs`, the source is `ja`. |
 | `anchor` | The language used as a placement reference in anchored syntax. In `ja:cs`, the anchor is `cs`. |
 | `queue` | Remember a requested change now so it can be applied later in a predictable order. |
 | `replay` | Go through queued placements in argument order and apply them to the working language order. |
-| `invalid input` | Parsing failed because the token shape or language tag was not accepted. |
 
 ## Matching Rules
 
