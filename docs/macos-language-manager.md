@@ -271,11 +271,12 @@ stateDiagram-v2
         QueueRequestedEnd --> NextToken
 
         NextToken --> Token: iterate to next token
-        NextToken --> [*]: no more tokens
+        NextToken --> TokenLoopDone: no more tokens
+        TokenLoopDone --> [*]
     }
 
-    TokenLoop --> QueueRemoval: queued removals available
-    TokenLoop --> QueueOperation: queued operations available
+    TokenLoopDone --> QueueRemoval: queued removals available
+    TokenLoopDone --> QueueOperation: queued operations available
 
     QueueRemoval --> FilterRemoved: later used during final filtering
     QueueOperation --> ReplayEntry
