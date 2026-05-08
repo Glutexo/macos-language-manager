@@ -229,10 +229,11 @@ stateDiagram-v2
     state TokenLoop {
         [*] --> TokenLoopEntry
         TokenLoopEntry --> Token: next token
+        Token --> StripPlus: normalize leading "+"
 
-        Token --> Remove: starts with "-"
-        Token --> Anchored: contains ":"
-        Token --> Front: otherwise
+        StripPlus --> Remove: starts with "-"
+        StripPlus --> Anchored: contains ":"
+        StripPlus --> Front: otherwise
 
         Remove --> Invalid: source contains ":"
         Remove --> Invalid: source is empty or invalid tag
