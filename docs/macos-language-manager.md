@@ -233,8 +233,8 @@ stateDiagram-v2
         TokenLoopEntry --> Token: next token
         Token --> StripPlus: normalize leading "+"
 
-        StripPlus --> Invalid: remaining token starts with "-"
-        StripPlus --> Remove: starts with "-"
+        StripPlus --> Invalid: normalized token starts with "-" after "+" removal
+        StripPlus --> Remove: normalized token starts with "-"
         StripPlus --> Anchored: contains ":"
         StripPlus --> Front: otherwise
 
