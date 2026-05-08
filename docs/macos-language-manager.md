@@ -228,11 +228,22 @@ State machine overview:
 ```mermaid
 stateDiagram-v2
     [*] --> Arguments
-    Arguments --> ParseTokens
+    Arguments --> TokenParsing
 
-    state ParseTokens {
+    state "Token parsing" as TokenParsing {
         [*] --> Token: next token
         Token --> LeadingPlus: optionally remove leading "+"
+
+        state "Leading +" as LeadingPlus
+        state "Removal" as Removal
+        state "Anchored placement" as AnchoredPlacement
+        state "Front placement" as FrontPlacement
+        state "Queue removal" as QueueRemoval
+        state "Queue front placement" as QueueFront
+        state "Queue before placement" as QueueBefore
+        state "Queue end placement" as QueueEnd
+        state "Next token" as NextToken
+        state "Invalid" as Invalid
 
         LeadingPlus --> Invalid: token had "+" and the remaining token starts with "-"
         LeadingPlus --> Removal: remaining token starts with "-"
@@ -261,14 +272,25 @@ stateDiagram-v2
         Invalid --> [*]
     }
 
-    ParseTokens --> InvalidInput: invalid input
-    ParseTokens --> ValidInput: parsing completed
-    InvalidInput --> [*]
-    ValidInput --> ApplyQueuedPlacements: replay queued placements
-    ValidInput --> ApplyQueuedRemovals: later apply queued removals
+    state "Invalid input" as InvalidInput
+    state "Parsing completed" as ValidInput
+    state "Apply removals" as ApplyRemovals
 
-    state ApplyQueuedPlacements {
+    TokenParsing --> InvalidInput: invalid input
+    TokenParsing --> ValidInput: parsing completed
+    InvalidInput --> [*]
+    ValidInput --> Replay: replay queued placements
+    ValidInput --> ApplyRemovals: later apply queued removals
+
+    state "Replay placements" as Replay {
         [*] --> Placement: next queued placement
+
+        state "Move to front" as MoveToFront
+        state "Move to end" as MoveToEnd
+        state "Place before anchor" as PlaceBeforeAnchor
+        state "Updated order" as UpdatedOrder
+        state "Next placement" as NextPlacement
+
         Placement --> MoveToFront: move source to the front
         Placement --> MoveToEnd: move source to the end
         Placement --> PlaceBeforeAnchor: use or insert source and anchor, then place source before anchor
@@ -280,8 +302,8 @@ stateDiagram-v2
         NextPlacement --> [*]: no more placements
     }
 
-    ApplyQueuedPlacements --> ApplyQueuedRemovals
-    ApplyQueuedRemovals --> [*]
+    Replay --> ApplyRemovals
+    ApplyRemovals --> [*]
 ```
 
 Glossary of diagram terms:
@@ -293,14 +315,9 @@ Glossary of diagram terms:
 | `remaining token` | The token after optional removal of a leading `+`. |
 | `source` | The language being moved, added, or removed. In `ja:cs`, the source is `ja`. |
 | `anchor` | The language used as a placement reference in anchored syntax. In `ja:cs`, the anchor is `cs`. |
-| `queue` | Record a requested change now so it can be applied later in a predictable order. |
-| `front placement` | Move or add the source language at the front of the list. |
-| `before placement` | Move or add the source language immediately before the anchor language. |
-| `end placement` | Move or add the source language at the end of the list. |
-| `replay queued placements` | Apply queued move-or-add requests in argument order. |
-| `apply queued removals` | Remove languages only after placements have already been replayed. |
+| `queue` | Remember a requested change now so it can be applied later in a predictable order. |
+| `replay` | Go through queued placements in argument order and apply them to the working language order. |
 | `invalid input` | Parsing failed because the token shape or language tag was not accepted. |
-| `parsing completed` | All tokens were parsed without error, so queued operations and removals can be processed. |
 
 ## Matching Rules
 
