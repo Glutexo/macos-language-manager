@@ -223,85 +223,32 @@ State machine overview:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> ParseArgs
+    [*] --> Token
 
-    state ParseArgs {
-        [*] --> ExpectTargetOrOption
+    Token --> Remove: starts with "-"
+    Token --> Anchored: contains ":"
+    Token --> Front: otherwise
 
-        ExpectTargetOrOption --> HelpExit: --help / -h
-        ExpectTargetOrOption --> VerboseHelpExit: --verbose / -v
-        ExpectTargetOrOption --> ExpectTargetOrOption: --dry-run / --restart
-        ExpectTargetOrOption --> ExpectLanguages: target set
-        ExpectTargetOrOption --> ExpectLanguages: "--"
+    Remove --> Invalid: source contains ":"
+    Remove --> Invalid: source is empty or invalid tag
+    Remove --> AcceptRemove: store in removed_languages
 
-        state ExpectLanguages {
-            [*] --> NextToken
-            NextToken --> DoneParsing: no more args
-            NextToken --> RemoveToken: removal token
-            NextToken --> FrontToken: front token
-            NextToken --> BeforeToken: anchored token
-            NextToken --> EndToken: end token
-            NextToken --> ErrorExit: invalid token
+    Anchored --> Invalid: source is empty or invalid tag
+    Anchored --> Invalid: anchor is invalid tag
+    Anchored --> End: anchor is empty
+    Anchored --> Before: anchor is present
 
-            RemoveToken --> NextToken: add to removed_languages
-            FrontToken --> NextToken: op=front, requested+=xx
-            BeforeToken --> NextToken: op=before, requested+=xx, anchor=yy
-            EndToken --> NextToken: op=end, requested+=xx
-        }
-    }
+    Front --> Invalid: token is not a valid tag
+    Front --> AcceptFront: op=front, requested+=source
 
-    HelpExit --> [*]
-    VerboseHelpExit --> [*]
+    Before --> AcceptBefore: op=before, requested+=source, anchor=yy
+    End --> AcceptEnd: op=end, requested+=source
 
-    DoneParsing --> ValidateTarget
-    ValidateTarget --> ErrorExit: no target
-    ValidateTarget --> ReadCurrentState: target ok
-
-    ReadCurrentState --> ShowCurrentValues: no requested and no removed
-    ReadCurrentState --> NeedEffectiveLanguage: locale/startup only and no requested
-    ReadCurrentState --> ReplayOperations: otherwise
-
-    NeedEffectiveLanguage --> ErrorExit: missing requested language
-    NeedEffectiveLanguage --> ReplayOperations: requested present
-
-    state ReplayOperations {
-        [*] --> OpLoop
-        OpLoop --> EnsureSource
-        EnsureSource --> FrontOp: kind=front
-        EnsureSource --> EndOp: kind=end
-        EnsureSource --> EnsureAnchor: kind=before
-
-        EnsureAnchor --> BeforeOp
-
-        FrontOp --> MoreOps: set root=front
-        EndOp --> MoreOps: set root=end
-        BeforeOp --> MoreOps: set parent(source → anchor)
-
-        MoreOps --> OpLoop: next operation
-        MoreOps --> BuildOrdered: no more operations
-    }
-
-    BuildOrdered --> FilterRemoved
-    FilterRemoved --> DeriveEffectiveLanguage
-    DeriveEffectiveLanguage --> DeriveLocale: target includes locale
-    DeriveEffectiveLanguage --> DeriveStartup: target includes startup
-    DeriveEffectiveLanguage --> PrintPreview: language-order only
-
-    DeriveLocale --> DeriveStartup
-    DeriveLocale --> PrintPreview
-    DeriveStartup --> PrintPreview
-
-    PrintPreview --> DryRunExit: --dry-run
-    PrintPreview --> ApplyChanges: persist changes
-
-    ApplyChanges --> Restart: --restart
-    ApplyChanges --> SuccessExit: no restart
-    Restart --> SuccessExit
-
-    ShowCurrentValues --> [*]
-    DryRunExit --> [*]
-    SuccessExit --> [*]
-    ErrorExit --> [*]
+    AcceptRemove --> [*]
+    AcceptFront --> [*]
+    AcceptBefore --> [*]
+    AcceptEnd --> [*]
+    Invalid --> [*]
 ```
 
 ## Matching Rules
