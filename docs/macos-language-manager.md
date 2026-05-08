@@ -240,8 +240,9 @@ flowchart TD
             FrontPlacement[Front placement]
         end
 
-        subgraph QueuedChanges["Queued changes"]
-            QueueRemoval[Queue removal]
+        QueueRemoval[Queue removal]
+
+        subgraph QueuedPlacements["Queued placements"]
             QueueFront[Queue front placement]
             QueueBefore[Queue before placement]
             QueueEnd[Queue end placement]
