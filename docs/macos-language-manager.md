@@ -246,8 +246,8 @@ stateDiagram-v2
 
         Anchored --> Invalid: source is empty or invalid tag
         Anchored --> Invalid: anchor is invalid tag
-        Anchored --> EnqueueEndOperation: anchor is empty; queue end operation and requested language
-        Anchored --> EnqueueBeforeOperation: anchor is present; queue before operation and requested language
+        Anchored --> EnqueueEndOperation: anchor is empty, so queue end operation and requested language
+        Anchored --> EnqueueBeforeOperation: anchor is present, so queue before operation and requested language
 
         Front --> Invalid: token is not a valid tag
         Front --> EnqueueFrontOperation: queue front operation and requested language
