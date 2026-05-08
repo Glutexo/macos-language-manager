@@ -268,10 +268,7 @@ stateDiagram-v2
     state ReplayOperations {
         [*] --> ReplayEntry
         ReplayEntry --> Replay: next operation
-        Replay --> FindSource: lookup source entity
-        FindSource --> UseSource: source found
-        FindSource --> CreateSource: source missing
-        CreateSource --> UseSource: build and insert missing source language
+        Replay --> UseSource: use or insert source language
 
         UseSource --> ApplyFront: op=front
         UseSource --> ApplyEnd: op=end
