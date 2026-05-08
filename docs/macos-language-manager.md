@@ -227,61 +227,61 @@ State machine overview:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Tokens
-    Tokens --> TokenLoop
+    [*] --> Arguments
+    Arguments --> ParseTokens
 
-    state TokenLoop {
+    state ParseTokens {
         [*] --> Token: next token
-        Token --> MaybeStripPlus: optionally normalize leading "+"
+        Token --> LeadingPlus: optionally remove leading "+"
 
-        MaybeStripPlus --> Invalid: token had "+" and normalized token starts with "-"
-        MaybeStripPlus --> Remove: normalized token starts with "-"
-        MaybeStripPlus --> Anchored: normalized token contains ":"
-        MaybeStripPlus --> Front: otherwise
+        LeadingPlus --> Invalid: token had "+" and the remaining token starts with "-"
+        LeadingPlus --> Removal: remaining token starts with "-"
+        LeadingPlus --> AnchoredPlacement: remaining token contains ":"
+        LeadingPlus --> FrontPlacement: otherwise
 
-        Remove --> Invalid: source contains ":"
-        Remove --> Invalid: source is empty or invalid tag
-        Remove --> EnqueueRemoval: queue removal
+        Removal --> Invalid: source contains ":"
+        Removal --> Invalid: source is empty or invalid tag
+        Removal --> QueueRemoval: queue removal
 
-        Anchored --> Invalid: source is empty or invalid tag
-        Anchored --> Invalid: anchor is invalid tag
-        Anchored --> EnqueueEndOperation: anchor is empty, so queue end operation and requested language
-        Anchored --> EnqueueBeforeOperation: anchor is present, so queue before operation and requested language
+        AnchoredPlacement --> Invalid: source is empty or invalid tag
+        AnchoredPlacement --> Invalid: anchor is invalid tag
+        AnchoredPlacement --> QueueEnd: anchor is empty, so queue an end placement
+        AnchoredPlacement --> QueueBefore: anchor is present, so queue a before placement
 
-        Front --> Invalid: token is not a valid tag
-        Front --> EnqueueFrontOperation: queue front operation and requested language
+        FrontPlacement --> Invalid: token is not a valid tag
+        FrontPlacement --> QueueFront: queue a front placement
 
-        EnqueueRemoval --> NextToken
-        EnqueueFrontOperation --> NextToken
-        EnqueueBeforeOperation --> NextToken
-        EnqueueEndOperation --> NextToken
+        QueueRemoval --> NextToken
+        QueueFront --> NextToken
+        QueueBefore --> NextToken
+        QueueEnd --> NextToken
 
         NextToken --> Token: iterate to next token
         NextToken --> [*]: no more tokens
         Invalid --> [*]
     }
 
-    TokenLoop --> InvalidResult: invalid input
-    TokenLoop --> ParsedOK: parsing completed
-    InvalidResult --> [*]
-    ParsedOK --> ReplayOperations: replay queued operations
-    ParsedOK --> FilterRemoved: later apply queued removals
+    ParseTokens --> InvalidInput: invalid input
+    ParseTokens --> ValidInput: parsing completed
+    InvalidInput --> [*]
+    ValidInput --> ApplyQueuedPlacements: replay queued placements
+    ValidInput --> ApplyQueuedRemovals: later apply queued removals
 
-    state ReplayOperations {
-        [*] --> Replay: next operation
-        Replay --> MoveFront: op=front, move source to front section
-        Replay --> MoveEnd: op=end, move source to end section
-        Replay --> PlaceBefore: op=before, use or insert source and anchor language, then place source before anchor
-        MoveFront --> Ordered
-        MoveEnd --> Ordered
-        PlaceBefore --> Ordered
-        Ordered --> NextOperation
-        NextOperation --> Replay: iterate to next operation
-        NextOperation --> [*]: no more operations
+    state ApplyQueuedPlacements {
+        [*] --> Placement: next queued placement
+        Placement --> MoveToFront: move source to the front
+        Placement --> MoveToEnd: move source to the end
+        Placement --> PlaceBeforeAnchor: use or insert source and anchor, then place source before anchor
+        MoveToFront --> UpdatedOrder
+        MoveToEnd --> UpdatedOrder
+        PlaceBeforeAnchor --> UpdatedOrder
+        UpdatedOrder --> NextPlacement
+        NextPlacement --> Placement: iterate to next placement
+        NextPlacement --> [*]: no more placements
     }
 
-    ReplayOperations --> FilterRemoved
-    FilterRemoved --> [*]
+    ApplyQueuedPlacements --> ApplyQueuedRemovals
+    ApplyQueuedRemovals --> [*]
 ```
 
 Glossary of diagram terms:
@@ -290,20 +290,15 @@ Glossary of diagram terms:
 | Term | Meaning |
 | --- | --- |
 | `token` | One command-line language argument, for example `+ja`, `-ja`, `ja:cs`, or `ja:`. |
-| `normalized token` | The token after optional removal of a leading `+`, used for the later parse checks in `MaybeStripPlus`. |
+| `remaining token` | The token after optional removal of a leading `+`. |
 | `source` | The language being moved, added, or removed. In `ja:cs`, the source is `ja`. |
 | `anchor` | The language used as a placement reference in anchored syntax. In `ja:cs`, the anchor is `cs`. |
-| `queue removal` | Record a removal request now and apply it later, after replaying queued ordering operations. |
-| `queue front operation` | Record that the source language should be moved or added at the front. |
-| `queue before operation` | Record that the source language should be moved or added immediately before the anchor language. |
-| `queue end operation` | Record that the source language should be moved or added at the end. |
-| `requested language` | The language value remembered from a successful add-or-move request and later used for locale or startup derivation when needed. |
-| `replay queued operations` | Revisit queued add-or-move requests in argument order and apply them to the working language order. |
-| `later apply queued removals` | Remove languages only after the queued ordering operations have already been replayed. |
-| `op=front` | A replayed operation that moves or adds the source language to the front section. |
-| `op=end` | A replayed operation that moves or adds the source language to the end section. |
-| `op=before` | A replayed operation that ensures source and anchor exist, then places the source immediately before the anchor. |
-| `ordered` | The current replayed operation has finished updating the working language order. |
+| `queue` | Record a requested change now so it can be applied later in a predictable order. |
+| `front placement` | Move or add the source language at the front of the list. |
+| `before placement` | Move or add the source language immediately before the anchor language. |
+| `end placement` | Move or add the source language at the end of the list. |
+| `replay queued placements` | Apply queued move-or-add requests in argument order. |
+| `apply queued removals` | Remove languages only after placements have already been replayed. |
 | `invalid input` | Parsing failed because the token shape or language tag was not accepted. |
 | `parsing completed` | All tokens were parsed without error, so queued operations and removals can be processed. |
 
