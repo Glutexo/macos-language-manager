@@ -531,6 +531,12 @@ parse_language_argument() {
   case "$normalized_token" in
     +*)
       normalized_token="${normalized_token#+}"
+      case "$normalized_token" in
+        -*)
+          echo "Invalid language value: $token"
+          exit 1
+          ;;
+      esac
       ;;
   esac
 

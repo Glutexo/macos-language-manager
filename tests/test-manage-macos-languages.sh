@@ -215,4 +215,7 @@ assert_contains "$output" "requires at least one added language argument" "local
 output="$(run_case account --dry-run -ja:ko 2>&1 || true)"
 assert_contains "$output" "Removal syntax does not support anchors" "removal syntax should reject anchors"
 
+output="$(run_case account --dry-run '+-xx' 2>&1 || true)"
+assert_contains "$output" "Invalid language value: +-xx" "+-xx should not be accepted as a valid language request"
+
 echo "All tests passed."
