@@ -268,12 +268,9 @@ stateDiagram-v2
     state ReplayOperations {
         [*] --> ReplayEntry
         ReplayEntry --> Replay: next operation
-        Replay --> UseSource: use or insert source language
-
-        UseSource --> ApplyFront: op=front
-        UseSource --> ApplyEnd: op=end
-        UseSource --> UseAnchor: op=before; use or insert anchor language
-        UseAnchor --> ApplyBefore
+        Replay --> ApplyFront: op=front
+        Replay --> ApplyEnd: op=end
+        Replay --> ApplyBefore: op=before; use or insert source and anchor language
 
         ApplyFront --> MoveFront: move source to front section
         ApplyEnd --> MoveEnd: move source to end section
