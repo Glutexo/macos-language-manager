@@ -219,6 +219,91 @@ Important detail:
 - Anchored placements are resolved before removals.
 - Because of that, `ja:ko -ko` and `-ko ja:ko` produce the same Japanese placement.
 
+State machine overview:
+
+```mermaid
+stateDiagram-v2
+    [*] --> ParseArgs
+
+    state ParseArgs {
+        [*] --> ExpectTargetOrOption
+
+        ExpectTargetOrOption --> HelpExit: --help / -h
+        ExpectTargetOrOption --> VerboseHelpExit: --verbose / -v
+        ExpectTargetOrOption --> ExpectTargetOrOption: --dry-run / --restart
+        ExpectTargetOrOption --> ExpectLanguages: target set
+        ExpectTargetOrOption --> ExpectLanguages: "--"
+
+        state ExpectLanguages {
+            [*] --> NextToken
+            NextToken --> DoneParsing: no more args
+            NextToken --> RemoveToken: -xx
+            NextToken --> FrontToken: xx / +xx
+            NextToken --> BeforeToken: xx:yy
+            NextToken --> EndToken: xx:
+            NextToken --> ErrorExit: invalid token
+
+            RemoveToken --> NextToken: add to removed_languages
+            FrontToken --> NextToken: op=front, requested+=xx
+            BeforeToken --> NextToken: op=before, requested+=xx, anchor=yy
+            EndToken --> NextToken: op=end, requested+=xx
+        }
+    }
+
+    HelpExit --> [*]
+    VerboseHelpExit --> [*]
+
+    DoneParsing --> ValidateTarget
+    ValidateTarget --> ErrorExit: no target
+    ValidateTarget --> ReadCurrentState: target ok
+
+    ReadCurrentState --> ShowCurrentValues: no requested and no removed
+    ReadCurrentState --> NeedEffectiveLanguage: locale/startup only and no requested
+    ReadCurrentState --> ReplayOperations: otherwise
+
+    NeedEffectiveLanguage --> ErrorExit: missing requested language
+    NeedEffectiveLanguage --> ReplayOperations: requested present
+
+    state ReplayOperations {
+        [*] --> OpLoop
+        OpLoop --> EnsureSource
+        EnsureSource --> FrontOp: kind=front
+        EnsureSource --> EndOp: kind=end
+        EnsureSource --> EnsureAnchor: kind=before
+
+        EnsureAnchor --> BeforeOp
+
+        FrontOp --> MoreOps: set root=front
+        EndOp --> MoreOps: set root=end
+        BeforeOp --> MoreOps: set parent(source → anchor)
+
+        MoreOps --> OpLoop: next operation
+        MoreOps --> BuildOrdered: no more operations
+    }
+
+    BuildOrdered --> FilterRemoved
+    FilterRemoved --> DeriveEffectiveLanguage
+    DeriveEffectiveLanguage --> DeriveLocale: target includes locale
+    DeriveEffectiveLanguage --> DeriveStartup: target includes startup
+    DeriveEffectiveLanguage --> PrintPreview: language-order only
+
+    DeriveLocale --> DeriveStartup
+    DeriveLocale --> PrintPreview
+    DeriveStartup --> PrintPreview
+
+    PrintPreview --> DryRunExit: --dry-run
+    PrintPreview --> ApplyChanges: persist changes
+
+    ApplyChanges --> Restart: --restart
+    ApplyChanges --> SuccessExit: no restart
+    Restart --> SuccessExit
+
+    ShowCurrentValues --> [*]
+    DryRunExit --> [*]
+    SuccessExit --> [*]
+    ErrorExit --> [*]
+```
+
 ## Matching Rules
 
 Matching is intentionally broader than exact string equality.
