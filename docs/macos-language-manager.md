@@ -242,25 +242,15 @@ stateDiagram-v2
 
         Remove --> Invalid: source contains ":"
         Remove --> Invalid: source is empty or invalid tag
-        Remove --> AcceptRemove
+        Remove --> StoreRemoval: removed_languages += source
 
         Anchored --> Invalid: source is empty or invalid tag
         Anchored --> Invalid: anchor is invalid tag
-        Anchored --> End: anchor is empty
-        Anchored --> Before: anchor is present
+        Anchored --> EnqueueEndOperation: anchor is empty; queue end operation and requested language
+        Anchored --> EnqueueBeforeOperation: anchor is present; queue before operation and requested language
 
         Front --> Invalid: token is not a valid tag
-        Front --> AcceptFront
-
-        Before --> AcceptBefore
-        End --> AcceptEnd
-
-        AcceptRemove --> StoreRemoval: removed_languages += source
-        AcceptFront --> EnqueueFrontOperation: queue front operation and requested language
-
-        AcceptBefore --> EnqueueBeforeOperation: queue before operation and requested language
-
-        AcceptEnd --> EnqueueEndOperation: queue end operation and requested language
+        Front --> EnqueueFrontOperation: queue front operation and requested language
 
         StoreRemoval --> NextToken
         EnqueueFrontOperation --> NextToken
