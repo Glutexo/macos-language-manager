@@ -237,10 +237,10 @@ stateDiagram-v2
         state ExpectLanguages {
             [*] --> NextToken
             NextToken --> DoneParsing: no more args
-            NextToken --> RemoveToken: -xx
-            NextToken --> FrontToken: xx / +xx
-            NextToken --> BeforeToken: xx:yy
-            NextToken --> EndToken: xx:
+            NextToken --> RemoveToken: removal token
+            NextToken --> FrontToken: front token
+            NextToken --> BeforeToken: anchored token
+            NextToken --> EndToken: end token
             NextToken --> ErrorExit: invalid token
 
             RemoveToken --> NextToken: add to removed_languages
