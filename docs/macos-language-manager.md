@@ -228,90 +228,67 @@ State machine overview:
 ```mermaid
 stateDiagram-v2
     [*] --> Arguments
-    Arguments --> TokenParsing
+    Arguments --> Token: next token
+    Token --> LeadingPlus: optionally remove leading "+"
 
-    state TokenParsing {
-        [*] --> Token: next token
-        Token --> LeadingPlus: optionally remove leading "+"
-
-        state "Leading +" as LeadingPlus
-        state "Next token" as NextToken
-        state "Invalid" as Invalid
-
-        state PlacementForms {
-            state "Removal" as Removal
-            state "Anchored placement" as AnchoredPlacement
-            state "Front placement" as FrontPlacement
-        }
-
-        state QueuedChanges {
-            state "Queue removal" as QueueRemoval
-            state "Queue front placement" as QueueFront
-            state "Queue before placement" as QueueBefore
-            state "Queue end placement" as QueueEnd
-        }
-
-        LeadingPlus --> Invalid: token had "+" and the normalized token starts with "-"
-        LeadingPlus --> Removal: normalized token starts with "-"
-        LeadingPlus --> AnchoredPlacement: normalized token contains ":"
-        LeadingPlus --> FrontPlacement: otherwise
-
-        Removal --> Invalid: source contains ":"
-        Removal --> Invalid: source is empty or invalid tag
-        Removal --> QueueRemoval: queue removal
-
-        AnchoredPlacement --> Invalid: source is empty or invalid tag
-        AnchoredPlacement --> Invalid: anchor is empty or invalid tag
-        AnchoredPlacement --> QueueEnd: anchor is empty, so queue an end placement
-        AnchoredPlacement --> QueueBefore: anchor is present, so queue a before placement
-
-        FrontPlacement --> Invalid: token is not a valid tag
-        FrontPlacement --> QueueFront: queue a front placement
-
-        QueueRemoval --> NextToken
-        QueueFront --> NextToken
-        QueueBefore --> NextToken
-        QueueEnd --> NextToken
-
-        NextToken --> Token: iterate to next token
-        NextToken --> [*]: no more tokens
-        Invalid --> [*]
-    }
-
+    state "Leading +" as LeadingPlus
+    state "Removal" as Removal
+    state "Anchored placement" as AnchoredPlacement
+    state "Front placement" as FrontPlacement
+    state "Queue removal" as QueueRemoval
+    state "Queue front placement" as QueueFront
+    state "Queue before placement" as QueueBefore
+    state "Queue end placement" as QueueEnd
+    state "Next token" as NextToken
+    state "Invalid" as Invalid
     state "Invalid input" as InvalidInput
     state "Parsing completed" as ValidInput
     state "Apply removals" as ApplyRemovals
+    state "Replay placements" as Replay
+    state "Updated order" as UpdatedOrder
+    state "Next placement" as NextPlacement
+    state "Move to front" as MoveToFront
+    state "Move to end" as MoveToEnd
+    state "Place before anchor" as PlaceBeforeAnchor
 
-    TokenParsing --> InvalidInput: invalid input
-    TokenParsing --> ValidInput: parsing completed
+    LeadingPlus --> Invalid: token had "+" and the normalized token starts with "-"
+    LeadingPlus --> Removal: normalized token starts with "-"
+    LeadingPlus --> AnchoredPlacement: normalized token contains ":"
+    LeadingPlus --> FrontPlacement: otherwise
+
+    Removal --> Invalid: source contains ":"
+    Removal --> Invalid: source is empty or invalid tag
+    Removal --> QueueRemoval: queue removal
+
+    AnchoredPlacement --> Invalid: source is empty or invalid tag
+    AnchoredPlacement --> Invalid: anchor is empty or invalid tag
+    AnchoredPlacement --> QueueEnd: anchor is empty, so queue an end placement
+    AnchoredPlacement --> QueueBefore: anchor is present, so queue a before placement
+
+    FrontPlacement --> Invalid: token is not a valid tag
+    FrontPlacement --> QueueFront: queue a front placement
+
+    QueueRemoval --> NextToken
+    QueueFront --> NextToken
+    QueueBefore --> NextToken
+    QueueEnd --> NextToken
+
+    NextToken --> Token: iterate to next token
+    NextToken --> ValidInput: no more tokens
+    Invalid --> InvalidInput
     InvalidInput --> [*]
     ValidInput --> Replay: replay queued placements
     ValidInput --> ApplyRemovals: later apply queued removals
 
-    state Replay {
-        [*] --> Placement: next queued placement
-
-        state "Updated order" as UpdatedOrder
-        state "Next placement" as NextPlacement
-
-        state PlacementActions {
-            state "Move to front" as MoveToFront
-            state "Move to end" as MoveToEnd
-            state "Place before anchor" as PlaceBeforeAnchor
-        }
-
-        Placement --> MoveToFront: use or insert source, then move it to the front
-        Placement --> MoveToEnd: use or insert source, then move it to the end
-        Placement --> PlaceBeforeAnchor: use or insert source and anchor, then move source before anchor
-        MoveToFront --> UpdatedOrder
-        MoveToEnd --> UpdatedOrder
-        PlaceBeforeAnchor --> UpdatedOrder
-        UpdatedOrder --> NextPlacement
-        NextPlacement --> Placement: iterate to next placement
-        NextPlacement --> [*]: no more placements
-    }
-
-    Replay --> ApplyRemovals
+    Replay --> MoveToFront: use or insert source, then move it to the front
+    Replay --> MoveToEnd: use or insert source, then move it to the end
+    Replay --> PlaceBeforeAnchor: use or insert source and anchor, then move source before anchor
+    MoveToFront --> UpdatedOrder
+    MoveToEnd --> UpdatedOrder
+    PlaceBeforeAnchor --> UpdatedOrder
+    UpdatedOrder --> NextPlacement
+    NextPlacement --> Replay: iterate to next placement
+    NextPlacement --> ApplyRemovals: no more placements
     ApplyRemovals --> [*]
 ```
 
