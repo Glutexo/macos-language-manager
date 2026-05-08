@@ -234,7 +234,7 @@ stateDiagram-v2
 
         Remove --> Invalid: source contains ":"
         Remove --> Invalid: source is empty or invalid tag
-        Remove --> AcceptRemove: store in removed_languages
+        Remove --> AcceptRemove
 
         Anchored --> Invalid: source is empty or invalid tag
         Anchored --> Invalid: anchor is invalid tag
@@ -242,15 +242,31 @@ stateDiagram-v2
         Anchored --> Before: anchor is present
 
         Front --> Invalid: token is not a valid tag
-        Front --> AcceptFront: op=front, requested+=source
+        Front --> AcceptFront
 
-        Before --> AcceptBefore: op=before, requested+=source, anchor=yy
-        End --> AcceptEnd: op=end, requested+=source
+        Before --> AcceptBefore
+        End --> AcceptEnd
 
-        AcceptRemove --> NextToken
-        AcceptFront --> NextToken
-        AcceptBefore --> NextToken
-        AcceptEnd --> NextToken
+        AcceptRemove --> StoreRemoval: removed_languages += source
+        AcceptFront --> QueueFront: operation_kinds += front
+        QueueFront --> QueueFrontSource: operation_sources += source
+        QueueFrontSource --> QueueFrontAnchor: operation_anchors += empty
+        QueueFrontAnchor --> QueueRequestedFront: requested_languages += source
+
+        AcceptBefore --> QueueBefore: operation_kinds += before
+        QueueBefore --> QueueBeforeSource: operation_sources += source
+        QueueBeforeSource --> QueueBeforeAnchor: operation_anchors += anchor
+        QueueBeforeAnchor --> QueueRequestedBefore: requested_languages += source
+
+        AcceptEnd --> QueueEnd: operation_kinds += end
+        QueueEnd --> QueueEndSource: operation_sources += source
+        QueueEndSource --> QueueEndAnchor: operation_anchors += empty
+        QueueEndAnchor --> QueueRequestedEnd: requested_languages += source
+
+        StoreRemoval --> NextToken
+        QueueRequestedFront --> NextToken
+        QueueRequestedBefore --> NextToken
+        QueueRequestedEnd --> NextToken
 
         NextToken --> Token: iterate to next token
         NextToken --> [*]: no more tokens
@@ -276,11 +292,14 @@ stateDiagram-v2
         FindAnchor --> UseAnchor: anchor found
         FindAnchor --> CreateAnchor: anchor missing
         CreateAnchor --> UseAnchor: build_missing_language_tag and create_entity
-        UseAnchor --> ApplyBefore: set source before anchor
+        UseAnchor --> ApplyBefore
 
-        ApplyFront --> Ordered: move source to front root
-        ApplyEnd --> Ordered: move source to end root
-        ApplyBefore --> Ordered: place source before anchor
+        ApplyFront --> MoveFront: set_entity_root front
+        ApplyEnd --> MoveEnd: set_entity_root end
+        ApplyBefore --> PlaceBefore: set_entity_parent source to anchor
+        MoveFront --> Ordered
+        MoveEnd --> Ordered
+        PlaceBefore --> Ordered
         Ordered --> NextOperation
         NextOperation --> Replay: iterate to next operation
         NextOperation --> FilterRemoved: no more operations; remove matches from ordered_languages
