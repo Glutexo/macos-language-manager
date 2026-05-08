@@ -223,31 +223,41 @@ State machine overview:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Token
+    [*] --> TokenLoop
 
-    Token --> Remove: starts with "-"
-    Token --> Anchored: contains ":"
-    Token --> Front: otherwise
+    state TokenLoop {
+        [*] --> Token: next token
 
-    Remove --> Invalid: source contains ":"
-    Remove --> Invalid: source is empty or invalid tag
-    Remove --> AcceptRemove: store in removed_languages
+        Token --> Remove: starts with "-"
+        Token --> Anchored: contains ":"
+        Token --> Front: otherwise
 
-    Anchored --> Invalid: source is empty or invalid tag
-    Anchored --> Invalid: anchor is invalid tag
-    Anchored --> End: anchor is empty
-    Anchored --> Before: anchor is present
+        Remove --> Invalid: source contains ":"
+        Remove --> Invalid: source is empty or invalid tag
+        Remove --> AcceptRemove: store in removed_languages
 
-    Front --> Invalid: token is not a valid tag
-    Front --> AcceptFront: op=front, requested+=source
+        Anchored --> Invalid: source is empty or invalid tag
+        Anchored --> Invalid: anchor is invalid tag
+        Anchored --> End: anchor is empty
+        Anchored --> Before: anchor is present
 
-    Before --> AcceptBefore: op=before, requested+=source, anchor=yy
-    End --> AcceptEnd: op=end, requested+=source
+        Front --> Invalid: token is not a valid tag
+        Front --> AcceptFront: op=front, requested+=source
 
-    AcceptRemove --> QueueRemoval: append source to removed_languages
-    AcceptFront --> QueueOperation: append front op
-    AcceptBefore --> QueueOperation: append before op
-    AcceptEnd --> QueueOperation: append end op
+        Before --> AcceptBefore: op=before, requested+=source, anchor=yy
+        End --> AcceptEnd: op=end, requested+=source
+
+        AcceptRemove --> NextToken
+        AcceptFront --> NextToken
+        AcceptBefore --> NextToken
+        AcceptEnd --> NextToken
+
+        NextToken --> Token: more tokens
+        NextToken --> [*]: no more tokens
+    }
+
+    TokenLoop --> QueueRemoval: queued removals available
+    TokenLoop --> QueueOperation: queued operations available
 
     QueueRemoval --> FilterRemoved: later used during final filtering
     QueueOperation --> ReplayOperations
