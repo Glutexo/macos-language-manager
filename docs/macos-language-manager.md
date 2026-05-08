@@ -290,13 +290,14 @@ Internal argument fields:
 | Field | Meaning |
 | --- | --- |
 | `token` | Original argument string, for example `+ja`, `-ja`, `ja:cs`, or `ja:`. Error messages report this original value. |
+| `normalized_token` | Working token value after optional leading `+` normalization. The parser uses this form for later checks such as removal syntax and anchor parsing. |
 | `source` | Normalized language taken from the token itself, for example `ja` in `+ja`, `-ja`, `ja:cs`, and `ja:`. |
 | `anchor` | Language after `:` in anchored syntax like `ja:cs`; empty for `xx`, `+xx`, `-xx`, and `xx:`. |
 | `requested_languages` | Array recording every added or repositioned source language in argument order. It later helps derive the effective locale or startup language. |
-| `operation_kinds` | Parallel array holding the operation kind for each queued operation. The parser produces `front`, `before`, or `end`. |
-| `operation_sources` | Parallel array holding the `source` value for each queued operation. |
-| `operation_anchors` | Parallel array holding the `anchor` value for each queued operation; empty except for `before`. |
-| `removed_languages` | Separate array of removals collected from `-xx`. These removals are applied only after the final ordered list is built. |
+| `operation_kinds` | Parallel array holding the queued operation kind. The parser records `front`, `before`, or `end` here, and the replay step later executes those operations in argument order. |
+| `operation_sources` | Parallel array holding the queued `source` value for each replayed operation. |
+| `operation_anchors` | Parallel array holding the queued `anchor` value for each replayed operation; empty except for `before`. |
+| `removed_languages` | Separate array holding queued removals collected from `-xx`. These removals are applied only after the replay step has finished ordering languages. |
 
 ## Matching Rules
 
