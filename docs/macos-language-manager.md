@@ -230,7 +230,6 @@ stateDiagram-v2
     [*] --> Arguments
     Arguments --> TokenParsing
 
-    state "Token parsing" as TokenParsing
     state TokenParsing {
         [*] --> Token: next token
         Token --> LeadingPlus: optionally remove leading "+"
@@ -239,14 +238,12 @@ stateDiagram-v2
         state "Next token" as NextToken
         state "Invalid" as Invalid
 
-        state "Placement forms" as PlacementForms
         state PlacementForms {
             state "Removal" as Removal
             state "Anchored placement" as AnchoredPlacement
             state "Front placement" as FrontPlacement
         }
 
-        state "Queued changes" as QueuedChanges
         state QueuedChanges {
             state "Queue removal" as QueueRemoval
             state "Queue front placement" as QueueFront
@@ -291,14 +288,12 @@ stateDiagram-v2
     ValidInput --> Replay: replay queued placements
     ValidInput --> ApplyRemovals: later apply queued removals
 
-    state "Replay placements" as Replay
     state Replay {
         [*] --> Placement: next queued placement
 
         state "Updated order" as UpdatedOrder
         state "Next placement" as NextPlacement
 
-        state "Placement actions" as PlacementActions
         state PlacementActions {
             state "Move to front" as MoveToFront
             state "Move to end" as MoveToEnd
