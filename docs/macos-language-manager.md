@@ -305,9 +305,11 @@ stateDiagram-v2
         PlaceBefore --> Ordered
         Ordered --> NextOperation
         NextOperation --> Replay: iterate to next operation
-        NextOperation --> FilterRemoved: no more operations
-        FilterRemoved --> [*]
+        NextOperation --> [*]: no more operations
     }
+
+    ReplayOperations --> FilterRemoved
+    FilterRemoved --> [*]
 
     Invalid --> [*]
 ```
