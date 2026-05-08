@@ -272,11 +272,7 @@ stateDiagram-v2
 
         UseSource --> ApplyFront: op=front
         UseSource --> ApplyEnd: op=end
-        UseSource --> FindAnchor: op=before
-
-        FindAnchor --> UseAnchor: anchor found
-        FindAnchor --> CreateAnchor: anchor missing
-        CreateAnchor --> UseAnchor: build and insert missing anchor language
+        UseSource --> UseAnchor: op=before; use or insert anchor language
         UseAnchor --> ApplyBefore
 
         ApplyFront --> MoveFront: move source to front section
