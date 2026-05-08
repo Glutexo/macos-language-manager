@@ -207,6 +207,8 @@ The script does not just prepend values blindly. It builds an internal ordered e
 - `base`
 - `end`
 
+Argument tokens are parsed by the `parse_language_argument` shell function in `manage-macos-languages.sh`. The behavior summary, state diagram, and field table below describe that parser.
+
 Behavior by argument type:
 
 - `xx` or `+xx` → move or add the language to the front section
