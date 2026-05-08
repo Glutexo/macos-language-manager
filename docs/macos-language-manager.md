@@ -247,21 +247,21 @@ flowchart TD
             QueueEnd[Queue end placement]
         end
 
-        LeadingPlus -- + then - --> Invalid[Invalid]
+        LeadingPlus -- + then - --> TokenLoopInvalidEnd((End))
         LeadingPlus -- starts with - --> Removal
         LeadingPlus -- contains : --> AnchoredPlacement
         LeadingPlus -- otherwise --> FrontPlacement
 
-        Removal -- source contains : --> Invalid
-        Removal -- source is empty or invalid tag --> Invalid
+        Removal -- source contains : --> TokenLoopInvalidEnd
+        Removal -- source is empty or invalid tag --> TokenLoopInvalidEnd
         Removal --> QueueRemoval
 
-        AnchoredPlacement -- source is empty or invalid tag --> Invalid
-        AnchoredPlacement -- anchor is empty or invalid tag --> Invalid
+        AnchoredPlacement -- source is empty or invalid tag --> TokenLoopInvalidEnd
+        AnchoredPlacement -- anchor is empty or invalid tag --> TokenLoopInvalidEnd
         AnchoredPlacement -- anchor is not present --> QueueEnd
         AnchoredPlacement -- anchor is present --> QueueBefore
 
-        FrontPlacement -- invalid tag --> Invalid
+        FrontPlacement -- invalid tag --> TokenLoopInvalidEnd
         FrontPlacement --> QueueFront
 
         QueueRemoval --> NextToken[Next token]
@@ -270,7 +270,6 @@ flowchart TD
         QueueEnd --> NextToken
 
         NextToken -- iterate to next token --> Token
-        Invalid --> TokenLoopInvalidEnd((End))
         NextToken -- no more tokens --> TokenLoopDoneEnd((End))
     end
 
