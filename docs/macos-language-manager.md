@@ -234,19 +234,22 @@ flowchart TD
         TokenLoopStart((Start)) --> Token[Token]
         Token[Token] --> LeadingPlus[Normalize leading +]
 
-        Removal[Removal]
-
-        subgraph PlacementForms["Placement forms"]
-            AnchoredPlacement[Anchored placement]
-            FrontPlacement[Front placement]
+        subgraph RemovalFlow["Removal"]
+            Removal[Removal]
+            QueueRemoval[Queue removal]
         end
 
-        QueueRemoval[Queue removal]
+        subgraph PlacementFlow["Placements"]
+            subgraph PlacementForms["Placement forms"]
+                AnchoredPlacement[Anchored placement]
+                FrontPlacement[Front placement]
+            end
 
-        subgraph QueuedPlacements["Queued placements"]
+            subgraph QueuedPlacements["Queued placements"]
             QueueFront[Queue front placement]
             QueueBefore[Queue before placement]
             QueueEnd[Queue end placement]
+            end
         end
 
         LeadingPlus -- + then - --> TokenLoopInvalidEnd((End))
