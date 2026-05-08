@@ -254,7 +254,7 @@ flowchart TD
 
         Removal -- source contains : --> Invalid
         Removal -- source is empty or invalid tag --> Invalid
-        Removal -- queue removal --> QueueRemoval
+        Removal --> QueueRemoval
 
         AnchoredPlacement -- source is empty or invalid tag --> Invalid
         AnchoredPlacement -- anchor is empty or invalid tag --> Invalid
@@ -262,7 +262,7 @@ flowchart TD
         AnchoredPlacement -- anchor is present --> QueueBefore
 
         FrontPlacement -- invalid tag --> Invalid
-        FrontPlacement -- queue a front placement --> QueueFront
+        FrontPlacement --> QueueFront
 
         QueueRemoval --> NextToken[Next token]
         QueueFront --> NextToken
