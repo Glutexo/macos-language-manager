@@ -312,11 +312,9 @@ Glossary of diagram terms:
 | Term | Meaning |
 | --- | --- |
 | `token` | One command-line language argument, for example `+ja`, `-ja`, `ja:cs`, or `ja:`. |
-| `normalized` | The token after optional removal of a leading `+`. |
 | `source` | The language being moved, added, or removed. In `ja:cs`, the source is `ja`. |
 | `anchor` | The language used as a placement reference in anchored syntax. In `ja:cs`, the anchor is `cs`. |
 | `queue` | Remember a requested change now so it can be applied later in a predictable order. |
-| `replay` | Go through queued placements in argument order and apply them to the working language order. |
 
 ## Matching Rules
 
