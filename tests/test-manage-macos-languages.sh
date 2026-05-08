@@ -194,8 +194,14 @@ assert_contains "$output" $'New startup language setting:
 order="$(run_and_capture_order ja:cs)"
 assert_eq "en-US,ko-KR,fr-FR,ja-CZ,cs-CZ" "$order" "ja:cs should place Japanese immediately before Czech"
 
+order="$(run_and_capture_order +ja:cs)"
+assert_eq "en-US,ko-KR,fr-FR,ja-CZ,cs-CZ" "$order" "+ja:cs should behave like ja:cs after leading plus normalization"
+
 order="$(run_and_capture_order ja:pl)"
 assert_eq "ja-CZ,pl-CZ,en-US,ko-KR,fr-FR,cs-CZ" "$order" "ja:pl should behave like explicit ja pl when the anchor is missing"
+
+order="$(run_and_capture_order +ja:)"
+assert_eq "en-US,ko-KR,fr-FR,cs-CZ,ja-CZ" "$order" "+ja: should behave like ja: after leading plus normalization"
 
 order="$(run_and_capture_order ja:ko -ko)"
 assert_eq "en-US,ja-CZ,fr-FR,cs-CZ" "$order" "ja:ko -ko should keep Japanese in Korean's former position"
@@ -217,5 +223,17 @@ assert_contains "$output" "Removal syntax does not support anchors" "removal syn
 
 output="$(run_case account --dry-run '+-xx' 2>&1 || true)"
 assert_contains "$output" "Invalid language value: +-xx" "+-xx should not be accepted as a valid language request"
+
+output="$(run_case account --dry-run 'ja:-ko' 2>&1 || true)"
+assert_contains "$output" "Invalid language value: ja:-ko" "anchored syntax should reject removal-style anchors"
+
+output="$(run_case account --dry-run 'ja:+ko' 2>&1 || true)"
+assert_contains "$output" "Invalid language value: ja:+ko" "anchored syntax should reject plus-prefixed anchors"
+
+output="$(run_case account --dry-run '+ja:-ko' 2>&1 || true)"
+assert_contains "$output" "Invalid language value: +ja:-ko" "plus-normalized anchored syntax should still reject removal-style anchors"
+
+output="$(run_case account --dry-run '+ja:+ko' 2>&1 || true)"
+assert_contains "$output" "Invalid language value: +ja:+ko" "plus-normalized anchored syntax should still reject plus-prefixed anchors"
 
 echo "All tests passed."

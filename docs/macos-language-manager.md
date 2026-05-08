@@ -211,9 +211,10 @@ Behavior by argument type:
 
 - `xx` or `+xx` → move or add the language to the front section
 - `-xx` → remove matching languages after ordering is resolved
-- `xx:yy` → move or add `xx` immediately before `yy`
-- `xx:` → move or add `xx` at the end section
+- `xx:yy` or `+xx:yy` → move or add `xx` immediately before `yy`
+- `xx:` or `+xx:` → move or add `xx` at the end section
 - `+-xx` → invalid; a leading `+` cannot prefix removal syntax
+- `xx:-yy`, `xx:+yy`, `+xx:-yy`, and `+xx:+yy` → invalid; anchors must be plain language tags
 
 Important detail:
 
