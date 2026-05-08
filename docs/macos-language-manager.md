@@ -223,10 +223,12 @@ State machine overview:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> TokenLoop
+    [*] --> Tokens
+    Tokens --> TokenLoopEntry
 
     state TokenLoop {
-        [*] --> Token: next token
+        [*] --> TokenLoopEntry
+        TokenLoopEntry --> Token: next token
 
         Token --> Remove: starts with "-"
         Token --> Anchored: contains ":"
@@ -276,10 +278,11 @@ stateDiagram-v2
     TokenLoop --> QueueOperation: queued operations available
 
     QueueRemoval --> FilterRemoved: later used during final filtering
-    QueueOperation --> ReplayOperations
+    QueueOperation --> ReplayEntry
 
     state ReplayOperations {
-        [*] --> Replay: next operation
+        [*] --> ReplayEntry
+        ReplayEntry --> Replay: next operation
         Replay --> FindSource: lookup source entity
         FindSource --> UseSource: source found
         FindSource --> CreateSource: source missing
