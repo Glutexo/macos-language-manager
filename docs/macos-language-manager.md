@@ -278,10 +278,10 @@ flowchart TD
     InvalidInput --> End((End))
 
     TokenLoopDoneEnd --> PlacementLoopStart
-    TokenLoopDoneEnd --> ApplyRemovals[Apply removals]
+    TokenLoopDoneEnd --> ApplyRemovals[Apply queued removals]
 
     subgraph PlacementLoop["Apply queued placements loop"]
-        PlacementLoopStart((Start)) --> Placement[Placement]
+        PlacementLoopStart((Start)) --> Placement[Queued placement]
 
         subgraph PlacementActions["Placement actions"]
             MoveToFront[Move to front]
@@ -315,6 +315,8 @@ Glossary of diagram terms:
 | `source` | The language being moved, added, or removed. In `ja:cs`, the source is `ja`. |
 | `anchor` | The language used as a placement reference in anchored syntax. In `ja:cs`, the anchor is `cs`. |
 | `queue` | Remember a requested change now so it can be applied later in a predictable order. |
+| `queued placement` | One queued move-or-add request being applied inside the placement loop. |
+| `queued removals` | Removal requests that are applied only after queued placements are finished. |
 
 ## Matching Rules
 
