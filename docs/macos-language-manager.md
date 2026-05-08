@@ -263,6 +263,7 @@ stateDiagram-v2
 
     TokenLoop --> InvalidResult: invalid input
     TokenLoop --> ParsedOK: parsing completed
+    InvalidResult --> [*]
     ParsedOK --> ReplayOperations: replay queued operations
     ParsedOK --> FilterRemoved: later apply queued removals
 
