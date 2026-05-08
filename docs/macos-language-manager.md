@@ -249,21 +249,30 @@ stateDiagram-v2
     AcceptBefore --> QueueOperation: append before op
     AcceptEnd --> QueueOperation: append end op
 
-    QueueRemoval --> [*]
+    QueueRemoval --> FilterRemoved: later used during final filtering
     QueueOperation --> ReplayOperations
 
     state ReplayOperations {
-        [*] --> Replay: iterate operation_kinds in argument order
-        Replay --> EnsureSource: ensure source entity exists
-        EnsureSource --> ApplyFront: op=front
-        EnsureSource --> ApplyEnd: op=end
-        EnsureSource --> EnsureAnchor: op=before
-        EnsureAnchor --> ApplyBefore: ensure anchor entity exists
+        [*] --> Replay: next queued operation
+        Replay --> FindSource: lookup source entity
+        FindSource --> UseSource: source found
+        FindSource --> CreateSource: source missing
+        CreateSource --> UseSource: build_missing_language_tag and create_entity
+
+        UseSource --> ApplyFront: op=front
+        UseSource --> ApplyEnd: op=end
+        UseSource --> FindAnchor: op=before
+
+        FindAnchor --> UseAnchor: anchor found
+        FindAnchor --> CreateAnchor: anchor missing
+        CreateAnchor --> UseAnchor: build_missing_language_tag and create_entity
+        UseAnchor --> ApplyBefore: set source before anchor
 
         ApplyFront --> Ordered: move source to front root
         ApplyEnd --> Ordered: move source to end root
         ApplyBefore --> Ordered: place source before anchor
-        Ordered --> FilterRemoved: remove matches from ordered_languages
+        Ordered --> Replay: more queued operations
+        Ordered --> FilterRemoved: no more operations; remove matches from ordered_languages
         FilterRemoved --> [*]
     }
 
