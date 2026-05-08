@@ -244,12 +244,36 @@ stateDiagram-v2
     Before --> AcceptBefore: op=before, requested+=source, anchor=yy
     End --> AcceptEnd: op=end, requested+=source
 
-    AcceptRemove --> [*]
-    AcceptFront --> [*]
-    AcceptBefore --> [*]
-    AcceptEnd --> [*]
+    AcceptRemove --> QueueRemoval: append source to removed_languages
+    AcceptFront --> QueueOperation: append front op
+    AcceptBefore --> QueueOperation: append before op
+    AcceptEnd --> QueueOperation: append end op
+
+    QueueRemoval --> [*]
+    QueueOperation --> Replay: iterate operation_kinds in argument order
+    Replay --> EnsureSource: ensure source entity exists
+    EnsureSource --> ApplyFront: op=front
+    EnsureSource --> ApplyEnd: op=end
+    EnsureSource --> EnsureAnchor: op=before
+    EnsureAnchor --> ApplyBefore: ensure anchor entity exists
+
+    ApplyFront --> Ordered: move source to front root
+    ApplyEnd --> Ordered: move source to end root
+    ApplyBefore --> Ordered: place source before anchor
+    Ordered --> FilterRemoved: remove matches from ordered_languages
+    FilterRemoved --> [*]
     Invalid --> [*]
 ```
+
+Internal argument fields:
+
+- `source` → normalized language taken from the token itself, for example `ja` in `+ja`, `-ja`, `ja:cs`, and `ja:`.
+- `anchor` → the language after `:` in anchored syntax like `ja:cs`; it is empty for `xx`, `+xx`, `-xx`, and `xx:`.
+- `requested` → the `requested_languages` array. It records every added or repositioned source language in argument order and later helps derive the effective locale/startup language.
+- `op` → the operation kind stored in `operation_kinds`. The parser produces `front`, `before`, or `end`.
+- `operation_sources` → a parallel array holding the `source` value for each queued operation.
+- `operation_anchors` → a parallel array holding the `anchor` value for each queued operation; it is empty except for `before`.
+- `removed_languages` → a separate array of removals collected from `-xx`. These removals are applied only after the final ordered list is built.
 
 ## Matching Rules
 
