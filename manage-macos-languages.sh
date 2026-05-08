@@ -6,11 +6,11 @@ target_mode=""
 verbose_help=false
 
 display_target_list() {
-  echo "  account        Read or write the current account language order."
-  echo "  login-window   Read or write the login window language order."
-  echo "  locale         Read or write locale settings derived from the first language."
-  echo "  startup        Read or write startup NVRAM language settings."
-  echo "  all            Read or write account, login window, locale, and startup NVRAM settings."
+  echo "  account        Current account language order."
+  echo "  login-window   Login window language order."
+  echo "  locale         Locale settings derived from the first language."
+  echo "  startup        Startup NVRAM language settings."
+  echo "  all            Account, login window, locale, and startup NVRAM settings."
 }
 
 show_usage() {
