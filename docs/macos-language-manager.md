@@ -262,11 +262,8 @@ stateDiagram-v2
         TokenLoopDone --> [*]
     }
 
-    TokenLoopDone --> QueueRemoval: queued removals available
-    TokenLoopDone --> QueueOperation: queued operations available
-
-    QueueRemoval --> FilterRemoved: later used during final filtering
-    QueueOperation --> ReplayEntry
+    TokenLoopDone --> ReplayEntry: replay queued operations
+    TokenLoopDone --> FilterRemoved: later apply queued removals
 
     state ReplayOperations {
         [*] --> ReplayEntry
