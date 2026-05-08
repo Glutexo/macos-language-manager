@@ -256,25 +256,16 @@ stateDiagram-v2
         End --> AcceptEnd
 
         AcceptRemove --> StoreRemoval: removed_languages += source
-        AcceptFront --> QueueFront: operation_kinds += front
-        QueueFront --> QueueFrontSource: operation_sources += source
-        QueueFrontSource --> QueueFrontAnchor: operation_anchors += empty
-        QueueFrontAnchor --> QueueRequestedFront: requested_languages += source
+        AcceptFront --> EnqueueFrontOperation: queue front operation and requested language
 
-        AcceptBefore --> QueueBefore: operation_kinds += before
-        QueueBefore --> QueueBeforeSource: operation_sources += source
-        QueueBeforeSource --> QueueBeforeAnchor: operation_anchors += anchor
-        QueueBeforeAnchor --> QueueRequestedBefore: requested_languages += source
+        AcceptBefore --> EnqueueBeforeOperation: queue before operation and requested language
 
-        AcceptEnd --> QueueEnd: operation_kinds += end
-        QueueEnd --> QueueEndSource: operation_sources += source
-        QueueEndSource --> QueueEndAnchor: operation_anchors += empty
-        QueueEndAnchor --> QueueRequestedEnd: requested_languages += source
+        AcceptEnd --> EnqueueEndOperation: queue end operation and requested language
 
         StoreRemoval --> NextToken
-        QueueRequestedFront --> NextToken
-        QueueRequestedBefore --> NextToken
-        QueueRequestedEnd --> NextToken
+        EnqueueFrontOperation --> NextToken
+        EnqueueBeforeOperation --> NextToken
+        EnqueueEndOperation --> NextToken
 
         NextToken --> Token: iterate to next token
         NextToken --> TokenLoopDone: no more tokens
