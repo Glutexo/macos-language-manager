@@ -223,73 +223,83 @@ Important detail:
 - Anchored placements are resolved before removals.
 - Because of that, `ja:ko -ko` and `-ko ja:ko` produce the same Japanese placement.
 
-State machine overview:
+Flow overview:
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Arguments
-    Arguments --> Token: next token
-    Token --> LeadingPlus: optionally remove leading "+"
+flowchart TD
+    Start((Start)) --> Arguments[Arguments]
+    Arguments --> Token
 
-    state "Leading +" as LeadingPlus
-    state "Removal" as Removal
-    state "Anchored placement" as AnchoredPlacement
-    state "Front placement" as FrontPlacement
-    state "Queue removal" as QueueRemoval
-    state "Queue front placement" as QueueFront
-    state "Queue before placement" as QueueBefore
-    state "Queue end placement" as QueueEnd
-    state "Next token" as NextToken
-    state "Invalid" as Invalid
-    state "Invalid input" as InvalidInput
-    state "Parsing completed" as ValidInput
-    state "Apply removals" as ApplyRemovals
-    state "Replay placements" as Replay
-    state "Updated order" as UpdatedOrder
-    state "Next placement" as NextPlacement
-    state "Move to front" as MoveToFront
-    state "Move to end" as MoveToEnd
-    state "Place before anchor" as PlaceBeforeAnchor
+    subgraph TokenParsing["Token parsing loop"]
+        Token[Token] --> LeadingPlus[Leading +]
 
-    LeadingPlus --> Invalid: token had "+" and the normalized token starts with "-"
-    LeadingPlus --> Removal: normalized token starts with "-"
-    LeadingPlus --> AnchoredPlacement: normalized token contains ":"
-    LeadingPlus --> FrontPlacement: otherwise
+        subgraph PlacementForms["Placement forms"]
+            Removal[Removal]
+            AnchoredPlacement[Anchored placement]
+            FrontPlacement[Front placement]
+        end
 
-    Removal --> Invalid: source contains ":"
-    Removal --> Invalid: source is empty or invalid tag
-    Removal --> QueueRemoval: queue removal
+        subgraph QueuedChanges["Queued changes"]
+            QueueRemoval[Queue removal]
+            QueueFront[Queue front placement]
+            QueueBefore[Queue before placement]
+            QueueEnd[Queue end placement]
+        end
 
-    AnchoredPlacement --> Invalid: source is empty or invalid tag
-    AnchoredPlacement --> Invalid: anchor is empty or invalid tag
-    AnchoredPlacement --> QueueEnd: anchor is empty, so queue an end placement
-    AnchoredPlacement --> QueueBefore: anchor is present, so queue a before placement
+        LeadingPlus -- token had "+" and the normalized token starts with "-" --> Invalid[Invalid]
+        LeadingPlus -- normalized token starts with "-" --> Removal
+        LeadingPlus -- normalized token contains ":" --> AnchoredPlacement
+        LeadingPlus -- otherwise --> FrontPlacement
 
-    FrontPlacement --> Invalid: token is not a valid tag
-    FrontPlacement --> QueueFront: queue a front placement
+        Removal -- source contains ":" --> Invalid
+        Removal -- source is empty or invalid tag --> Invalid
+        Removal -- queue removal --> QueueRemoval
 
-    QueueRemoval --> NextToken
-    QueueFront --> NextToken
-    QueueBefore --> NextToken
-    QueueEnd --> NextToken
+        AnchoredPlacement -- source is empty or invalid tag --> Invalid
+        AnchoredPlacement -- anchor is empty or invalid tag --> Invalid
+        AnchoredPlacement -- anchor is empty --> QueueEnd
+        AnchoredPlacement -- anchor is present --> QueueBefore
 
-    NextToken --> Token: iterate to next token
-    NextToken --> ValidInput: no more tokens
-    Invalid --> InvalidInput
-    InvalidInput --> [*]
-    ValidInput --> Replay: replay queued placements
-    ValidInput --> ApplyRemovals: later apply queued removals
+        FrontPlacement -- token is not a valid tag --> Invalid
+        FrontPlacement -- queue a front placement --> QueueFront
 
-    Replay --> MoveToFront: use or insert source, then move it to the front
-    Replay --> MoveToEnd: use or insert source, then move it to the end
-    Replay --> PlaceBeforeAnchor: use or insert source and anchor, then move source before anchor
-    MoveToFront --> UpdatedOrder
-    MoveToEnd --> UpdatedOrder
-    PlaceBeforeAnchor --> UpdatedOrder
-    UpdatedOrder --> NextPlacement
-    NextPlacement --> Replay: iterate to next placement
-    NextPlacement --> ApplyRemovals: no more placements
-    ApplyRemovals --> [*]
+        QueueRemoval --> NextToken[Next token]
+        QueueFront --> NextToken
+        QueueBefore --> NextToken
+        QueueEnd --> NextToken
+
+        NextToken -- iterate to next token --> Token
+    end
+
+    TokenParsing -- invalid input --> InvalidInput[Invalid input]
+    InvalidInput --> End((End))
+
+    TokenParsing -- parsing completed --> Replay
+    TokenParsing -- later apply queued removals --> ApplyRemovals[Apply removals]
+
+    subgraph Replay["Replay placements loop"]
+        Placement[Placement]
+
+        subgraph PlacementActions["Placement actions"]
+            MoveToFront[Move to front]
+            MoveToEnd[Move to end]
+            PlaceBeforeAnchor[Place before anchor]
+        end
+
+        Placement -- use or insert source, then move it to the front --> MoveToFront
+        Placement -- use or insert source, then move it to the end --> MoveToEnd
+        Placement -- use or insert source and anchor, then move source before anchor --> PlaceBeforeAnchor
+
+        MoveToFront --> UpdatedOrder[Updated order]
+        MoveToEnd --> UpdatedOrder
+        PlaceBeforeAnchor --> UpdatedOrder
+
+        UpdatedOrder --> NextPlacement[Next placement]
+        NextPlacement -- iterate to next placement --> Placement
+    end
+
+    Replay --> ApplyRemovals
+    ApplyRemovals --> End
 ```
 
 Glossary of diagram terms:
