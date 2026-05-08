@@ -21,6 +21,18 @@ Usage:
 ./manage-macos-languages.sh all [--dry-run|-n] [--restart|-r] [language ...]
 ```
 
+Common token examples:
+
+| Token | Meaning |
+| --- | --- |
+| `ja` or `+ja` | Move or add Japanese at the front |
+| `ja:cs` or `+ja:cs` | Move or add Japanese immediately before Czech |
+| `ja:` or `+ja:` | Move or add Japanese at the end |
+| `-ja` | Remove matching Japanese entries after ordering |
+| `+-ja` | Invalid |
+| `ja:-cs` | Invalid |
+| `ja:+cs` | Invalid |
+
 Technical details:
 
 - [macos-language-manager.md](docs/macos-language-manager.md)
