@@ -231,12 +231,12 @@ stateDiagram-v2
     state TokenLoop {
         [*] --> TokenLoopEntry
         TokenLoopEntry --> Token: next token
-        Token --> StripPlus: normalize leading "+"
+        Token --> MaybeStripPlus: optionally normalize leading "+"
 
-        StripPlus --> Invalid: normalized token starts with "-" after "+" removal
-        StripPlus --> Remove: normalized token starts with "-"
-        StripPlus --> Anchored: contains ":"
-        StripPlus --> Front: otherwise
+        MaybeStripPlus --> Invalid: token had "+" and normalized token starts with "-"
+        MaybeStripPlus --> Remove: normalized token starts with "-"
+        MaybeStripPlus --> Anchored: normalized token contains ":"
+        MaybeStripPlus --> Front: otherwise
 
         Remove --> Invalid: source contains ":"
         Remove --> Invalid: source is empty or invalid tag
