@@ -284,20 +284,28 @@ stateDiagram-v2
     FilterRemoved --> [*]
 ```
 
-Internal argument fields:
+Glossary of diagram terms:
 
 
-| Field | Meaning |
+| Term | Meaning |
 | --- | --- |
-| `token` | Original argument string, for example `+ja`, `-ja`, `ja:cs`, or `ja:`. Error messages report this original value. |
-| `normalized_token` | Working token value after optional leading `+` normalization. The parser uses this form for later checks such as removal syntax and anchor parsing. |
-| `source` | Normalized language taken from the token itself, for example `ja` in `+ja`, `-ja`, `ja:cs`, and `ja:`. |
-| `anchor` | Language after `:` in anchored syntax like `ja:cs`; empty for `xx`, `+xx`, `-xx`, and `xx:`. |
-| `requested_languages` | Array recording every added or repositioned source language in argument order. It later helps derive the effective locale or startup language. |
-| `operation_kinds` | Parallel array holding the queued operation kind. The parser records `front`, `before`, or `end` here, and the replay step later executes those operations in argument order. |
-| `operation_sources` | Parallel array holding the queued `source` value for each replayed operation. |
-| `operation_anchors` | Parallel array holding the queued `anchor` value for each replayed operation; empty except for `before`. |
-| `removed_languages` | Separate array holding queued removals collected from `-xx`. These removals are applied only after the replay step has finished ordering languages. |
+| `token` | One command-line language argument, for example `+ja`, `-ja`, `ja:cs`, or `ja:`. |
+| `normalized token` | The token after optional removal of a leading `+`, used for the later parse checks in `MaybeStripPlus`. |
+| `source` | The language being moved, added, or removed. In `ja:cs`, the source is `ja`. |
+| `anchor` | The language used as a placement reference in anchored syntax. In `ja:cs`, the anchor is `cs`. |
+| `queue removal` | Record a removal request now and apply it later, after replaying queued ordering operations. |
+| `queue front operation` | Record that the source language should be moved or added at the front. |
+| `queue before operation` | Record that the source language should be moved or added immediately before the anchor language. |
+| `queue end operation` | Record that the source language should be moved or added at the end. |
+| `requested language` | The language value remembered from a successful add-or-move request and later used for locale or startup derivation when needed. |
+| `replay queued operations` | Revisit queued add-or-move requests in argument order and apply them to the working language order. |
+| `later apply queued removals` | Remove languages only after the queued ordering operations have already been replayed. |
+| `op=front` | A replayed operation that moves or adds the source language to the front section. |
+| `op=end` | A replayed operation that moves or adds the source language to the end section. |
+| `op=before` | A replayed operation that ensures source and anchor exist, then places the source immediately before the anchor. |
+| `ordered` | The current replayed operation has finished updating the working language order. |
+| `invalid input` | Parsing failed because the token shape or language tag was not accepted. |
+| `parsing completed` | All tokens were parsed without error, so queued operations and removals can be processed. |
 
 ## Matching Rules
 
