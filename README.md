@@ -1,9 +1,10 @@
 # macos-language-manager
 
-Simple shell tooling for two separate tasks on macOS:
+Simple shell tooling for three separate tasks on macOS:
 
 - managing the preferred macOS language order
 - managing the Steam interface language
+- managing the Anki interface language
 
 ## Scripts
 
@@ -74,10 +75,25 @@ Technical details:
 
 - [steam-language-manager.md](docs/steam-language-manager.md)
 
+### `manage-anki-language.sh`
+
+Reads or changes the Anki interface language on macOS.
+
+Usage:
+
+```bash
+./manage-anki-language.sh [--dry-run|-n] [--force|-f] [language]
+```
+
+Technical details:
+
+- [anki-language-manager.md](docs/anki-language-manager.md)
+
 ## Tests
 
 - `./tests/test-manage-macos-languages.sh`
 - `./tests/test-manage-steam-language.sh`
+- `./tests/test-manage-anki-language.sh`
 
 ## Repository Workflow
 
