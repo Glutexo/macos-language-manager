@@ -122,6 +122,12 @@ assert_contains "$output" "Supported Anki interface language values:" "verbose h
 assert_contains "$output" "  ja_JP" "verbose help should include language list entries"
 assert_contains "$output" "Short aliases such as en, cs, ja, pt, or zh" "verbose help should mention aliases"
 
+output="$(run_case --help --verbose)"
+assert_contains "$output" "Supported Anki interface language values:" "help before verbose should still show supported languages"
+
+output="$(run_case --verbose --help)"
+assert_contains "$output" "Supported Anki interface language values:" "verbose before help should still show supported languages"
+
 write_prefs
 output="$(run_case --dry-run ja)"
 assert_eq "Would change Anki interface language from en_US to ja_JP." "$output" "dry-run should report planned language change"

@@ -7,6 +7,7 @@ prefs_file="$anki_base_dir/prefs21.db"
 dry_run=false
 force_write=false
 verbose_help=false
+show_help=false
 supported_languages=(
   af_ZA
   ar_SA
@@ -258,13 +259,10 @@ while [ "$#" -gt 0 ]; do
       force_write=true
       ;;
     --help|-h)
-      show_usage
-      exit 0
+      show_help=true
       ;;
     --verbose|-v)
       verbose_help=true
-      show_usage
-      exit 0
       ;;
     -*)
       fail "Unknown option: $1"
@@ -278,6 +276,11 @@ while [ "$#" -gt 0 ]; do
   esac
   shift
 done
+
+if $show_help || $verbose_help; then
+  show_usage
+  exit 0
+fi
 
 ensure_prefs_exists
 current_language="$(print_current_language)"
