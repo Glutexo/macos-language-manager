@@ -46,6 +46,11 @@ assert_contains "$output" "anki" "list-apps should print app ids"
 assert_contains "$output" "factorio" "list-apps should print app ids"
 assert_contains "$output" "steam" "list-apps should print app ids"
 
+output="$("$script" --self-test)"
+assert_contains "$output" "OK: anki" "self-test should verify anki module contract"
+assert_contains "$output" "OK: factorio" "self-test should verify factorio module contract"
+assert_contains "$output" "OK: steam" "self-test should verify steam module contract"
+
 output="$("$script" nope 2>&1 || true)"
 assert_contains "$output" "Unknown application: nope" "unknown apps should fail clearly"
 

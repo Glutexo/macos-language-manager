@@ -44,6 +44,8 @@ Examples:
 
 `--list-apps` prints the discovered ids.
 
+`--self-test` loads each discovered module and verifies that the required shell functions and metadata are present.
+
 ## Command-Line Interface
 
 Unified usage:
@@ -51,11 +53,13 @@ Unified usage:
 ```bash
 ./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]
 ./manage-app-language.sh --list-apps
+./manage-app-language.sh --self-test
 ```
 
 The runner handles:
 
 - option parsing
+- module contract self-tests
 - global help
 - app-specific help
 - verbose supported-language output

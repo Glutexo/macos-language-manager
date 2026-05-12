@@ -10,6 +10,7 @@ verbose_help=false
 dry_run=false
 force_write=false
 list_apps=false
+self_test=false
 requested_app="$default_app"
 requested_language=""
 
@@ -43,6 +44,7 @@ show_global_usage() {
   echo
   echo "Usage: $display_command <app> [--dry-run|-n] [--force|-f] [language]"
   echo "       $display_command --list-apps"
+  echo "       $display_command --self-test"
   echo
   echo "Options:"
   echo "  --dry-run, -n    Print the planned change without writing it."
@@ -50,6 +52,7 @@ show_global_usage() {
   echo "  --help, -h       Show help. Add an app name for app-specific help."
   echo "  --verbose, -v    Show help together with supported language values."
   echo "  --list-apps      List supported application modules."
+  echo "  --self-test      Verify that all discovered modules implement the required contract."
   echo
   echo "Available apps:"
 
@@ -81,6 +84,54 @@ load_module() {
   : "${module_example_dry_run_language:?}"
   module_primary_storage_path="$(module_primary_path)"
   [ -n "$module_primary_storage_path" ] || fail "Module $module_key did not report a primary storage path."
+}
+
+assert_module_function() {
+  local function_name="$1"
+
+  if ! declare -F "$function_name" >/dev/null 2>&1; then
+    fail "Module $module_key is missing required function: $function_name"
+  fi
+}
+
+run_module_self_test() {
+  local app="$1"
+
+  module_key=""
+  module_display_name=""
+  module_storage_label=""
+  module_example_language=""
+  module_example_dry_run_language=""
+  module_alias_help=""
+  module_primary_storage_path=""
+
+  load_module "$app"
+
+  assert_module_function "module_primary_path"
+  assert_module_function "module_ensure_storage_exists"
+  assert_module_function "module_print_supported_languages"
+  assert_module_function "module_backup_paths"
+  assert_module_function "module_validate_backup_paths"
+  assert_module_function "module_canonicalize_language"
+  assert_module_function "module_is_running"
+  assert_module_function "module_read_current_language"
+  assert_module_function "module_write_language"
+
+  echo "OK: $app"
+}
+
+run_self_test() {
+  local app=""
+  local found_any=false
+
+  for app in $(available_modules); do
+    found_any=true
+    run_module_self_test "$app"
+  done
+
+  if ! $found_any; then
+    fail "No application modules were found in $modules_dir"
+  fi
 }
 
 collect_module_backup_paths() {
@@ -157,6 +208,9 @@ while [ "$#" -gt 0 ]; do
     --list-apps)
       list_apps=true
       ;;
+    --self-test)
+      self_test=true
+      ;;
     -*)
       fail "Unknown option: $1"
       ;;
@@ -177,6 +231,11 @@ done
 
 if $list_apps; then
   available_modules
+  exit 0
+fi
+
+if $self_test; then
+  run_self_test
   exit 0
 fi
 
