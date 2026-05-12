@@ -17,6 +17,10 @@ module_storage_path() {
   echo "$factorio_config_file"
 }
 
+module_backup_paths() {
+  echo "$factorio_config_file"
+}
+
 module_ensure_storage_exists() {
   [ -f "$factorio_config_file" ] || fail "Factorio config file not found: $factorio_config_file"
 }

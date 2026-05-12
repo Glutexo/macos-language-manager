@@ -62,7 +62,7 @@ The runner handles:
 - read-only mode when no language argument is provided
 - dry-run mode
 - running-application protection
-- backup creation before writing
+- backup creation before writing, based on file paths reported by the module
 - generic status output
 
 ## Module Contract
@@ -72,6 +72,7 @@ Each module is sourced by the runner and must define `module_init` plus these fu
 - `module_storage_path`
 - `module_ensure_storage_exists`
 - `module_print_supported_languages`
+- `module_backup_paths`
 - `module_canonicalize_language`
 - `module_is_running`
 - `module_read_current_language`
@@ -102,9 +103,10 @@ For a write:
 3. read the current value when possible
 4. canonicalize and validate the requested language through the module
 5. block the write if the app appears to be running unless `--force` was provided
-6. create a `.bak` copy of the module storage file
-7. ask the module to write the new value
-8. print the old and new value and ask the user to restart the app
+6. ask the module for the files that must be backed up
+7. create `.bak` copies of those files
+8. ask the module to write the new value
+9. print the old and new value and ask the user to restart the app
 
 ## Error Handling
 
@@ -117,7 +119,7 @@ The runner owns generic argument and flow errors, for example:
 - read-only mode without a detectable current language
 - running-application protection
 
-Modules own application-specific errors, for example:
+Modules own application-specific errors and backup scope declarations, for example:
 
 - missing storage file
 - invalid or unsupported language identifiers

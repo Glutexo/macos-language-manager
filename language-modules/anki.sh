@@ -19,6 +19,10 @@ module_storage_path() {
   echo "$anki_prefs_file"
 }
 
+module_backup_paths() {
+  echo "$anki_prefs_file"
+}
+
 module_ensure_storage_exists() {
   [ -f "$anki_prefs_file" ] || fail "Anki preferences database not found: $anki_prefs_file"
 }

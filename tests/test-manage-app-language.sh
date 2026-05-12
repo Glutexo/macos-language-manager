@@ -55,4 +55,7 @@ assert_contains "$output" "Usage: ./manage-app-language.sh steam [--dry-run|-n] 
 output="$(STEAM_DIR="$steam_dir" "$script" steam)"
 assert_contains "$output" "Current Steam interface language: english" "unified runner should execute steam module"
 
+output="$(STEAM_DIR="$steam_dir" "$script" steam japanese)"
+assert_contains "$output" "Backup saved to $steam_dir/registry.vdf.bak" "runner should own module backup creation"
+
 echo "All tests passed."

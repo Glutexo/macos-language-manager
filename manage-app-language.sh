@@ -81,6 +81,24 @@ load_module() {
   : "${module_example_dry_run_language:?}"
 }
 
+backup_module_files() {
+  local backup_path=""
+  local backup_file=""
+  local backed_up_any=false
+
+  while IFS= read -r backup_path; do
+    [ -n "$backup_path" ] || continue
+    backup_file="$backup_path.bak"
+    cp "$backup_path" "$backup_file"
+    echo "Backup saved to $backup_file"
+    backed_up_any=true
+  done < <(module_backup_paths)
+
+  if ! $backed_up_any; then
+    fail "Module $module_key did not report any files to back up."
+  fi
+}
+
 show_module_usage() {
   local usage_target="$display_command $module_key"
 
@@ -197,11 +215,8 @@ if $dry_run; then
   exit 0
 fi
 
-storage_path="$(module_storage_path)"
-backup_file="$storage_path.bak"
-cp "$storage_path" "$backup_file"
+backup_module_files
 module_write_language "$requested_language"
 
 echo "Changed $module_display_name interface language from $display_current_language to $requested_language."
-echo "Backup saved to $backup_file"
 echo "Restart $module_display_name to apply the new interface language."

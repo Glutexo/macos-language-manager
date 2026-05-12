@@ -18,6 +18,10 @@ module_storage_path() {
   echo "$steam_registry_file"
 }
 
+module_backup_paths() {
+  echo "$steam_registry_file"
+}
+
 module_ensure_storage_exists() {
   [ -f "$steam_registry_file" ] || fail "Steam registry file not found: $steam_registry_file"
 }
