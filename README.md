@@ -1,10 +1,11 @@
 # macos-language-manager
 
-Simple shell tooling for three separate tasks on macOS:
+Simple shell tooling for four separate tasks on macOS:
 
 - managing the preferred macOS language order
 - managing the Steam interface language
 - managing the Anki interface language
+- managing the Factorio interface language
 
 ## Scripts
 
@@ -75,6 +76,20 @@ Technical details:
 
 - [steam-language-manager.md](docs/steam-language-manager.md)
 
+### `manage-factorio-language.sh`
+
+Reads or changes the Factorio interface language on macOS.
+
+Usage:
+
+```bash
+./manage-factorio-language.sh [--dry-run|-n] [--force|-f] [language]
+```
+
+Technical details:
+
+- [factorio-language-manager.md](docs/factorio-language-manager.md)
+
 ### `manage-anki-language.sh`
 
 Reads or changes the Anki interface language on macOS.
@@ -94,6 +109,7 @@ Technical details:
 - `./tests/test-manage-macos-languages.sh`
 - `./tests/test-manage-steam-language.sh`
 - `./tests/test-manage-anki-language.sh`
+- `./tests/test-manage-factorio-language.sh`
 
 ## Repository Workflow
 
