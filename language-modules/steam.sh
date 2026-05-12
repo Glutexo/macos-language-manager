@@ -2,9 +2,9 @@ module_init() {
   module_key="steam"
   module_display_name="Steam"
   module_storage_label="registry file"
-  module_example_language="czech"
-  module_example_dry_run_language="japanese"
-  module_alias_help=""
+  module_example_language="cs"
+  module_example_dry_run_language="ja"
+  module_alias_help="ISO aliases such as bg, cs, da, de, el, en, es, es-419, fi, fr, hu, id, it, ja, ko, nl, no, pl, pt, pt-BR, ro, ru, sv, th, tr, uk, vi, zh-CN, and zh-TW are also accepted."
   steam_dir="${STEAM_DIR:-$HOME/Library/Application Support/Steam}"
   steam_registry_file="$steam_dir/registry.vdf"
   module_supported_languages=(
@@ -40,12 +40,51 @@ module_print_supported_languages() {
 }
 
 module_canonicalize_language() {
+  local original_language="$1"
   local language="$1"
   local supported_language
 
   case "$language" in
-    [a-z]*) ;;
-    *) fail "Invalid Steam language value: $language" ;;
+    [A-Za-z][A-Za-z_-]*)
+      ;;
+    *)
+      fail "Invalid Steam language value: $language"
+      ;;
+  esac
+
+  language="${language//_/-}"
+  language="$(printf '%s' "$language" | tr '[:upper:]' '[:lower:]')"
+
+  case "$language" in
+    bg) language="bulgarian" ;;
+    zh|zh-cn|zh-hans) language="schinese" ;;
+    zh-tw|zh-hant) language="tchinese" ;;
+    cs) language="czech" ;;
+    da) language="danish" ;;
+    nl) language="dutch" ;;
+    en) language="english" ;;
+    fi) language="finnish" ;;
+    fr) language="french" ;;
+    de) language="german" ;;
+    el) language="greek" ;;
+    hu) language="hungarian" ;;
+    id) language="indonesian" ;;
+    it) language="italian" ;;
+    ja) language="japanese" ;;
+    ko) language="koreana" ;;
+    nb|no) language="norwegian" ;;
+    pl) language="polish" ;;
+    pt) language="portuguese" ;;
+    pt-br) language="brazilian" ;;
+    ro) language="romanian" ;;
+    ru) language="russian" ;;
+    es) language="spanish" ;;
+    es-419|es-xl|es-latam) language="latam" ;;
+    sv) language="swedish" ;;
+    th) language="thai" ;;
+    tr) language="turkish" ;;
+    uk) language="ukrainian" ;;
+    vi) language="vietnamese" ;;
   esac
 
   for supported_language in "${module_supported_languages[@]}"; do
@@ -55,7 +94,7 @@ module_canonicalize_language() {
     fi
   done
 
-  fail "Unsupported Steam interface language: $language"
+  fail "Unsupported Steam interface language: $original_language"
 }
 
 module_is_running() {

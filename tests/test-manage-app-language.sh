@@ -127,7 +127,12 @@ assert_contains "$output" "./manage-app-language.sh steam --restore [--dry-run|-
 
 output="$(STEAM_DIR="$steam_dir" "$script" steam)"
 assert_contains "$output" "Current Steam interface language: english" "runner should read steam language"
-output="$(STEAM_DIR="$steam_dir" "$script" steam japanese)"
+output="$(STEAM_DIR="$steam_dir" "$script" steam --verbose)"
+assert_contains "$output" "Supported Steam interface language values:" "steam verbose help should show supported languages"
+assert_contains "$output" "ISO aliases such as bg, cs" "steam verbose help should mention ISO aliases"
+
+output="$(STEAM_DIR="$steam_dir" "$script" steam ja)"
+assert_contains "$output" "Changed Steam interface language from english to japanese." "runner should accept ISO aliases for steam"
 assert_contains "$output" "Backup saved to $steam_registry_file.bak" "runner should back up steam file"
 assert_contains "$(cat "$steam_registry_file.bak")" '"language"    "english"' "steam backup should preserve original value"
 output="$(STEAM_DIR="$steam_dir" "$script" steam --restore)"

@@ -118,13 +118,16 @@ Supported values:
 
 Validation rules:
 
-- value must begin with lowercase ASCII letters
-- value must exactly match one item from the allowlist
+- the canonical Steam value must begin with lowercase ASCII letters
+- direct Steam values must exactly match one item from the allowlist
+- ISO-style aliases with `-` or `_` are also accepted for common languages and normalized to Steam values
 
 Consequences:
 
 - `japanese` is valid
-- `Japanese` is rejected
+- `ja` is normalized to `japanese`
+- `zh-cn` is normalized to `schinese`
+- `pt-br` is normalized to `brazilian`
 - unsupported values such as `klingon` are rejected
 
 ## What The Script Writes
@@ -196,6 +199,7 @@ Unlike the macOS script, Steam language values do not come from the system.
 
 They come from the in-script `supported_languages` array.
 
+`--verbose` also mentions the accepted ISO-style aliases.
 `--verbose` prints that array.
 
 ## Environment Variables Used For Testing Or Overrides
