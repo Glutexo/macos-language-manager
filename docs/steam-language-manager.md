@@ -1,6 +1,6 @@
 # Steam Language Manager Technical Notes
 
-This document describes how the Steam module behind `manage-app-language.sh` reads and writes Steam language settings on macOS, where the language is stored, and how the file format is handled.
+This document describes how the Steam module behind `manage-languages.sh` reads and writes Steam language settings on macOS, where the language is stored, and how the file format is handled.
 
 ## Scope
 
@@ -203,7 +203,7 @@ They come from the in-script `supported_languages` array.
 `--verbose` also prints an explicit alias list together with the accepted ISO-style mappings.
 `--verbose` prints that array.
 
-When `manage-app-language.sh steam --inherit-macos` is used, the module receives the first tag from macOS `AppleLanguages` and normalizes it with the same alias logic.
+When `manage-languages.sh steam --inherit-macos` is used, the module receives the first tag from macOS `AppleLanguages` and normalizes it with the same alias logic.
 
 ## Environment Variables Used For Testing Or Overrides
 
@@ -211,7 +211,7 @@ When `manage-app-language.sh steam --inherit-macos` is used, the module receives
 
 ## Related Tests
 
-- `./tests/test-manage-app-language.sh`
+- `./tests/test-manage-languages.sh`
 
 The test suite verifies:
 

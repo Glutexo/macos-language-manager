@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eo pipefail
 
-display_command="./manage-macos-languages.sh"
+display_command="./manage-languages.sh macos"
 target_mode=""
 verbose_help=false
 

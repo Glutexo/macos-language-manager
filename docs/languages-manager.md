@@ -1,19 +1,17 @@
-# App Language Manager Technical Notes
+# Languages Manager Technical Notes
 
-This document describes the shared architecture behind `manage-app-language.sh` and the dynamically loaded application modules in `language-modules/`.
+This document describes the shared architecture behind `manage-languages.sh` and the dynamically loaded application modules in `language-modules/`.
 
 ## Scope
 
-The runner manages application interface languages for supported macOS applications.
-
-It does not modify macOS `AppleLanguages`, `AppleLocale`, or NVRAM settings.
+The runner manages application interface languages for supported macOS applications and delegates the macOS target-based workflow through a dedicated custom module.
 
 ## Entry Points
 
 Primary runner:
 
 ```text
-./manage-app-language.sh
+./manage-languages.sh
 ```
 
 ## Module Discovery
@@ -24,16 +22,17 @@ The runner loads modules from:
 ./language-modules
 ```
 
-Each `*.sh` file in that directory becomes one available application id.
+Each `*.sh` file in that directory becomes one available module id, except helper files that are not meant for direct discovery.
 
 Examples:
 
-- `all` → pseudo-app that runs the selected operation for every discovered module
+- `all` → pseudo-module that runs the selected operation for every simple application module
 - `language-modules/steam.sh` → `steam`
 - `language-modules/anki.sh` → `anki`
 - `language-modules/factorio.sh` → `factorio`
+- `language-modules/macos.sh` → `macos`
 
-`--list-apps` prints the discovered ids.
+`--list-apps` and `--list-modules` print the discovered ids.
 
 `--self-test` loads each discovered module and verifies that the required shell functions and metadata are present.
 
@@ -42,14 +41,15 @@ Examples:
 Unified usage:
 
 ```bash
-./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]
-./manage-app-language.sh <app> --inherit-macos [--dry-run|-n] [--force|-f]
-./manage-app-language.sh <app> --restore [--dry-run|-n] [--force|-f]
-./manage-app-language.sh all [--dry-run|-n] [--force|-f] [language]
-./manage-app-language.sh all --inherit-macos [--dry-run|-n] [--force|-f]
-./manage-app-language.sh all --restore [--dry-run|-n] [--force|-f]
-./manage-app-language.sh --list-apps
-./manage-app-language.sh --self-test
+./manage-languages.sh <module> [--dry-run|-n] [--force|-f] [language]
+./manage-languages.sh <module> --inherit-macos [--dry-run|-n] [--force|-f]
+./manage-languages.sh <module> --restore [--dry-run|-n] [--force|-f]
+./manage-languages.sh all [--dry-run|-n] [--force|-f] [language]
+./manage-languages.sh all --inherit-macos [--dry-run|-n] [--force|-f]
+./manage-languages.sh all --restore [--dry-run|-n] [--force|-f]
+./manage-languages.sh --list-apps|--list-modules
+./manage-languages.sh --self-test
+./manage-languages.sh macos ...
 ```
 
 The runner handles:
@@ -57,7 +57,7 @@ The runner handles:
 - option parsing
 - module contract self-tests
 - global help
-- app-specific help
+- module-specific help
 - verbose supported-language output
 - read-only mode when no language argument is provided
 - dry-run mode
@@ -69,7 +69,9 @@ The runner handles:
 
 ## Module Contract
 
-Each module is sourced by the runner and must define `module_init` plus these functions:
+Each module is sourced by the runner and must define `module_init`.
+
+Simple application modules must also define:
 
 - `module_primary_path`
 - `module_ensure_storage_exists`
@@ -81,6 +83,11 @@ Each module is sourced by the runner and must define `module_init` plus these fu
 - `module_is_running`
 - `module_read_current_language`
 - `module_write_language`
+
+Custom modules define their own CLI and must provide:
+
+- `module_show_help_custom`
+- `module_run_custom`
 
 `module_primary_path` returns the canonical file path the runner should mention in diagnostics for that module.
 
@@ -104,9 +111,15 @@ For a read:
 
 For `all`:
 
-1. discover all application modules
+1. discover all simple application modules
 2. run the selected read, write, inherit, or restore flow for each module in order
 3. stop on the first module error
+
+For a custom module:
+
+1. parse global options until the module name is known
+2. pass the remaining argument vector through unchanged
+3. let the custom module own its target-specific parsing and execution
 
 For a write:
 
@@ -142,8 +155,8 @@ For a restore:
 The runner owns generic argument and flow errors, for example:
 
 - unknown option
-- unknown application
-- missing application name
+- unknown module
+- missing module name
 - multiple language arguments
 - inherit mode combined with a language argument
 - restore mode combined with inherit mode
@@ -151,7 +164,7 @@ The runner owns generic argument and flow errors, for example:
 - read-only mode without a detectable current language
 - running-application protection
 
-Modules own application-specific errors, primary-path reporting, backup scope declarations, and backup-set validation, for example:
+Simple modules own application-specific errors, primary-path reporting, backup scope declarations, and backup-set validation, for example:
 
 - missing storage file
 - invalid or unsupported language identifiers
@@ -160,6 +173,7 @@ Modules own application-specific errors, primary-path reporting, backup scope de
 
 ## Related Modules
 
+- [macos-language-manager.md](macos-language-manager.md)
 - [steam-language-manager.md](steam-language-manager.md)
 - [anki-language-manager.md](anki-language-manager.md)
 - [factorio-language-manager.md](factorio-language-manager.md)

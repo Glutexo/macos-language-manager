@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
-script="$repo_root/manage-macos-languages.sh"
+script="$repo_root/manage-languages.sh"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -149,7 +149,7 @@ assert_contains() {
 run_case() {
   PATH="$stub_dir:$PATH" \
     MACOS_LANGUAGE_RENDERABLE_UI_LANGUAGES_PATH="$renderable_languages_file" \
-    "$script" "$@"
+    "$script" macos "$@"
 }
 
 run_and_capture_order() {

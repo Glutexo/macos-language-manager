@@ -7,47 +7,48 @@ Simple shell tooling for macOS language management:
 
 ## Scripts
 
-### `manage-app-language.sh`
+### `manage-languages.sh`
 
-Reads or changes the interface language for supported macOS applications via dynamically loaded modules.
+Reads or changes macOS and application languages via dynamically loaded modules.
 
 Usage:
 
 ```bash
-./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]
-./manage-app-language.sh <app> --inherit-macos [--dry-run|-n] [--force|-f]
-./manage-app-language.sh <app> --restore [--dry-run|-n] [--force|-f]
-./manage-app-language.sh all [--dry-run|-n] [--force|-f] [language]
-./manage-app-language.sh all --inherit-macos [--dry-run|-n] [--force|-f]
-./manage-app-language.sh all --restore [--dry-run|-n] [--force|-f]
-./manage-app-language.sh --list-apps
-./manage-app-language.sh --self-test
+./manage-languages.sh <module> [--dry-run|-n] [--force|-f] [language]
+./manage-languages.sh <module> --inherit-macos [--dry-run|-n] [--force|-f]
+./manage-languages.sh <module> --restore [--dry-run|-n] [--force|-f]
+./manage-languages.sh all [--dry-run|-n] [--force|-f] [language]
+./manage-languages.sh all --inherit-macos [--dry-run|-n] [--force|-f]
+./manage-languages.sh all --restore [--dry-run|-n] [--force|-f]
+./manage-languages.sh --list-apps|--list-modules
+./manage-languages.sh --self-test
 ```
 
 Notes:
 
-- The script discovers application modules from `language-modules/`.
-- The pseudo-app `all` runs the same operation across every discovered application module.
+- The script discovers modules from `language-modules/`.
+- The pseudo-module `all` runs the shared application-language flow across every simple application module.
+- The `macos` module keeps its own target-based CLI under `./manage-languages.sh macos ...`.
 - `--inherit-macos` uses the first tag from the current macOS `AppleLanguages` list and lets the selected module map it to its own language format.
 - `--restore` restores the module's declared backup set from existing `.bak` files.
 - `--self-test` verifies that every discovered module exposes the required shell hooks and metadata for CI or manual contract checks.
 
 Technical details:
 
-- [app-language-manager.md](docs/app-language-manager.md)
+- [languages-manager.md](docs/languages-manager.md)
 
-### `manage-macos-languages.sh`
+### `manage-languages.sh macos`
 
 Changes macOS language-related settings for the current account, login window, locale, startup language, or all of them together.
 
 Usage:
 
 ```bash
-./manage-macos-languages.sh account [--dry-run|-n] [--restart|-r] [language ...]
-./manage-macos-languages.sh login-window [--dry-run|-n] [--restart|-r] [language ...]
-./manage-macos-languages.sh locale [--dry-run|-n] [--restart|-r] [language ...]
-./manage-macos-languages.sh startup [--dry-run|-n] [--restart|-r] [language ...]
-./manage-macos-languages.sh all [--dry-run|-n] [--restart|-r] [language ...]
+./manage-languages.sh macos account [--dry-run|-n] [--restart|-r] [language ...]
+./manage-languages.sh macos login-window [--dry-run|-n] [--restart|-r] [language ...]
+./manage-languages.sh macos locale [--dry-run|-n] [--restart|-r] [language ...]
+./manage-languages.sh macos startup [--dry-run|-n] [--restart|-r] [language ...]
+./manage-languages.sh macos all [--dry-run|-n] [--restart|-r] [language ...]
 ```
 
 Common token examples:
@@ -97,8 +98,8 @@ Technical details:
 
 ## Tests
 
-- `./tests/test-manage-macos-languages.sh`
-- `./tests/test-manage-app-language.sh`
+- `./tests/test-manage-languages.sh`
+- `./tests/test-manage-languages-macos.sh`
 
 ## Repository Workflow
 

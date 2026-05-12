@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
-script="$repo_root/manage-app-language.sh"
+script="$repo_root/manage-languages.sh"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -101,37 +101,43 @@ PY
 }
 
 output="$("$script" --help)"
-assert_contains "$output" "Usage: ./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]" "global help should show unified usage"
-assert_contains "$output" "./manage-app-language.sh <app> --inherit-macos [--dry-run|-n] [--force|-f]" "global help should show macOS inheritance usage"
-assert_contains "$output" "./manage-app-language.sh <app> --restore [--dry-run|-n] [--force|-f]" "global help should show restore usage"
-assert_contains "$output" "Available apps:" "global help should list apps"
+assert_contains "$output" "Usage: ./manage-languages.sh <module> [--dry-run|-n] [--force|-f] [language]" "global help should show unified usage"
+assert_contains "$output" "./manage-languages.sh <module> --inherit-macos [--dry-run|-n] [--force|-f]" "global help should show macOS inheritance usage"
+assert_contains "$output" "./manage-languages.sh <module> --restore [--dry-run|-n] [--force|-f]" "global help should show restore usage"
+assert_contains "$output" "Available modules:" "global help should list modules"
 assert_contains "$output" "  all" "global help should include the all pseudo-app"
 assert_contains "$output" "  anki" "global help should include anki"
 assert_contains "$output" "  factorio" "global help should include factorio"
+assert_contains "$output" "  macos" "global help should include macos"
 assert_contains "$output" "  steam" "global help should include steam"
 
 output="$("$script" --list-apps)"
 assert_contains "$output" "anki" "list-apps should print app ids"
 assert_contains "$output" "factorio" "list-apps should print app ids"
+assert_contains "$output" "macos" "list-apps should print module ids"
 assert_contains "$output" "steam" "list-apps should print app ids"
 
 output="$("$script" --self-test)"
 assert_contains "$output" "OK: anki" "self-test should verify anki module contract"
 assert_contains "$output" "OK: factorio" "self-test should verify factorio module contract"
+assert_contains "$output" "OK: macos" "self-test should verify macos module contract"
 assert_contains "$output" "OK: steam" "self-test should verify steam module contract"
 
 output="$("$script" nope 2>&1 || true)"
-assert_contains "$output" "Unknown application: nope" "unknown apps should fail clearly"
+assert_contains "$output" "Unknown module: nope" "unknown modules should fail clearly"
+
+output="$("$script" macos --help)"
+assert_contains "$output" "Usage: ./manage-languages.sh macos account [--dry-run|-n] [--restart|-r] [language ...]" "macos module help should be routed through the shared entry point"
 
 output="$("$script" all --help)"
-assert_contains "$output" "Usage: ./manage-app-language.sh all [--dry-run|-n] [--force|-f] [language]" "all help should show bulk usage"
-assert_contains "$output" "./manage-app-language.sh all --inherit-macos [--dry-run|-n] [--force|-f]" "all help should show bulk inheritance usage"
-assert_contains "$output" "./manage-app-language.sh all --restore [--dry-run|-n] [--force|-f]" "all help should show bulk restore usage"
+assert_contains "$output" "Usage: ./manage-languages.sh all [--dry-run|-n] [--force|-f] [language]" "all help should show bulk usage"
+assert_contains "$output" "./manage-languages.sh all --inherit-macos [--dry-run|-n] [--force|-f]" "all help should show bulk inheritance usage"
+assert_contains "$output" "./manage-languages.sh all --restore [--dry-run|-n] [--force|-f]" "all help should show bulk restore usage"
 
 output="$(STEAM_DIR="$steam_dir" "$script" steam --help)"
-assert_contains "$output" "Usage: ./manage-app-language.sh steam [--dry-run|-n] [--force|-f] [language]" "app help should show steam usage"
-assert_contains "$output" "./manage-app-language.sh steam --inherit-macos [--dry-run|-n] [--force|-f]" "app help should show steam inheritance usage"
-assert_contains "$output" "./manage-app-language.sh steam --restore [--dry-run|-n] [--force|-f]" "app help should show steam restore usage"
+assert_contains "$output" "Usage: ./manage-languages.sh steam [--dry-run|-n] [--force|-f] [language]" "app help should show steam usage"
+assert_contains "$output" "./manage-languages.sh steam --inherit-macos [--dry-run|-n] [--force|-f]" "app help should show steam inheritance usage"
+assert_contains "$output" "./manage-languages.sh steam --restore [--dry-run|-n] [--force|-f]" "app help should show steam restore usage"
 
 output="$(STEAM_DIR="$steam_dir" "$script" steam)"
 assert_contains "$output" "Current Steam interface language: english" "runner should read steam language"
@@ -152,9 +158,9 @@ assert_contains "$output" "Restored Steam interface language from japanese to en
 assert_contains "$(cat "$steam_registry_file")" '"language"    "english"' "steam restore should put original value back"
 
 output="$(ANKI_BASE_DIR="$anki_dir" "$script" anki --help)"
-assert_contains "$output" "Usage: ./manage-app-language.sh anki [--dry-run|-n] [--force|-f] [language]" "app help should show anki usage"
-assert_contains "$output" "./manage-app-language.sh anki --inherit-macos [--dry-run|-n] [--force|-f]" "app help should show anki inheritance usage"
-assert_contains "$output" "./manage-app-language.sh anki --restore [--dry-run|-n] [--force|-f]" "app help should show anki restore usage"
+assert_contains "$output" "Usage: ./manage-languages.sh anki [--dry-run|-n] [--force|-f] [language]" "app help should show anki usage"
+assert_contains "$output" "./manage-languages.sh anki --inherit-macos [--dry-run|-n] [--force|-f]" "app help should show anki inheritance usage"
+assert_contains "$output" "./manage-languages.sh anki --restore [--dry-run|-n] [--force|-f]" "app help should show anki restore usage"
 
 output="$(ANKI_BASE_DIR="$anki_dir" "$script" anki)"
 assert_contains "$output" "Current Anki interface language: en_US" "runner should read anki language"
@@ -169,9 +175,9 @@ assert_contains "$output" "Restored Anki interface language from ja_JP to en_US.
 assert_contains "$(read_anki_default_lang)" "en_US" "anki restore should put original value back"
 
 output="$(FACTORIO_DIR="$factorio_dir" "$script" factorio --help)"
-assert_contains "$output" "Usage: ./manage-app-language.sh factorio [--dry-run|-n] [--force|-f] [language]" "app help should show factorio usage"
-assert_contains "$output" "./manage-app-language.sh factorio --inherit-macos [--dry-run|-n] [--force|-f]" "app help should show factorio inheritance usage"
-assert_contains "$output" "./manage-app-language.sh factorio --restore [--dry-run|-n] [--force|-f]" "app help should show factorio restore usage"
+assert_contains "$output" "Usage: ./manage-languages.sh factorio [--dry-run|-n] [--force|-f] [language]" "app help should show factorio usage"
+assert_contains "$output" "./manage-languages.sh factorio --inherit-macos [--dry-run|-n] [--force|-f]" "app help should show factorio inheritance usage"
+assert_contains "$output" "./manage-languages.sh factorio --restore [--dry-run|-n] [--force|-f]" "app help should show factorio restore usage"
 
 output="$(FACTORIO_DIR="$factorio_dir" "$script" factorio)"
 assert_contains "$output" "Current Factorio interface language: en" "runner should read factorio language"

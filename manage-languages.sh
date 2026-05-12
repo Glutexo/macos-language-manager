@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 modules_dir="$script_dir/language-modules"
-display_command="${DISPLAY_COMMAND:-./manage-app-language.sh}"
+display_command="${DISPLAY_COMMAND:-./manage-languages.sh}"
 default_app="${DEFAULT_APP:-}"
 show_help=false
 verbose_help=false
@@ -15,6 +15,8 @@ restore_from_backup=false
 inherit_macos=false
 requested_app="$default_app"
 requested_language=""
+module_type=""
+module_passthrough_args=()
 
 fail() {
   echo "$1" >&2
@@ -25,6 +27,7 @@ available_modules() {
   find "$modules_dir" -maxdepth 1 -type f -name '*.sh' -print 2>/dev/null \
     | sed 's#.*/##' \
     | sed 's#\.sh$##' \
+    | grep -v '^macos-command$' \
     | sort
 }
 
@@ -80,25 +83,26 @@ EOF_LANG
 }
 
 show_global_usage() {
-  echo "Read or change interface languages for supported macOS applications."
+  echo "Read or change macOS and application interface languages through dynamically loaded modules."
   echo
-  echo "Usage: $display_command <app> [--dry-run|-n] [--force|-f] [language]"
-  echo "       $display_command <app> --inherit-macos [--dry-run|-n] [--force|-f]"
-  echo "       $display_command <app> --restore [--dry-run|-n] [--force|-f]"
-  echo "       $display_command --list-apps"
+  echo "Usage: $display_command <module> [--dry-run|-n] [--force|-f] [language]"
+  echo "       $display_command <module> --inherit-macos [--dry-run|-n] [--force|-f]"
+  echo "       $display_command <module> --restore [--dry-run|-n] [--force|-f]"
+  echo "       $display_command --list-apps|--list-modules"
   echo "       $display_command --self-test"
   echo
   echo "Options:"
   echo "  --dry-run, -n        Print the planned change without writing it."
   echo "  --force, -f          Write even if the application appears to be running."
-  echo "  --help, -h           Show help. Add an app name for app-specific help."
+  echo "  --help, -h           Show help. Add a module name for module-specific help."
   echo "  --verbose, -v        Show help together with supported language values."
   echo "  --inherit-macos, -M  Use the current macOS preferred language as the requested app language."
   echo "  --restore, -R        Restore the application language files from their .bak backups."
-  echo "  --list-apps          List supported application modules."
+  echo "  --list-apps          List supported modules."
+  echo "  --list-modules       Alias for --list-apps."
   echo "  --self-test          Verify that all discovered modules implement the required contract."
   echo
-  echo "Available apps:"
+  echo "Available modules:"
   print_available_apps
 
   echo
@@ -106,6 +110,7 @@ show_global_usage() {
   echo "  $display_command steam"
   echo "  $display_command anki ja"
   echo "  $display_command factorio --dry-run zh-CN"
+  echo "  $display_command macos --help"
   echo "  $display_command steam --inherit-macos"
   echo "  $display_command all --inherit-macos"
 }
@@ -113,7 +118,15 @@ show_global_usage() {
 load_module() {
   local module_file="$modules_dir/$1.sh"
 
-  [ -f "$module_file" ] || fail "Unknown application module: $1"
+  [ -f "$module_file" ] || fail "Unknown module implementation: $1"
+  module_key=""
+  module_display_name=""
+  module_storage_label=""
+  module_example_language=""
+  module_example_dry_run_language=""
+  module_alias_help=""
+  module_primary_storage_path=""
+  module_type=""
   # shellcheck disable=SC1090
   source "$module_file"
 
@@ -124,8 +137,19 @@ load_module() {
   : "${module_storage_label:?}"
   : "${module_example_language:?}"
   : "${module_example_dry_run_language:?}"
-  module_primary_storage_path="$(module_primary_path)"
-  [ -n "$module_primary_storage_path" ] || fail "Module $module_key did not report a primary storage path."
+  module_type="${module_type:-simple}"
+
+  case "$module_type" in
+    simple)
+      module_primary_storage_path="$(module_primary_path)"
+      [ -n "$module_primary_storage_path" ] || fail "Module $module_key did not report a primary storage path."
+      ;;
+    custom)
+      ;;
+    *)
+      fail "Module $module_key reported an unsupported module type: $module_type"
+      ;;
+  esac
 }
 
 assert_module_function() {
@@ -149,16 +173,21 @@ run_module_self_test() {
 
   load_module "$app"
 
-  assert_module_function "module_primary_path"
-  assert_module_function "module_ensure_storage_exists"
-  assert_module_function "module_print_supported_languages"
-  assert_module_function "module_print_aliases"
-  assert_module_function "module_backup_paths"
-  assert_module_function "module_validate_backup_paths"
-  assert_module_function "module_canonicalize_language"
-  assert_module_function "module_is_running"
-  assert_module_function "module_read_current_language"
-  assert_module_function "module_write_language"
+  if [ "$module_type" = "custom" ]; then
+    assert_module_function "module_show_help_custom"
+    assert_module_function "module_run_custom"
+  else
+    assert_module_function "module_primary_path"
+    assert_module_function "module_ensure_storage_exists"
+    assert_module_function "module_print_supported_languages"
+    assert_module_function "module_print_aliases"
+    assert_module_function "module_backup_paths"
+    assert_module_function "module_validate_backup_paths"
+    assert_module_function "module_canonicalize_language"
+    assert_module_function "module_is_running"
+    assert_module_function "module_read_current_language"
+    assert_module_function "module_write_language"
+  fi
 
   echo "OK: $app"
 }
@@ -271,8 +300,12 @@ show_module_usage() {
   fi
 }
 
+run_custom_module() {
+  module_run_custom "$@"
+}
+
 show_all_usage() {
-  echo "Read or change the interface language for all supported macOS applications."
+  echo "Read or change the interface language for all simple application modules."
   echo
   echo "Usage: $display_command all [--dry-run|-n] [--force|-f] [language]"
   echo "       $display_command all --inherit-macos [--dry-run|-n] [--force|-f]"
@@ -374,17 +407,26 @@ run_all_modules() {
   local requested_language_input="$1"
 
   for app in $(available_modules); do
-    found_any=true
     load_module "$app"
+    if [ "$module_type" != "simple" ]; then
+      continue
+    fi
+    found_any=true
     run_loaded_module "$requested_language_input"
   done
 
   if ! $found_any; then
-    fail "No application modules were found in $modules_dir"
+    fail "No simple application modules were found in $modules_dir"
   fi
 }
 
 while [ "$#" -gt 0 ]; do
+  if [ -n "$requested_app" ] && [ "$module_type" = "custom" ]; then
+    module_passthrough_args+=("$1")
+    shift
+    continue
+  fi
+
   case "$1" in
     --dry-run|-n)
       dry_run=true
@@ -398,7 +440,7 @@ while [ "$#" -gt 0 ]; do
     --verbose|-v)
       verbose_help=true
       ;;
-    --list-apps)
+    --list-apps|--list-modules)
       list_apps=true
       ;;
     --self-test)
@@ -416,8 +458,11 @@ while [ "$#" -gt 0 ]; do
     *)
       if [ -z "$requested_app" ] && is_known_app "$1"; then
         requested_app="$1"
+        if [ "$requested_app" != "all" ]; then
+          load_module "$requested_app"
+        fi
       elif [ -z "$requested_app" ]; then
-        fail "Unknown application: $1"
+        fail "Unknown module: $1"
       elif [ -z "$requested_language" ]; then
         requested_language="$1"
       else
@@ -444,7 +489,7 @@ if [ -z "$requested_app" ]; then
     exit 0
   fi
 
-  fail "Missing application name. Use --help to see supported apps."
+  fail "Missing module name. Use --help to see supported modules."
 fi
 
 if $restore_from_backup && [ -n "$requested_language" ]; then
@@ -465,12 +510,31 @@ if [ "$requested_app" = "all" ]; then
     exit 0
   fi
 else
-  load_module "$requested_app"
-
   if $show_help || $verbose_help; then
-    show_module_usage
+    if [ "$module_type" = "custom" ]; then
+      if $verbose_help; then
+        run_custom_module --verbose
+      else
+        module_show_help_custom
+      fi
+    else
+      show_module_usage
+    fi
     exit 0
   fi
+fi
+
+if [ "$module_type" = "custom" ]; then
+  if $inherit_macos; then
+    fail "The --inherit-macos mode is only available for simple application modules."
+  fi
+
+  if $restore_from_backup; then
+    fail "The --restore mode is only available for simple application modules."
+  fi
+
+  run_custom_module "${module_passthrough_args[@]}"
+  exit 0
 fi
 
 if $inherit_macos; then

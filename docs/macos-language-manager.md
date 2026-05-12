@@ -1,6 +1,6 @@
 # macOS Language Manager Technical Notes
 
-This document describes what `manage-macos-languages.sh` reads and writes on macOS, where the values are stored, and how the script interprets language identifiers.
+This document describes what `manage-languages.sh macos` reads and writes on macOS, where the values are stored, and how the script interprets language identifiers.
 
 ## Scope
 
@@ -438,7 +438,7 @@ This flag can be combined with `--dry-run`.
 
 ## Related Tests
 
-- `./tests/test-manage-macos-languages.sh`
+- `./tests/test-manage-languages.sh macos`
 
 The test suite stubs `defaults` and `nvram` and verifies:
 
