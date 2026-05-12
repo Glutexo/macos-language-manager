@@ -81,6 +81,7 @@ EOF
 module_canonicalize_language() {
   local original_language="$1"
   local language="$1"
+  local primary_language=""
   local supported_language
 
   case "$language" in
@@ -125,6 +126,38 @@ module_canonicalize_language() {
     uk) language="ukrainian" ;;
     vi) language="vietnamese" ;;
   esac
+
+  if [[ "$language" == *-* ]]; then
+    primary_language="${language%%-*}"
+    case "$primary_language" in
+      bg) language="bulgarian" ;;
+      zh) language="schinese" ;;
+      cs) language="czech" ;;
+      da) language="danish" ;;
+      nl) language="dutch" ;;
+      en) language="english" ;;
+      fi) language="finnish" ;;
+      fr) language="french" ;;
+      de) language="german" ;;
+      el) language="greek" ;;
+      hu) language="hungarian" ;;
+      id) language="indonesian" ;;
+      it) language="italian" ;;
+      ja) language="japanese" ;;
+      ko) language="koreana" ;;
+      nb|no) language="norwegian" ;;
+      pl) language="polish" ;;
+      pt) language="portuguese" ;;
+      ro) language="romanian" ;;
+      ru) language="russian" ;;
+      es) language="spanish" ;;
+      sv) language="swedish" ;;
+      th) language="thai" ;;
+      tr) language="turkish" ;;
+      uk) language="ukrainian" ;;
+      vi) language="vietnamese" ;;
+    esac
+  fi
 
   for supported_language in "${module_supported_languages[@]}"; do
     if [ "$language" = "$supported_language" ]; then

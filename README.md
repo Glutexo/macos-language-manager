@@ -15,6 +15,7 @@ Usage:
 
 ```bash
 ./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]
+./manage-app-language.sh <app> --inherit-macos [--dry-run|-n] [--force|-f]
 ./manage-app-language.sh <app> --restore [--dry-run|-n] [--force|-f]
 ./manage-app-language.sh --list-apps
 ./manage-app-language.sh --self-test
@@ -23,6 +24,7 @@ Usage:
 Notes:
 
 - The script discovers application modules from `language-modules/`.
+- `--inherit-macos` uses the first tag from the current macOS `AppleLanguages` list and lets the selected module map it to its own language format.
 - `--restore` restores the module's declared backup set from existing `.bak` files.
 - `--self-test` verifies that every discovered module exposes the required shell hooks and metadata for CI or manual contract checks.
 

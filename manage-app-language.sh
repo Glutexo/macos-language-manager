@@ -12,6 +12,7 @@ force_write=false
 list_apps=false
 self_test=false
 restore_from_backup=false
+inherit_macos=false
 requested_app="$default_app"
 requested_language=""
 
@@ -40,22 +41,49 @@ is_known_app() {
   return 1
 }
 
+read_macos_preferred_language() {
+  local raw_language=""
+  local candidate=""
+
+  if [ -n "${MACOS_APP_LANGUAGE_INHERIT:-}" ]; then
+    printf '%s\n' "$MACOS_APP_LANGUAGE_INHERIT"
+    return 0
+  fi
+
+  raw_language="$(defaults read -g AppleLanguages 2>/dev/null || true)"
+  [ -n "$raw_language" ] || return 1
+
+  while IFS= read -r candidate; do
+    candidate="${candidate//[()\", ]/}"
+    if [[ "$candidate" =~ ^[A-Za-z][A-Za-z0-9_-]*$ ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done <<EOF_LANG
+$raw_language
+EOF_LANG
+
+  return 1
+}
+
 show_global_usage() {
   echo "Read or change interface languages for supported macOS applications."
   echo
   echo "Usage: $display_command <app> [--dry-run|-n] [--force|-f] [language]"
+  echo "       $display_command <app> --inherit-macos [--dry-run|-n] [--force|-f]"
   echo "       $display_command <app> --restore [--dry-run|-n] [--force|-f]"
   echo "       $display_command --list-apps"
   echo "       $display_command --self-test"
   echo
   echo "Options:"
-  echo "  --dry-run, -n    Print the planned change without writing it."
-  echo "  --force, -f      Write even if the application appears to be running."
-  echo "  --help, -h       Show help. Add an app name for app-specific help."
-  echo "  --verbose, -v    Show help together with supported language values."
-  echo "  --restore, -R    Restore the application language files from their .bak backups."
-  echo "  --list-apps      List supported application modules."
-  echo "  --self-test      Verify that all discovered modules implement the required contract."
+  echo "  --dry-run, -n        Print the planned change without writing it."
+  echo "  --force, -f          Write even if the application appears to be running."
+  echo "  --help, -h           Show help. Add an app name for app-specific help."
+  echo "  --verbose, -v        Show help together with supported language values."
+  echo "  --inherit-macos, -M  Use the current macOS preferred language as the requested app language."
+  echo "  --restore, -R        Restore the application language files from their .bak backups."
+  echo "  --list-apps          List supported application modules."
+  echo "  --self-test          Verify that all discovered modules implement the required contract."
   echo
   echo "Available apps:"
 
@@ -69,6 +97,7 @@ show_global_usage() {
   echo "  $display_command steam"
   echo "  $display_command anki ja"
   echo "  $display_command factorio --dry-run zh-CN"
+  echo "  $display_command steam --inherit-macos"
 }
 
 load_module() {
@@ -197,19 +226,22 @@ show_module_usage() {
   echo "Read or change the $module_display_name interface language on macOS."
   echo
   echo "Usage: $usage_target [--dry-run|-n] [--force|-f] [language]"
+  echo "       $usage_target --inherit-macos [--dry-run|-n] [--force|-f]"
   echo "       $usage_target --restore [--dry-run|-n] [--force|-f]"
   echo
   echo "Options:"
-  echo "  --dry-run, -n   Print the planned change without writing it."
-  echo "  --force, -f     Write even if $module_display_name appears to be running."
-  echo "  --help, -h      Show this help message. Use --verbose or -v for the supported language list."
-  echo "  --verbose, -v   Show help together with supported language values."
-  echo "  --restore, -R   Restore the $module_display_name language files from their .bak backups."
+  echo "  --dry-run, -n        Print the planned change without writing it."
+  echo "  --force, -f          Write even if $module_display_name appears to be running."
+  echo "  --help, -h           Show this help message. Use --verbose or -v for the supported language list."
+  echo "  --verbose, -v        Show help together with supported language values."
+  echo "  --inherit-macos, -M  Use the current macOS preferred language as the requested $module_display_name language."
+  echo "  --restore, -R        Restore the $module_display_name language files from their .bak backups."
   echo
   echo "Examples:"
   echo "  $usage_target"
   echo "  $usage_target $module_example_language"
   echo "  $usage_target --dry-run $module_example_dry_run_language"
+  echo "  $usage_target --inherit-macos"
 
   if $verbose_help; then
     echo
@@ -251,6 +283,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --restore|-R)
       restore_from_backup=true
+      ;;
+    --inherit-macos|-M)
+      inherit_macos=true
       ;;
     -*)
       fail "Unknown option: $1"
@@ -300,6 +335,14 @@ if $restore_from_backup && [ -n "$requested_language" ]; then
   fail "The --restore mode does not accept a language value."
 fi
 
+if $inherit_macos && [ -n "$requested_language" ]; then
+  fail "The --inherit-macos mode does not accept a language value."
+fi
+
+if $restore_from_backup && $inherit_macos; then
+  fail "The --restore and --inherit-macos modes cannot be used together."
+fi
+
 collect_module_backup_paths
 
 if $restore_from_backup; then
@@ -333,6 +376,12 @@ fi
 
 module_ensure_storage_exists
 current_language="$(try_read_current_language)"
+
+if $inherit_macos; then
+  macos_requested_language="$(read_macos_preferred_language || true)"
+  [ -n "$macos_requested_language" ] || fail "Could not detect the current macOS preferred language."
+  requested_language="$macos_requested_language"
+fi
 
 if [ -z "$requested_language" ]; then
   [ -n "$current_language" ] || fail "Could not detect the current $module_display_name language in $module_primary_storage_path"

@@ -54,6 +54,7 @@ EOF
 module_canonicalize_language() {
   local original_language="$1"
   local normalized_language=""
+  local primary_language=""
   local supported_language=""
 
   case "$original_language" in
@@ -81,6 +82,33 @@ module_canonicalize_language() {
       fi
       ;;
   esac
+
+  if [[ "$normalized_language" == *-* ]]; then
+    primary_language="${normalized_language%%-*}"
+    case "$normalized_language" in
+      zh-HANT|zh-TW) normalized_language="zh-TW" ;;
+      zh-HANS|zh-CN) normalized_language="zh-CN" ;;
+      pt-BR) normalized_language="pt-BR" ;;
+      pt-PT) normalized_language="pt-PT" ;;
+      es-ES) normalized_language="es-ES" ;;
+      sv-SE) normalized_language="sv-SE" ;;
+      ga-IE) normalized_language="ga-IE" ;;
+      fy-NL) normalized_language="fy-NL" ;;
+      *)
+        case "$primary_language" in
+          es) normalized_language="es-ES" ;;
+          fy) normalized_language="fy-NL" ;;
+          ga) normalized_language="ga-IE" ;;
+          pt) normalized_language="pt-PT" ;;
+          sv) normalized_language="sv-SE" ;;
+          zh) normalized_language="zh-CN" ;;
+          *)
+            normalized_language="$primary_language"
+            ;;
+        esac
+        ;;
+    esac
+  fi
 
   for supported_language in "${module_supported_languages[@]}"; do
     if [ "$normalized_language" = "$supported_language" ]; then

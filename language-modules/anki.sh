@@ -101,6 +101,9 @@ EOF
 module_canonicalize_language() {
   local original_language="$1"
   local language="$1"
+  local exact_supported_language=""
+  local primary_language=""
+  local secondary_part=""
   local supported_language=""
 
   case "$language" in
@@ -109,6 +112,38 @@ module_canonicalize_language() {
   esac
 
   language="${language//-/_}"
+
+  if [[ "$language" == *_* ]]; then
+    primary_language="${language%%_*}"
+    secondary_part="${language#*_}"
+    language="$(printf '%s' "$primary_language" | tr '[:upper:]' '[:lower:]')_$(printf '%s' "$secondary_part" | tr '[:lower:]' '[:upper:]')"
+  fi
+
+  for exact_supported_language in "${module_supported_languages[@]}"; do
+    if [ "$language" = "$exact_supported_language" ]; then
+      printf '%s\n' "$exact_supported_language"
+      return 0
+    fi
+  done
+
+  if [[ "$language" == *_* ]]; then
+    primary_language="${language%%_*}"
+    case "$language" in
+      zh_HANT|zh_TW) language="zh_TW" ;;
+      zh_HANS|zh_CN) language="zh_CN" ;;
+      pt_BR) language="pt_BR" ;;
+      pt_PT) language="pt_PT" ;;
+      en_GB) language="en_GB" ;;
+      en_US) language="en_US" ;;
+      es_ES) language="es_ES" ;;
+      sv_SE) language="sv_SE" ;;
+      ga_IE) language="ga_IE" ;;
+      fy_NL) language="fy_NL" ;;
+      *)
+        language="$primary_language"
+        ;;
+    esac
+  fi
 
   case "$language" in
     af) language="af_ZA" ;;

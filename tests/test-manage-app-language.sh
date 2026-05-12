@@ -102,6 +102,7 @@ PY
 
 output="$("$script" --help)"
 assert_contains "$output" "Usage: ./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]" "global help should show unified usage"
+assert_contains "$output" "./manage-app-language.sh <app> --inherit-macos [--dry-run|-n] [--force|-f]" "global help should show macOS inheritance usage"
 assert_contains "$output" "./manage-app-language.sh <app> --restore [--dry-run|-n] [--force|-f]" "global help should show restore usage"
 assert_contains "$output" "Available apps:" "global help should list apps"
 assert_contains "$output" "  anki" "global help should include anki"
@@ -123,6 +124,7 @@ assert_contains "$output" "Unknown application: nope" "unknown apps should fail 
 
 output="$(STEAM_DIR="$steam_dir" "$script" steam --help)"
 assert_contains "$output" "Usage: ./manage-app-language.sh steam [--dry-run|-n] [--force|-f] [language]" "app help should show steam usage"
+assert_contains "$output" "./manage-app-language.sh steam --inherit-macos [--dry-run|-n] [--force|-f]" "app help should show steam inheritance usage"
 assert_contains "$output" "./manage-app-language.sh steam --restore [--dry-run|-n] [--force|-f]" "app help should show steam restore usage"
 
 output="$(STEAM_DIR="$steam_dir" "$script" steam)"
@@ -133,6 +135,8 @@ assert_contains "$output" "Accepted aliases:" "steam verbose help should show al
 assert_contains "$output" "  ja -> japanese" "steam verbose help should list steam aliases"
 assert_contains "$output" "  zh-CN -> schinese" "steam verbose help should list normalized Chinese aliases"
 
+output="$(STEAM_DIR="$steam_dir" MACOS_APP_LANGUAGE_INHERIT=ja-CZ "$script" steam --dry-run --inherit-macos)"
+assert_contains "$output" "Would change Steam interface language from english to japanese." "steam should inherit macOS locale tags by primary language"
 output="$(STEAM_DIR="$steam_dir" "$script" steam ja)"
 assert_contains "$output" "Changed Steam interface language from english to japanese." "runner should accept ISO aliases for steam"
 assert_contains "$output" "Backup saved to $steam_registry_file.bak" "runner should back up steam file"
@@ -143,10 +147,13 @@ assert_contains "$(cat "$steam_registry_file")" '"language"    "english"' "steam
 
 output="$(ANKI_BASE_DIR="$anki_dir" "$script" anki --help)"
 assert_contains "$output" "Usage: ./manage-app-language.sh anki [--dry-run|-n] [--force|-f] [language]" "app help should show anki usage"
+assert_contains "$output" "./manage-app-language.sh anki --inherit-macos [--dry-run|-n] [--force|-f]" "app help should show anki inheritance usage"
 assert_contains "$output" "./manage-app-language.sh anki --restore [--dry-run|-n] [--force|-f]" "app help should show anki restore usage"
 
 output="$(ANKI_BASE_DIR="$anki_dir" "$script" anki)"
 assert_contains "$output" "Current Anki interface language: en_US" "runner should read anki language"
+output="$(ANKI_BASE_DIR="$anki_dir" MACOS_APP_LANGUAGE_INHERIT=en-GB "$script" anki --dry-run --inherit-macos)"
+assert_contains "$output" "Would change Anki interface language from en_US to en_GB." "anki should inherit exact macOS locale tags"
 output="$(ANKI_BASE_DIR="$anki_dir" "$script" anki ja)"
 assert_contains "$output" "Changed Anki interface language from en_US to ja_JP." "runner should change anki language"
 assert_contains "$output" "Backup saved to $anki_prefs_file.bak" "runner should back up anki file"
@@ -157,10 +164,13 @@ assert_contains "$(read_anki_default_lang)" "en_US" "anki restore should put ori
 
 output="$(FACTORIO_DIR="$factorio_dir" "$script" factorio --help)"
 assert_contains "$output" "Usage: ./manage-app-language.sh factorio [--dry-run|-n] [--force|-f] [language]" "app help should show factorio usage"
+assert_contains "$output" "./manage-app-language.sh factorio --inherit-macos [--dry-run|-n] [--force|-f]" "app help should show factorio inheritance usage"
 assert_contains "$output" "./manage-app-language.sh factorio --restore [--dry-run|-n] [--force|-f]" "app help should show factorio restore usage"
 
 output="$(FACTORIO_DIR="$factorio_dir" "$script" factorio)"
 assert_contains "$output" "Current Factorio interface language: en" "runner should read factorio language"
+output="$(FACTORIO_DIR="$factorio_dir" MACOS_APP_LANGUAGE_INHERIT=zh-Hant "$script" factorio --dry-run --inherit-macos)"
+assert_contains "$output" "Would change Factorio interface language from en to zh-TW." "factorio should inherit macOS script tags"
 output="$(FACTORIO_DIR="$factorio_dir" "$script" factorio zh-cn)"
 assert_contains "$output" "Changed Factorio interface language from en to zh-CN." "runner should change factorio language"
 assert_contains "$output" "Backup saved to $factorio_config_file.bak" "runner should back up factorio file"

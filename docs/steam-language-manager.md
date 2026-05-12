@@ -126,6 +126,7 @@ Consequences:
 
 - `japanese` is valid
 - `ja` is normalized to `japanese`
+- `ja-CZ` is normalized to `japanese`
 - `zh-cn` is normalized to `schinese`
 - `pt-br` is normalized to `brazilian`
 - unsupported values such as `klingon` are rejected
@@ -201,6 +202,8 @@ They come from the in-script `supported_languages` array.
 
 `--verbose` also prints an explicit alias list together with the accepted ISO-style mappings.
 `--verbose` prints that array.
+
+When `manage-app-language.sh steam --inherit-macos` is used, the module receives the first tag from macOS `AppleLanguages` and normalizes it with the same alias logic.
 
 ## Environment Variables Used For Testing Or Overrides
 

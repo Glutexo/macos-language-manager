@@ -42,6 +42,7 @@ Unified usage:
 
 ```bash
 ./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]
+./manage-app-language.sh <app> --inherit-macos [--dry-run|-n] [--force|-f]
 ./manage-app-language.sh <app> --restore [--dry-run|-n] [--force|-f]
 ./manage-app-language.sh --list-apps
 ./manage-app-language.sh --self-test
@@ -56,6 +57,7 @@ The runner handles:
 - verbose supported-language output
 - read-only mode when no language argument is provided
 - dry-run mode
+- inheriting the current macOS preferred language through `AppleLanguages`
 - running-application protection
 - backup creation before writing, based on file paths reported by the module
 - restore from `.bak` files for the same module-declared backup set
@@ -109,6 +111,12 @@ For a write:
 9. ask the module to write the new value
 10. print the old and new value and ask the user to restart the app
 
+For macOS inheritance:
+
+1. read the first tag from the current macOS `AppleLanguages` list
+2. pass that tag through the selected module's canonicalization logic
+3. continue through the normal write flow with the module-specific target value
+
 For a restore:
 
 1. parse options and select a module
@@ -127,6 +135,8 @@ The runner owns generic argument and flow errors, for example:
 - unknown application
 - missing application name
 - multiple language arguments
+- inherit mode combined with a language argument
+- restore mode combined with inherit mode
 - restore mode combined with a language argument
 - read-only mode without a detectable current language
 - running-application protection
