@@ -1,13 +1,31 @@
 # macos-language-manager
 
-Simple shell tooling for four separate tasks on macOS:
+Simple shell tooling for macOS language management:
 
 - managing the preferred macOS language order
-- managing the Steam interface language
-- managing the Anki interface language
-- managing the Factorio interface language
+- managing application interface languages for Steam, Anki, and Factorio
 
 ## Scripts
+
+### `manage-app-language.sh`
+
+Reads or changes the interface language for supported macOS applications via dynamically loaded modules.
+
+Usage:
+
+```bash
+./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]
+./manage-app-language.sh --list-apps
+```
+
+Notes:
+
+- The script discovers application modules from `language-modules/`.
+- `manage-steam-language.sh`, `manage-anki-language.sh`, and `manage-factorio-language.sh` remain as thin compatibility wrappers around this runner.
+
+Technical details:
+
+- [app-language-manager.md](docs/app-language-manager.md)
 
 ### `manage-macos-languages.sh`
 
@@ -62,51 +80,22 @@ Technical details:
 
 - [extract-system-settings-languages.md](docs/extract-system-settings-languages.md)
 
-### `manage-steam-language.sh`
+### Compatibility Wrappers
 
-Reads or changes the Steam client interface language on macOS.
+- `./manage-steam-language.sh` → `./manage-app-language.sh steam`
+- `./manage-anki-language.sh` → `./manage-app-language.sh anki`
+- `./manage-factorio-language.sh` → `./manage-app-language.sh factorio`
 
-Usage:
-
-```bash
-./manage-steam-language.sh [--dry-run|-n] [--force|-f] [language]
-```
-
-Technical details:
+### Application Technical Details
 
 - [steam-language-manager.md](docs/steam-language-manager.md)
-
-### `manage-factorio-language.sh`
-
-Reads or changes the Factorio interface language on macOS.
-
-Usage:
-
-```bash
-./manage-factorio-language.sh [--dry-run|-n] [--force|-f] [language]
-```
-
-Technical details:
-
-- [factorio-language-manager.md](docs/factorio-language-manager.md)
-
-### `manage-anki-language.sh`
-
-Reads or changes the Anki interface language on macOS.
-
-Usage:
-
-```bash
-./manage-anki-language.sh [--dry-run|-n] [--force|-f] [language]
-```
-
-Technical details:
-
 - [anki-language-manager.md](docs/anki-language-manager.md)
+- [factorio-language-manager.md](docs/factorio-language-manager.md)
 
 ## Tests
 
 - `./tests/test-manage-macos-languages.sh`
+- `./tests/test-manage-app-language.sh`
 - `./tests/test-manage-steam-language.sh`
 - `./tests/test-manage-anki-language.sh`
 - `./tests/test-manage-factorio-language.sh`

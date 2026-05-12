@@ -1,10 +1,10 @@
 # Factorio Language Manager Technical Notes
 
-This document describes what `manage-factorio-language.sh` reads and writes, where Factorio stores the interface language on macOS, and how the script validates locale identifiers.
+This document describes how the Factorio module behind `manage-app-language.sh` reads and writes Factorio language settings on macOS, where the language is stored, and how locale identifiers are validated. `manage-factorio-language.sh` remains as a compatibility wrapper.
 
 ## Scope
 
-The script manages the Factorio interface language on macOS.
+The Factorio module manages the Factorio interface language on macOS.
 
 It does not modify macOS `AppleLanguages`, `AppleLocale`, or NVRAM settings.
 

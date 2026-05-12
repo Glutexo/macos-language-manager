@@ -1,10 +1,10 @@
 # Anki Language Manager Technical Notes
 
-This document describes what `manage-anki-language.sh` reads and writes, where Anki stores the interface language on macOS, and how the script validates language identifiers.
+This document describes how the Anki module behind `manage-app-language.sh` reads and writes Anki language settings on macOS, where the language is stored, and how locale identifiers are validated. `manage-anki-language.sh` remains as a compatibility wrapper.
 
 ## Scope
 
-The script manages the Anki interface language on macOS.
+The Anki module manages the Anki interface language on macOS.
 
 It does not modify macOS `AppleLanguages`, `AppleLocale`, or NVRAM settings.
 
