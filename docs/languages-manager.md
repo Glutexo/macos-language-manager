@@ -41,9 +41,9 @@ Examples:
 Unified usage:
 
 ```bash
-./manage-languages.sh <module> [--dry-run|-n] [--force|-f] [language]
-./manage-languages.sh <module> --inherit-macos [--dry-run|-n] [--force|-f]
-./manage-languages.sh <module> --restore [--dry-run|-n] [--force|-f]
+./manage-languages.sh <module> [<module> ...] [--dry-run|-n] [--force|-f] [language]
+./manage-languages.sh <module> [<module> ...] --inherit-macos [--dry-run|-n] [--force|-f]
+./manage-languages.sh <module> [<module> ...] --restore [--dry-run|-n] [--force|-f]
 ./manage-languages.sh all [--dry-run|-n] [--force|-f] [language]
 ./manage-languages.sh all --inherit-macos [--dry-run|-n] [--force|-f]
 ./manage-languages.sh all --restore [--dry-run|-n] [--force|-f]
@@ -117,6 +117,13 @@ For `all`:
 2. run the selected read, write, inherit, or restore flow for each module in order
 3. stop on the first module error
 
+For an explicit multi-module selection such as `steam anki ja`:
+
+1. collect the consecutive module names at the beginning of the command line
+2. treat the remaining arguments as one shared argument vector
+3. run the same parsed operation for each selected module in the order requested
+4. stop on the first module error
+
 For every module:
 
 1. parse global options until the module name is known
@@ -159,6 +166,7 @@ The runner owns generic argument and flow errors, for example:
 
 - unknown option
 - unknown module
+- invalid combination of exclusive modules such as `all` or `macos` with other module names
 - missing module name
 - multiple language arguments
 - inherit mode combined with a language argument

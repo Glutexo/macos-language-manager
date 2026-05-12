@@ -14,9 +14,9 @@ Reads or changes macOS and application languages via dynamically loaded modules.
 Usage:
 
 ```bash
-./manage-languages.sh <module> [--dry-run|-n] [--force|-f] [language]
-./manage-languages.sh <module> --inherit-macos [--dry-run|-n] [--force|-f]
-./manage-languages.sh <module> --restore [--dry-run|-n] [--force|-f]
+./manage-languages.sh <module> [<module> ...] [--dry-run|-n] [--force|-f] [language]
+./manage-languages.sh <module> [<module> ...] --inherit-macos [--dry-run|-n] [--force|-f]
+./manage-languages.sh <module> [<module> ...] --restore [--dry-run|-n] [--force|-f]
 ./manage-languages.sh all [--dry-run|-n] [--force|-f] [language]
 ./manage-languages.sh all --inherit-macos [--dry-run|-n] [--force|-f]
 ./manage-languages.sh all --restore [--dry-run|-n] [--force|-f]
@@ -27,8 +27,10 @@ Usage:
 Notes:
 
 - The script discovers modules from `language-modules/`.
+- You can target multiple application modules in one run, for example `./manage-languages.sh steam anki ja`.
 - The pseudo-module `all` runs the shared application-language flow across every simple application module.
 - The `macos` module keeps its own target-based CLI under `./manage-languages.sh macos ...`, but it is still loaded through the same module lifecycle as the other modules.
+- `macos` and `all` stay exclusive and cannot be combined with other module names.
 - `--inherit-macos` uses the first tag from the current macOS `AppleLanguages` list and lets the selected module map it to its own language format.
 - `--restore` restores the module's declared backup set from existing `.bak` files.
 - `--self-test` verifies that every discovered module exposes the required shell hooks and metadata for CI or manual contract checks.

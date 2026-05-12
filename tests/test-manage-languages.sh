@@ -101,9 +101,9 @@ PY
 }
 
 output="$("$script" --help)"
-assert_contains "$output" "Usage: ./manage-languages.sh <module> [--dry-run|-n] [--force|-f] [language]" "global help should show unified usage"
-assert_contains "$output" "./manage-languages.sh <module> --inherit-macos [--dry-run|-n] [--force|-f]" "global help should show macOS inheritance usage"
-assert_contains "$output" "./manage-languages.sh <module> --restore [--dry-run|-n] [--force|-f]" "global help should show restore usage"
+assert_contains "$output" "Usage: ./manage-languages.sh <module> [<module> ...] [--dry-run|-n] [--force|-f] [language]" "global help should show unified usage"
+assert_contains "$output" "./manage-languages.sh <module> [<module> ...] --inherit-macos [--dry-run|-n] [--force|-f]" "global help should show macOS inheritance usage"
+assert_contains "$output" "./manage-languages.sh <module> [<module> ...] --restore [--dry-run|-n] [--force|-f]" "global help should show restore usage"
 assert_contains "$output" "Available modules:" "global help should list modules"
 assert_contains "$output" "  all" "global help should include the all pseudo-app"
 assert_contains "$output" "  anki" "global help should include anki"
@@ -125,6 +125,16 @@ assert_contains "$output" "OK: steam" "self-test should verify steam module cont
 
 output="$("$script" nope 2>&1 || true)"
 assert_contains "$output" "Unknown module: nope" "unknown modules should fail clearly"
+
+output="$("$script" steam anki --help)"
+assert_contains "$output" "Usage: ./manage-languages.sh steam [--dry-run|-n] [--force|-f] [language]" "multi-module help should include steam usage"
+assert_contains "$output" "Usage: ./manage-languages.sh anki [--dry-run|-n] [--force|-f] [language]" "multi-module help should include anki usage"
+
+output="$("$script" steam macos ja 2>&1 || true)"
+assert_contains "$output" "The macos module cannot be combined with other modules." "macos should stay exclusive"
+
+output="$("$script" all steam ja 2>&1 || true)"
+assert_contains "$output" "The all pseudo-module cannot be combined with other modules." "all should stay exclusive"
 
 output="$("$script" macos --help)"
 assert_contains "$output" "Usage: ./manage-languages.sh macos account [--dry-run|-n] [--restart|-r] [language ...]" "macos module help should be routed through the shared entry point"
@@ -195,6 +205,18 @@ output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factor
 assert_contains "$output" "Current Steam interface language: english" "all mode should read steam"
 assert_contains "$output" "Current Anki interface language: en_US" "all mode should read anki"
 assert_contains "$output" "Current Factorio interface language: en" "all mode should read factorio"
+
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" "$script" steam anki)"
+assert_contains "$output" "Current Steam interface language: english" "multi-module mode should read steam"
+assert_contains "$output" "Current Anki interface language: en_US" "multi-module mode should read anki"
+
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" "$script" steam anki ja)"
+assert_contains "$output" "Changed Steam interface language from english to japanese." "multi-module mode should change steam"
+assert_contains "$output" "Changed Anki interface language from en_US to ja_JP." "multi-module mode should change anki"
+
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" "$script" steam anki --restore)"
+assert_contains "$output" "Restored Steam interface language from japanese to english." "multi-module restore should revert steam"
+assert_contains "$output" "Restored Anki interface language from ja_JP to en_US." "multi-module restore should revert anki"
 
 output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" MACOS_APP_LANGUAGE_INHERIT=ja-CZ "$script" all --dry-run --inherit-macos)"
 assert_contains "$output" "Would change Steam interface language from english to japanese." "all inherit should plan steam change"

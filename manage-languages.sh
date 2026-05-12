@@ -10,6 +10,7 @@ verbose_help=false
 list_apps=false
 self_test=false
 requested_app="$default_app"
+selected_apps=()
 module_pre_args=()
 module_post_args=()
 
@@ -80,9 +81,9 @@ EOF_LANG
 show_global_usage() {
   echo "Read or change macOS and application interface languages through dynamically loaded modules."
   echo
-  echo "Usage: $display_command <module> [--dry-run|-n] [--force|-f] [language]"
-  echo "       $display_command <module> --inherit-macos [--dry-run|-n] [--force|-f]"
-  echo "       $display_command <module> --restore [--dry-run|-n] [--force|-f]"
+  echo "Usage: $display_command <module> [<module> ...] [--dry-run|-n] [--force|-f] [language]"
+  echo "       $display_command <module> [<module> ...] --inherit-macos [--dry-run|-n] [--force|-f]"
+  echo "       $display_command <module> [<module> ...] --restore [--dry-run|-n] [--force|-f]"
   echo "       $display_command --list-apps|--list-modules"
   echo "       $display_command --self-test"
   echo
@@ -102,6 +103,7 @@ show_global_usage() {
   echo
   echo "Examples:"
   echo "  $display_command steam"
+  echo "  $display_command steam anki ja"
   echo "  $display_command anki ja"
   echo "  $display_command factorio --dry-run zh-CN"
   echo "  $display_command macos account ja:cs"
@@ -449,11 +451,16 @@ show_all_usage() {
 
 parse_global_arguments() {
   local module_found=false
+  local module_selection_finished=false
 
   while [ "$#" -gt 0 ]; do
-    if ! $module_found && is_known_app "$1"; then
+    if ! $module_selection_finished && is_known_app "$1"; then
       requested_app="$1"
+      selected_apps+=("$1")
       module_found=true
+      if [ "$1" = "macos" ] || [ "$1" = "all" ]; then
+        module_selection_finished=true
+      fi
       shift
       continue
     fi
@@ -479,10 +486,39 @@ parse_global_arguments() {
       esac
       module_pre_args+=("$1")
     else
+      module_selection_finished=true
       module_post_args+=("$1")
     fi
     shift
   done
+}
+
+validate_selected_apps() {
+  local app=""
+  local arg=""
+
+  [ "${#selected_apps[@]}" -gt 0 ] || return 0
+
+  if [ "$requested_app" = "all" ]; then
+    if [ "${#module_post_args[@]}" -gt 0 ]; then
+      for arg in "${module_post_args[@]}"; do
+        if is_known_app "$arg"; then
+          fail "The all pseudo-module cannot be combined with other modules."
+        fi
+      done
+    fi
+  fi
+
+  if [ "${#selected_apps[@]}" -gt 1 ]; then
+    for app in "${selected_apps[@]}"; do
+      if [ "$app" = "all" ]; then
+        fail "The all pseudo-module cannot be combined with other modules."
+      fi
+      if [ "$app" = "macos" ]; then
+        fail "The macos module cannot be combined with other modules."
+      fi
+    done
+  fi
 }
 
 run_all_modules() {
@@ -520,7 +556,34 @@ run_all_modules() {
   fi
 }
 
+run_selected_modules() {
+  local app=""
+  local module_args=("$@")
+  local shown_help=false
+
+  for app in "${selected_apps[@]}"; do
+    load_module "$app"
+    if [ "${#module_args[@]}" -gt 0 ]; then
+      module_parse_arguments "${module_args[@]}"
+    else
+      module_parse_arguments
+    fi
+
+    if $module_requested_help || $module_requested_verbose_help; then
+      if $shown_help; then
+        echo
+      fi
+      module_show_usage
+      shown_help=true
+      continue
+    fi
+
+    module_run
+  done
+}
+
 parse_global_arguments "$@"
+validate_selected_apps
 
 if $list_apps && [ -z "$requested_app" ]; then
   available_modules
@@ -558,16 +621,8 @@ if [ "$requested_app" = "all" ]; then
   exit 0
 fi
 
-load_module "$requested_app"
 if [ "${#module_cli_args[@]}" -gt 0 ]; then
-  module_parse_arguments "${module_cli_args[@]}"
+  run_selected_modules "${module_cli_args[@]}"
 else
-  module_parse_arguments
+  run_selected_modules
 fi
-
-if $module_requested_help || $module_requested_verbose_help; then
-  module_show_usage
-  exit 0
-fi
-
-module_run
