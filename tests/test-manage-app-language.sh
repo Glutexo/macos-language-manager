@@ -105,6 +105,7 @@ assert_contains "$output" "Usage: ./manage-app-language.sh <app> [--dry-run|-n] 
 assert_contains "$output" "./manage-app-language.sh <app> --inherit-macos [--dry-run|-n] [--force|-f]" "global help should show macOS inheritance usage"
 assert_contains "$output" "./manage-app-language.sh <app> --restore [--dry-run|-n] [--force|-f]" "global help should show restore usage"
 assert_contains "$output" "Available apps:" "global help should list apps"
+assert_contains "$output" "  all" "global help should include the all pseudo-app"
 assert_contains "$output" "  anki" "global help should include anki"
 assert_contains "$output" "  factorio" "global help should include factorio"
 assert_contains "$output" "  steam" "global help should include steam"
@@ -121,6 +122,11 @@ assert_contains "$output" "OK: steam" "self-test should verify steam module cont
 
 output="$("$script" nope 2>&1 || true)"
 assert_contains "$output" "Unknown application: nope" "unknown apps should fail clearly"
+
+output="$("$script" all --help)"
+assert_contains "$output" "Usage: ./manage-app-language.sh all [--dry-run|-n] [--force|-f] [language]" "all help should show bulk usage"
+assert_contains "$output" "./manage-app-language.sh all --inherit-macos [--dry-run|-n] [--force|-f]" "all help should show bulk inheritance usage"
+assert_contains "$output" "./manage-app-language.sh all --restore [--dry-run|-n] [--force|-f]" "all help should show bulk restore usage"
 
 output="$(STEAM_DIR="$steam_dir" "$script" steam --help)"
 assert_contains "$output" "Usage: ./manage-app-language.sh steam [--dry-run|-n] [--force|-f] [language]" "app help should show steam usage"
@@ -178,5 +184,25 @@ assert_contains "$(cat "$factorio_config_file")" "locale=zh-CN" "factorio change
 output="$(FACTORIO_DIR="$factorio_dir" "$script" factorio --restore)"
 assert_contains "$output" "Restored Factorio interface language from zh-CN to en." "runner should restore factorio language"
 assert_contains "$(cat "$factorio_config_file")" "locale=en" "factorio restore should put original value back"
+
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" "$script" all)"
+assert_contains "$output" "Current Steam interface language: english" "all mode should read steam"
+assert_contains "$output" "Current Anki interface language: en_US" "all mode should read anki"
+assert_contains "$output" "Current Factorio interface language: en" "all mode should read factorio"
+
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" MACOS_APP_LANGUAGE_INHERIT=ja-CZ "$script" all --dry-run --inherit-macos)"
+assert_contains "$output" "Would change Steam interface language from english to japanese." "all inherit should plan steam change"
+assert_contains "$output" "Would change Anki interface language from en_US to ja_JP." "all inherit should plan anki change"
+assert_contains "$output" "Would change Factorio interface language from en to ja." "all inherit should plan factorio change"
+
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" "$script" all ja)"
+assert_contains "$output" "Changed Steam interface language from english to japanese." "all mode should change steam"
+assert_contains "$output" "Changed Anki interface language from en_US to ja_JP." "all mode should change anki"
+assert_contains "$output" "Changed Factorio interface language from en to ja." "all mode should change factorio"
+
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" "$script" all --restore)"
+assert_contains "$output" "Restored Steam interface language from japanese to english." "all restore should revert steam"
+assert_contains "$output" "Restored Anki interface language from ja_JP to en_US." "all restore should revert anki"
+assert_contains "$output" "Restored Factorio interface language from ja to en." "all restore should revert factorio"
 
 echo "All tests passed."

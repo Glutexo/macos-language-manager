@@ -28,6 +28,7 @@ Each `*.sh` file in that directory becomes one available application id.
 
 Examples:
 
+- `all` → pseudo-app that runs the selected operation for every discovered module
 - `language-modules/steam.sh` → `steam`
 - `language-modules/anki.sh` → `anki`
 - `language-modules/factorio.sh` → `factorio`
@@ -44,6 +45,9 @@ Unified usage:
 ./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]
 ./manage-app-language.sh <app> --inherit-macos [--dry-run|-n] [--force|-f]
 ./manage-app-language.sh <app> --restore [--dry-run|-n] [--force|-f]
+./manage-app-language.sh all [--dry-run|-n] [--force|-f] [language]
+./manage-app-language.sh all --inherit-macos [--dry-run|-n] [--force|-f]
+./manage-app-language.sh all --restore [--dry-run|-n] [--force|-f]
 ./manage-app-language.sh --list-apps
 ./manage-app-language.sh --self-test
 ```
@@ -97,6 +101,12 @@ For a read:
 2. ensure the module storage exists
 3. ask the module to read the current language
 4. print the current value
+
+For `all`:
+
+1. discover all application modules
+2. run the selected read, write, inherit, or restore flow for each module in order
+3. stop on the first module error
 
 For a write:
 

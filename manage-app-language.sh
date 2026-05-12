@@ -28,9 +28,22 @@ available_modules() {
     | sort
 }
 
+print_available_apps() {
+  local app
+
+  echo "  all"
+  for app in $(available_modules); do
+    echo "  $app"
+  done
+}
+
 is_known_app() {
   local candidate="$1"
   local app
+
+  if [ "$candidate" = "all" ]; then
+    return 0
+  fi
 
   for app in $(available_modules); do
     if [ "$candidate" = "$app" ]; then
@@ -86,11 +99,7 @@ show_global_usage() {
   echo "  --self-test          Verify that all discovered modules implement the required contract."
   echo
   echo "Available apps:"
-
-  local app
-  for app in $(available_modules); do
-    echo "  $app"
-  done
+  print_available_apps
 
   echo
   echo "Examples:"
@@ -98,6 +107,7 @@ show_global_usage() {
   echo "  $display_command anki ja"
   echo "  $display_command factorio --dry-run zh-CN"
   echo "  $display_command steam --inherit-macos"
+  echo "  $display_command all --inherit-macos"
 }
 
 load_module() {
@@ -261,6 +271,119 @@ show_module_usage() {
   fi
 }
 
+show_all_usage() {
+  echo "Read or change the interface language for all supported macOS applications."
+  echo
+  echo "Usage: $display_command all [--dry-run|-n] [--force|-f] [language]"
+  echo "       $display_command all --inherit-macos [--dry-run|-n] [--force|-f]"
+  echo "       $display_command all --restore [--dry-run|-n] [--force|-f]"
+  echo
+  echo "Options:"
+  echo "  --dry-run, -n        Print the planned changes without writing them."
+  echo "  --force, -f          Write even if one of the applications appears to be running."
+  echo "  --help, -h           Show this help message."
+  echo "  --verbose, -v        Show the list of managed applications."
+  echo "  --inherit-macos, -M  Use the current macOS preferred language for every application module."
+  echo "  --restore, -R        Restore every module's language files from their .bak backups."
+  echo
+  echo "Managed applications:"
+  print_available_apps
+  echo
+  echo "Examples:"
+  echo "  $display_command all"
+  echo "  $display_command all ja"
+  echo "  $display_command all --inherit-macos"
+  echo "  $display_command all --restore"
+}
+
+run_loaded_module() {
+  local requested_language_input="$1"
+  local current_language=""
+  local restored_language=""
+  local canonical_requested_language=""
+  local display_current_language=""
+
+  collect_module_backup_paths
+
+  if $restore_from_backup; then
+    current_language="$(try_read_current_language)"
+
+    if ! $dry_run && ! $force_write && module_is_running; then
+      fail "$module_display_name appears to be running. Quit $module_display_name first, or rerun with --force."
+    fi
+
+    validate_restore_sources
+
+    if $dry_run; then
+      echo "Would restore $module_display_name interface language files from backup."
+      return 0
+    fi
+
+    restore_module_files
+    restored_language="$(try_read_current_language)"
+
+    if [ -n "$current_language" ] && [ -n "$restored_language" ]; then
+      echo "Restored $module_display_name interface language from $current_language to $restored_language."
+    elif [ -n "$restored_language" ]; then
+      echo "Restored $module_display_name interface language to $restored_language from backup."
+    else
+      echo "Restored $module_display_name interface language files from backup."
+    fi
+
+    echo "Restart $module_display_name to apply the restored interface language."
+    return 0
+  fi
+
+  module_ensure_storage_exists
+  current_language="$(try_read_current_language)"
+
+  if [ -z "$requested_language_input" ]; then
+    [ -n "$current_language" ] || fail "Could not detect the current $module_display_name language in $module_primary_storage_path"
+    echo "Current $module_display_name interface language: $current_language"
+    return 0
+  fi
+
+  canonical_requested_language="$(module_canonicalize_language "$requested_language_input")"
+  display_current_language="${current_language:-unset}"
+
+  if [ "$canonical_requested_language" = "$current_language" ]; then
+    echo "$module_display_name interface language is already set to $canonical_requested_language."
+    return 0
+  fi
+
+  if ! $dry_run && ! $force_write && module_is_running; then
+    fail "$module_display_name appears to be running. Quit $module_display_name first, or rerun with --force."
+  fi
+
+  if $dry_run; then
+    echo "Would change $module_display_name interface language from $display_current_language to $canonical_requested_language."
+    return 0
+  fi
+
+  module_validate_backup_paths "${module_backup_file_paths[@]}"
+  backup_module_files
+  module_write_language "$canonical_requested_language"
+
+  echo "Changed $module_display_name interface language from $display_current_language to $canonical_requested_language."
+  echo "Restart $module_display_name to apply the new interface language."
+}
+
+run_all_modules() {
+  local app=""
+  local found_any=false
+  local requested_language_input="$1"
+
+  for app in $(available_modules); do
+    found_any=true
+    load_module "$app"
+    run_loaded_module "$requested_language_input"
+  done
+
+  if ! $found_any; then
+    fail "No application modules were found in $modules_dir"
+  fi
+}
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --dry-run|-n)
@@ -324,13 +447,6 @@ if [ -z "$requested_app" ]; then
   fail "Missing application name. Use --help to see supported apps."
 fi
 
-load_module "$requested_app"
-
-if $show_help || $verbose_help; then
-  show_module_usage
-  exit 0
-fi
-
 if $restore_from_backup && [ -n "$requested_language" ]; then
   fail "The --restore mode does not accept a language value."
 fi
@@ -343,39 +459,19 @@ if $restore_from_backup && $inherit_macos; then
   fail "The --restore and --inherit-macos modes cannot be used together."
 fi
 
-collect_module_backup_paths
-
-if $restore_from_backup; then
-  current_language="$(try_read_current_language)"
-
-  if ! $dry_run && ! $force_write && module_is_running; then
-    fail "$module_display_name appears to be running. Quit $module_display_name first, or rerun with --force."
-  fi
-
-  validate_restore_sources
-
-  if $dry_run; then
-    echo "Would restore $module_display_name interface language files from backup."
+if [ "$requested_app" = "all" ]; then
+  if $show_help || $verbose_help; then
+    show_all_usage
     exit 0
   fi
+else
+  load_module "$requested_app"
 
-  restore_module_files
-  restored_language="$(try_read_current_language)"
-
-  if [ -n "$current_language" ] && [ -n "$restored_language" ]; then
-    echo "Restored $module_display_name interface language from $current_language to $restored_language."
-  elif [ -n "$restored_language" ]; then
-    echo "Restored $module_display_name interface language to $restored_language from backup."
-  else
-    echo "Restored $module_display_name interface language files from backup."
+  if $show_help || $verbose_help; then
+    show_module_usage
+    exit 0
   fi
-
-  echo "Restart $module_display_name to apply the restored interface language."
-  exit 0
 fi
-
-module_ensure_storage_exists
-current_language="$(try_read_current_language)"
 
 if $inherit_macos; then
   macos_requested_language="$(read_macos_preferred_language || true)"
@@ -383,32 +479,9 @@ if $inherit_macos; then
   requested_language="$macos_requested_language"
 fi
 
-if [ -z "$requested_language" ]; then
-  [ -n "$current_language" ] || fail "Could not detect the current $module_display_name language in $module_primary_storage_path"
-  echo "Current $module_display_name interface language: $current_language"
+if [ "$requested_app" = "all" ]; then
+  run_all_modules "$requested_language"
   exit 0
 fi
 
-requested_language="$(module_canonicalize_language "$requested_language")"
-display_current_language="${current_language:-unset}"
-
-if [ "$requested_language" = "$current_language" ]; then
-  echo "$module_display_name interface language is already set to $requested_language."
-  exit 0
-fi
-
-if ! $dry_run && ! $force_write && module_is_running; then
-  fail "$module_display_name appears to be running. Quit $module_display_name first, or rerun with --force."
-fi
-
-if $dry_run; then
-  echo "Would change $module_display_name interface language from $display_current_language to $requested_language."
-  exit 0
-fi
-
-module_validate_backup_paths "${module_backup_file_paths[@]}"
-backup_module_files
-module_write_language "$requested_language"
-
-echo "Changed $module_display_name interface language from $display_current_language to $requested_language."
-echo "Restart $module_display_name to apply the new interface language."
+run_loaded_module "$requested_language"
