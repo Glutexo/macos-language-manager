@@ -7,16 +7,11 @@ display_command="${DISPLAY_COMMAND:-./manage-languages.sh}"
 default_app="${DEFAULT_APP:-}"
 show_help=false
 verbose_help=false
-dry_run=false
-force_write=false
 list_apps=false
 self_test=false
-restore_from_backup=false
-inherit_macos=false
 requested_app="$default_app"
-requested_language=""
-module_type=""
-module_passthrough_args=()
+module_pre_args=()
+module_post_args=()
 
 fail() {
   echo "$1" >&2
@@ -92,25 +87,24 @@ show_global_usage() {
   echo "       $display_command --self-test"
   echo
   echo "Options:"
-  echo "  --dry-run, -n        Print the planned change without writing it."
-  echo "  --force, -f          Write even if the application appears to be running."
+  echo "  --dry-run, -n        Module option. Print the planned change without writing it."
+  echo "  --force, -f          Module option. Write even if the application appears to be running."
   echo "  --help, -h           Show help. Add a module name for module-specific help."
   echo "  --verbose, -v        Show help together with supported language values."
-  echo "  --inherit-macos, -M  Use the current macOS preferred language as the requested app language."
-  echo "  --restore, -R        Restore the application language files from their .bak backups."
+  echo "  --inherit-macos, -M  Module option for app-language modules."
+  echo "  --restore, -R        Module option for app-language modules."
   echo "  --list-apps          List supported modules."
   echo "  --list-modules       Alias for --list-apps."
   echo "  --self-test          Verify that all discovered modules implement the required contract."
   echo
   echo "Available modules:"
   print_available_apps
-
   echo
   echo "Examples:"
   echo "  $display_command steam"
   echo "  $display_command anki ja"
   echo "  $display_command factorio --dry-run zh-CN"
-  echo "  $display_command macos --help"
+  echo "  $display_command macos account ja:cs"
   echo "  $display_command steam --inherit-macos"
   echo "  $display_command all --inherit-macos"
 }
@@ -119,6 +113,7 @@ load_module() {
   local module_file="$modules_dir/$1.sh"
 
   [ -f "$module_file" ] || fail "Unknown module implementation: $1"
+
   module_key=""
   module_display_name=""
   module_storage_label=""
@@ -126,7 +121,10 @@ load_module() {
   module_example_dry_run_language=""
   module_alias_help=""
   module_primary_storage_path=""
-  module_type=""
+  module_supports_bulk="false"
+  module_flow_kind="standard"
+  module_requested_help=false
+  module_requested_verbose_help=false
   # shellcheck disable=SC1090
   source "$module_file"
 
@@ -137,19 +135,8 @@ load_module() {
   : "${module_storage_label:?}"
   : "${module_example_language:?}"
   : "${module_example_dry_run_language:?}"
-  module_type="${module_type:-simple}"
-
-  case "$module_type" in
-    simple)
-      module_primary_storage_path="$(module_primary_path)"
-      [ -n "$module_primary_storage_path" ] || fail "Module $module_key did not report a primary storage path."
-      ;;
-    custom)
-      ;;
-    *)
-      fail "Module $module_key reported an unsupported module type: $module_type"
-      ;;
-  esac
+  : "${module_supports_bulk:=false}"
+  : "${module_flow_kind:=standard}"
 }
 
 assert_module_function() {
@@ -160,102 +147,67 @@ assert_module_function() {
   fi
 }
 
-run_module_self_test() {
-  local app="$1"
+standard_module_reset_state() {
+  module_requested_help=false
+  module_requested_verbose_help=false
+  module_dry_run=false
+  module_force_write=false
+  module_restore_from_backup=false
+  module_inherit_macos=false
+  module_requested_language=""
+}
 
-  module_key=""
-  module_display_name=""
-  module_storage_label=""
-  module_example_language=""
-  module_example_dry_run_language=""
-  module_alias_help=""
-  module_primary_storage_path=""
+standard_module_parse_arguments() {
+  standard_module_reset_state
 
-  load_module "$app"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --dry-run|-n)
+        module_dry_run=true
+        ;;
+      --force|-f)
+        module_force_write=true
+        ;;
+      --help|-h)
+        module_requested_help=true
+        ;;
+      --verbose|-v)
+        module_requested_verbose_help=true
+        ;;
+      --restore|-R)
+        module_restore_from_backup=true
+        ;;
+      --inherit-macos|-M)
+        module_inherit_macos=true
+        ;;
+      -* )
+        fail "Unknown option: $1"
+        ;;
+      *)
+        if [ -z "$module_requested_language" ]; then
+          module_requested_language="$1"
+        else
+          fail "Only one language value can be provided."
+        fi
+        ;;
+    esac
+    shift
+  done
 
-  if [ "$module_type" = "custom" ]; then
-    assert_module_function "module_show_help_custom"
-    assert_module_function "module_run_custom"
-  else
-    assert_module_function "module_primary_path"
-    assert_module_function "module_ensure_storage_exists"
-    assert_module_function "module_print_supported_languages"
-    assert_module_function "module_print_aliases"
-    assert_module_function "module_backup_paths"
-    assert_module_function "module_validate_backup_paths"
-    assert_module_function "module_canonicalize_language"
-    assert_module_function "module_is_running"
-    assert_module_function "module_read_current_language"
-    assert_module_function "module_write_language"
+  if $module_restore_from_backup && [ -n "$module_requested_language" ]; then
+    fail "The --restore mode does not accept a language value."
   fi
 
-  echo "OK: $app"
-}
-
-run_self_test() {
-  local app=""
-  local found_any=false
-
-  for app in $(available_modules); do
-    found_any=true
-    run_module_self_test "$app"
-  done
-
-  if ! $found_any; then
-    fail "No application modules were found in $modules_dir"
+  if $module_inherit_macos && [ -n "$module_requested_language" ]; then
+    fail "The --inherit-macos mode does not accept a language value."
   fi
-}
 
-collect_module_backup_paths() {
-  module_backup_file_paths=()
-
-  while IFS= read -r backup_path; do
-    [ -n "$backup_path" ] || continue
-    module_backup_file_paths+=("$backup_path")
-  done < <(module_backup_paths)
-
-  if [ "${#module_backup_file_paths[@]}" -eq 0 ]; then
-    fail "Module $module_key did not report any files to back up."
-  fi
-}
-
-backup_module_files() {
-  local backup_file=""
-
-  for backup_path in "${module_backup_file_paths[@]}"; do
-    backup_file="$backup_path.bak"
-    cp "$backup_path" "$backup_file"
-    echo "Backup saved to $backup_file"
-  done
-}
-
-validate_restore_sources() {
-  local restore_source=""
-
-  for backup_path in "${module_backup_file_paths[@]}"; do
-    restore_source="$backup_path.bak"
-    [ -f "$restore_source" ] || fail "Backup file not found: $restore_source"
-    [ -r "$restore_source" ] || fail "Backup file is not readable: $restore_source"
-  done
-}
-
-restore_module_files() {
-  local restore_source=""
-
-  for backup_path in "${module_backup_file_paths[@]}"; do
-    restore_source="$backup_path.bak"
-    cp "$restore_source" "$backup_path"
-    echo "Restored $backup_path from $restore_source"
-  done
-}
-
-try_read_current_language() {
-  if [ -f "$module_primary_storage_path" ]; then
-    module_read_current_language || true
+  if $module_restore_from_backup && $module_inherit_macos; then
+    fail "The --restore and --inherit-macos modes cannot be used together."
   fi
 }
 
-show_module_usage() {
+standard_module_show_usage() {
   local usage_target="$display_command $module_key"
 
   if [ -n "$default_app" ]; then
@@ -282,7 +234,7 @@ show_module_usage() {
   echo "  $usage_target --dry-run $module_example_dry_run_language"
   echo "  $usage_target --inherit-macos"
 
-  if $verbose_help; then
+  if $module_requested_verbose_help; then
     echo
     echo "Supported $module_display_name interface language values:"
     module_print_supported_languages
@@ -300,12 +252,178 @@ show_module_usage() {
   fi
 }
 
-run_custom_module() {
-  module_run_custom "$@"
+collect_module_backup_paths() {
+  module_backup_file_paths=()
+
+  while IFS= read -r backup_path; do
+    [ -n "$backup_path" ] || continue
+    module_backup_file_paths+=("$backup_path")
+  done < <(module_backup_paths)
+
+  if [ "${#module_backup_file_paths[@]}" -eq 0 ]; then
+    fail "Module $module_key did not report any files to back up."
+  fi
+}
+
+backup_module_files() {
+  local backup_file=""
+  local backup_path=""
+
+  for backup_path in "${module_backup_file_paths[@]}"; do
+    backup_file="$backup_path.bak"
+    cp "$backup_path" "$backup_file"
+    echo "Backup saved to $backup_file"
+  done
+}
+
+validate_restore_sources() {
+  local restore_source=""
+  local backup_path=""
+
+  for backup_path in "${module_backup_file_paths[@]}"; do
+    restore_source="$backup_path.bak"
+    [ -f "$restore_source" ] || fail "Backup file not found: $restore_source"
+    [ -r "$restore_source" ] || fail "Backup file is not readable: $restore_source"
+  done
+}
+
+restore_module_files() {
+  local restore_source=""
+  local backup_path=""
+
+  for backup_path in "${module_backup_file_paths[@]}"; do
+    restore_source="$backup_path.bak"
+    cp "$restore_source" "$backup_path"
+    echo "Restored $backup_path from $restore_source"
+  done
+}
+
+try_read_current_language() {
+  if [ -f "$module_primary_storage_path" ]; then
+    module_read_current_language || true
+  fi
+}
+
+standard_module_run() {
+  local current_language=""
+  local restored_language=""
+  local canonical_requested_language=""
+  local display_current_language=""
+
+  module_primary_storage_path="$(module_primary_path)"
+  [ -n "$module_primary_storage_path" ] || fail "Module $module_key did not report a primary storage path."
+
+  collect_module_backup_paths
+
+  if $module_restore_from_backup; then
+    current_language="$(try_read_current_language)"
+
+    if ! $module_dry_run && ! $module_force_write && module_is_running; then
+      fail "$module_display_name appears to be running. Quit $module_display_name first, or rerun with --force."
+    fi
+
+    validate_restore_sources
+
+    if $module_dry_run; then
+      echo "Would restore $module_display_name interface language files from backup."
+      return 0
+    fi
+
+    restore_module_files
+    restored_language="$(try_read_current_language)"
+
+    if [ -n "$current_language" ] && [ -n "$restored_language" ]; then
+      echo "Restored $module_display_name interface language from $current_language to $restored_language."
+    elif [ -n "$restored_language" ]; then
+      echo "Restored $module_display_name interface language to $restored_language from backup."
+    else
+      echo "Restored $module_display_name interface language files from backup."
+    fi
+
+    echo "Restart $module_display_name to apply the restored interface language."
+    return 0
+  fi
+
+  module_ensure_storage_exists
+  current_language="$(try_read_current_language)"
+
+  if [ -z "$module_requested_language" ] && ! $module_inherit_macos; then
+    [ -n "$current_language" ] || fail "Could not detect the current $module_display_name language in $module_primary_storage_path"
+    echo "Current $module_display_name interface language: $current_language"
+    return 0
+  fi
+
+  if $module_inherit_macos; then
+    module_requested_language="$(read_macos_preferred_language || true)"
+    [ -n "$module_requested_language" ] || fail "Could not detect the current macOS preferred language."
+  fi
+
+  canonical_requested_language="$(module_canonicalize_language "$module_requested_language")"
+  display_current_language="${current_language:-unset}"
+
+  if [ "$canonical_requested_language" = "$current_language" ]; then
+    echo "$module_display_name interface language is already set to $canonical_requested_language."
+    return 0
+  fi
+
+  if ! $module_dry_run && ! $module_force_write && module_is_running; then
+    fail "$module_display_name appears to be running. Quit $module_display_name first, or rerun with --force."
+  fi
+
+  if $module_dry_run; then
+    echo "Would change $module_display_name interface language from $display_current_language to $canonical_requested_language."
+    return 0
+  fi
+
+  module_validate_backup_paths "${module_backup_file_paths[@]}"
+  backup_module_files
+  module_write_language "$canonical_requested_language"
+
+  echo "Changed $module_display_name interface language from $display_current_language to $canonical_requested_language."
+  echo "Restart $module_display_name to apply the new interface language."
+}
+
+run_module_self_test() {
+  local app="$1"
+
+  load_module "$app"
+
+  assert_module_function "module_show_usage"
+  assert_module_function "module_parse_arguments"
+  assert_module_function "module_run"
+
+  if [ "$module_flow_kind" = "standard" ]; then
+    assert_module_function "module_primary_path"
+    assert_module_function "module_ensure_storage_exists"
+    assert_module_function "module_print_supported_languages"
+    assert_module_function "module_print_aliases"
+    assert_module_function "module_backup_paths"
+    assert_module_function "module_validate_backup_paths"
+    assert_module_function "module_canonicalize_language"
+    assert_module_function "module_is_running"
+    assert_module_function "module_read_current_language"
+    assert_module_function "module_write_language"
+  fi
+
+  echo "OK: $app"
+}
+
+run_self_test() {
+  local app=""
+  local found_any=false
+
+  for app in $(available_modules); do
+    found_any=true
+    run_module_self_test "$app"
+  done
+
+  if ! $found_any; then
+    fail "No modules were found in $modules_dir"
+  fi
 }
 
 show_all_usage() {
-  echo "Read or change the interface language for all simple application modules."
+  echo "Read or change the interface language for all bulk-capable application modules."
   echo
   echo "Usage: $display_command all [--dry-run|-n] [--force|-f] [language]"
   echo "       $display_command all --inherit-macos [--dry-run|-n] [--force|-f]"
@@ -329,156 +447,87 @@ show_all_usage() {
   echo "  $display_command all --restore"
 }
 
-run_loaded_module() {
-  local requested_language_input="$1"
-  local current_language=""
-  local restored_language=""
-  local canonical_requested_language=""
-  local display_current_language=""
+parse_global_arguments() {
+  local module_found=false
 
-  collect_module_backup_paths
-
-  if $restore_from_backup; then
-    current_language="$(try_read_current_language)"
-
-    if ! $dry_run && ! $force_write && module_is_running; then
-      fail "$module_display_name appears to be running. Quit $module_display_name first, or rerun with --force."
+  while [ "$#" -gt 0 ]; do
+    if ! $module_found && is_known_app "$1"; then
+      requested_app="$1"
+      module_found=true
+      shift
+      continue
     fi
 
-    validate_restore_sources
+    if ! $module_found; then
+      if [[ "$1" != -* ]]; then
+        fail "Unknown module: $1"
+      fi
 
-    if $dry_run; then
-      echo "Would restore $module_display_name interface language files from backup."
-      return 0
-    fi
-
-    restore_module_files
-    restored_language="$(try_read_current_language)"
-
-    if [ -n "$current_language" ] && [ -n "$restored_language" ]; then
-      echo "Restored $module_display_name interface language from $current_language to $restored_language."
-    elif [ -n "$restored_language" ]; then
-      echo "Restored $module_display_name interface language to $restored_language from backup."
+      case "$1" in
+        --list-apps|--list-modules)
+          list_apps=true
+          ;;
+        --self-test)
+          self_test=true
+          ;;
+        --help|-h)
+          show_help=true
+          ;;
+        --verbose|-v)
+          verbose_help=true
+          ;;
+      esac
+      module_pre_args+=("$1")
     else
-      echo "Restored $module_display_name interface language files from backup."
+      module_post_args+=("$1")
     fi
-
-    echo "Restart $module_display_name to apply the restored interface language."
-    return 0
-  fi
-
-  module_ensure_storage_exists
-  current_language="$(try_read_current_language)"
-
-  if [ -z "$requested_language_input" ]; then
-    [ -n "$current_language" ] || fail "Could not detect the current $module_display_name language in $module_primary_storage_path"
-    echo "Current $module_display_name interface language: $current_language"
-    return 0
-  fi
-
-  canonical_requested_language="$(module_canonicalize_language "$requested_language_input")"
-  display_current_language="${current_language:-unset}"
-
-  if [ "$canonical_requested_language" = "$current_language" ]; then
-    echo "$module_display_name interface language is already set to $canonical_requested_language."
-    return 0
-  fi
-
-  if ! $dry_run && ! $force_write && module_is_running; then
-    fail "$module_display_name appears to be running. Quit $module_display_name first, or rerun with --force."
-  fi
-
-  if $dry_run; then
-    echo "Would change $module_display_name interface language from $display_current_language to $canonical_requested_language."
-    return 0
-  fi
-
-  module_validate_backup_paths "${module_backup_file_paths[@]}"
-  backup_module_files
-  module_write_language "$canonical_requested_language"
-
-  echo "Changed $module_display_name interface language from $display_current_language to $canonical_requested_language."
-  echo "Restart $module_display_name to apply the new interface language."
+    shift
+  done
 }
 
 run_all_modules() {
   local app=""
   local found_any=false
-  local requested_language_input="$1"
+  local module_args=("$@")
+
+  if [ "${#module_args[@]}" -gt 0 ]; then
+    standard_module_parse_arguments "${module_args[@]}"
+  else
+    standard_module_parse_arguments
+  fi
+
+  if $module_requested_help || $module_requested_verbose_help; then
+    show_all_usage
+    return 0
+  fi
 
   for app in $(available_modules); do
     load_module "$app"
-    if [ "$module_type" != "simple" ]; then
+    if [ "$module_supports_bulk" != "true" ]; then
       continue
     fi
     found_any=true
-    run_loaded_module "$requested_language_input"
+    if [ "${#module_args[@]}" -gt 0 ]; then
+      module_parse_arguments "${module_args[@]}"
+    else
+      module_parse_arguments
+    fi
+    module_run
   done
 
   if ! $found_any; then
-    fail "No simple application modules were found in $modules_dir"
+    fail "No bulk-capable application modules were found in $modules_dir"
   fi
 }
 
-while [ "$#" -gt 0 ]; do
-  if [ -n "$requested_app" ] && [ "$module_type" = "custom" ]; then
-    module_passthrough_args+=("$1")
-    shift
-    continue
-  fi
+parse_global_arguments "$@"
 
-  case "$1" in
-    --dry-run|-n)
-      dry_run=true
-      ;;
-    --force|-f)
-      force_write=true
-      ;;
-    --help|-h)
-      show_help=true
-      ;;
-    --verbose|-v)
-      verbose_help=true
-      ;;
-    --list-apps|--list-modules)
-      list_apps=true
-      ;;
-    --self-test)
-      self_test=true
-      ;;
-    --restore|-R)
-      restore_from_backup=true
-      ;;
-    --inherit-macos|-M)
-      inherit_macos=true
-      ;;
-    -*)
-      fail "Unknown option: $1"
-      ;;
-    *)
-      if [ -z "$requested_app" ] && is_known_app "$1"; then
-        requested_app="$1"
-        if [ "$requested_app" != "all" ]; then
-          load_module "$requested_app"
-        fi
-      elif [ -z "$requested_app" ]; then
-        fail "Unknown module: $1"
-      elif [ -z "$requested_language" ]; then
-        requested_language="$1"
-      else
-        fail "Only one language value can be provided."
-      fi
-      ;;
-  esac
-  shift
-done
-
-if $list_apps; then
+if $list_apps && [ -z "$requested_app" ]; then
   available_modules
   exit 0
 fi
 
-if $self_test; then
+if $self_test && [ -z "$requested_app" ]; then
   run_self_test
   exit 0
 fi
@@ -492,60 +541,33 @@ if [ -z "$requested_app" ]; then
   fail "Missing module name. Use --help to see supported modules."
 fi
 
-if $restore_from_backup && [ -n "$requested_language" ]; then
-  fail "The --restore mode does not accept a language value."
+module_cli_args=()
+if [ "${#module_pre_args[@]}" -gt 0 ]; then
+  module_cli_args+=("${module_pre_args[@]}")
 fi
-
-if $inherit_macos && [ -n "$requested_language" ]; then
-  fail "The --inherit-macos mode does not accept a language value."
-fi
-
-if $restore_from_backup && $inherit_macos; then
-  fail "The --restore and --inherit-macos modes cannot be used together."
+if [ "${#module_post_args[@]}" -gt 0 ]; then
+  module_cli_args+=("${module_post_args[@]}")
 fi
 
 if [ "$requested_app" = "all" ]; then
-  if $show_help || $verbose_help; then
-    show_all_usage
-    exit 0
+  if [ "${#module_cli_args[@]}" -gt 0 ]; then
+    run_all_modules "${module_cli_args[@]}"
+  else
+    run_all_modules
   fi
+  exit 0
+fi
+
+load_module "$requested_app"
+if [ "${#module_cli_args[@]}" -gt 0 ]; then
+  module_parse_arguments "${module_cli_args[@]}"
 else
-  if $show_help || $verbose_help; then
-    if [ "$module_type" = "custom" ]; then
-      if $verbose_help; then
-        run_custom_module --verbose
-      else
-        module_show_help_custom
-      fi
-    else
-      show_module_usage
-    fi
-    exit 0
-  fi
+  module_parse_arguments
 fi
 
-if [ "$module_type" = "custom" ]; then
-  if $inherit_macos; then
-    fail "The --inherit-macos mode is only available for simple application modules."
-  fi
-
-  if $restore_from_backup; then
-    fail "The --restore mode is only available for simple application modules."
-  fi
-
-  run_custom_module "${module_passthrough_args[@]}"
+if $module_requested_help || $module_requested_verbose_help; then
+  module_show_usage
   exit 0
 fi
 
-if $inherit_macos; then
-  macos_requested_language="$(read_macos_preferred_language || true)"
-  [ -n "$macos_requested_language" ] || fail "Could not detect the current macOS preferred language."
-  requested_language="$macos_requested_language"
-fi
-
-if [ "$requested_app" = "all" ]; then
-  run_all_modules "$requested_language"
-  exit 0
-fi
-
-run_loaded_module "$requested_language"
+module_run

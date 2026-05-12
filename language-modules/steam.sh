@@ -5,6 +5,7 @@ module_init() {
   module_example_language="cs"
   module_example_dry_run_language="ja"
   module_alias_help="ISO aliases such as bg, cs, da, de, el, en, es, es-419, fi, fr, hu, id, it, ja, ko, nl, no, pl, pt, pt-BR, ro, ru, sv, th, tr, uk, vi, zh-CN, and zh-TW are also accepted."
+  module_supports_bulk="true"
   steam_dir="${STEAM_DIR:-$HOME/Library/Application Support/Steam}"
   steam_registry_file="$steam_dir/registry.vdf"
   module_supported_languages=(
@@ -209,4 +210,16 @@ module_write_language() {
       die "No Steam language entries were updated\n";
     }
   ' "$steam_registry_file"
+}
+
+module_show_usage() {
+  standard_module_show_usage
+}
+
+module_parse_arguments() {
+  standard_module_parse_arguments "$@"
+}
+
+module_run() {
+  standard_module_run
 }

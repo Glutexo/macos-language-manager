@@ -5,6 +5,7 @@ module_init() {
   module_example_language="cs_CZ"
   module_example_dry_run_language="ja"
   module_alias_help="Short aliases such as en, cs, ja, pt, or zh are also accepted when they map to one supported value."
+  module_supports_bulk="true"
   anki_base_dir="${ANKI_BASE_DIR:-$HOME/Library/Application Support/Anki2}"
   anki_prefs_file="$anki_base_dir/prefs21.db"
   module_supported_languages=(
@@ -275,4 +276,16 @@ try:
 finally:
     conn.close()
 PY
+}
+
+module_show_usage() {
+  standard_module_show_usage
+}
+
+module_parse_arguments() {
+  standard_module_parse_arguments "$@"
+}
+
+module_run() {
+  standard_module_run
 }

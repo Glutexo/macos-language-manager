@@ -5,6 +5,7 @@ module_init() {
   module_example_language="cs"
   module_example_dry_run_language="zh-CN"
   module_alias_help="Short aliases such as es, ga, fy, pt, sv, or zh are also accepted when they map to one supported value."
+  module_supports_bulk="true"
   factorio_dir="${FACTORIO_DIR:-$HOME/Library/Application Support/factorio}"
   factorio_config_file="$factorio_dir/config/config.ini"
   module_supported_languages=(
@@ -178,4 +179,16 @@ updated_content = content[: match.start(2)] + updated_body + content[match.end(2
 with open(path, "w", encoding="utf-8") as handle:
     handle.write(updated_content)
 PY
+}
+
+module_show_usage() {
+  standard_module_show_usage
+}
+
+module_parse_arguments() {
+  standard_module_parse_arguments "$@"
+}
+
+module_run() {
+  standard_module_run
 }

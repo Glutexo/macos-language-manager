@@ -4,7 +4,7 @@ This document describes the shared architecture behind `manage-languages.sh` and
 
 ## Scope
 
-The runner manages application interface languages for supported macOS applications and delegates the macOS target-based workflow through a dedicated custom module.
+The runner manages application interface languages for supported macOS applications and loads the macOS target-based workflow through the same module lifecycle as the application modules.
 
 ## Entry Points
 
@@ -69,9 +69,14 @@ The runner handles:
 
 ## Module Contract
 
-Each module is sourced by the runner and must define `module_init`.
+Each module is sourced by the runner and must define:
 
-Simple application modules must also define:
+- `module_init`
+- `module_parse_arguments`
+- `module_show_usage`
+- `module_run`
+
+Modules that use the shared application-language flow must also define:
 
 - `module_primary_path`
 - `module_ensure_storage_exists`
@@ -84,11 +89,6 @@ Simple application modules must also define:
 - `module_read_current_language`
 - `module_write_language`
 
-Custom modules define their own CLI and must provide:
-
-- `module_show_help_custom`
-- `module_run_custom`
-
 `module_primary_path` returns the canonical file path the runner should mention in diagnostics for that module.
 
 `module_init` must also populate these variables:
@@ -99,6 +99,8 @@ Custom modules define their own CLI and must provide:
 - `module_example_language`
 - `module_example_dry_run_language`
 - optional `module_alias_help`
+- optional `module_supports_bulk`
+- optional `module_flow_kind`
 
 ## Shared Control Flow
 
@@ -115,11 +117,12 @@ For `all`:
 2. run the selected read, write, inherit, or restore flow for each module in order
 3. stop on the first module error
 
-For a custom module:
+For every module:
 
 1. parse global options until the module name is known
-2. pass the remaining argument vector through unchanged
-3. let the custom module own its target-specific parsing and execution
+2. pass the remaining module argument vector into `module_parse_arguments`
+3. show usage through `module_show_usage` when the module requests help
+4. execute the selected operation through `module_run`
 
 For a write:
 
@@ -164,7 +167,7 @@ The runner owns generic argument and flow errors, for example:
 - read-only mode without a detectable current language
 - running-application protection
 
-Simple modules own application-specific errors, primary-path reporting, backup scope declarations, and backup-set validation, for example:
+Modules own application-specific errors, and shared-flow modules additionally own primary-path reporting, backup scope declarations, and backup-set validation, for example:
 
 - missing storage file
 - invalid or unsupported language identifiers
