@@ -83,22 +83,27 @@ load_module() {
   [ -n "$module_primary_storage_path" ] || fail "Module $module_key did not report a primary storage path."
 }
 
-backup_module_files() {
-  local backup_path=""
-  local backup_file=""
-  local backed_up_any=false
+collect_module_backup_paths() {
+  module_backup_file_paths=()
 
   while IFS= read -r backup_path; do
     [ -n "$backup_path" ] || continue
+    module_backup_file_paths+=("$backup_path")
+  done < <(module_backup_paths)
+
+  if [ "${#module_backup_file_paths[@]}" -eq 0 ]; then
+    fail "Module $module_key did not report any files to back up."
+  fi
+}
+
+backup_module_files() {
+  local backup_file=""
+
+  for backup_path in "${module_backup_file_paths[@]}"; do
     backup_file="$backup_path.bak"
     cp "$backup_path" "$backup_file"
     echo "Backup saved to $backup_file"
-    backed_up_any=true
-  done < <(module_backup_paths)
-
-  if ! $backed_up_any; then
-    fail "Module $module_key did not report any files to back up."
-  fi
+  done
 }
 
 show_module_usage() {
@@ -217,6 +222,8 @@ if $dry_run; then
   exit 0
 fi
 
+collect_module_backup_paths
+module_validate_backup_paths "${module_backup_file_paths[@]}"
 backup_module_files
 module_write_language "$requested_language"
 

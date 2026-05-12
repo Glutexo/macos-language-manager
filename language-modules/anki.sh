@@ -23,6 +23,15 @@ module_backup_paths() {
   echo "$anki_prefs_file"
 }
 
+module_validate_backup_paths() {
+  local backup_path=""
+
+  for backup_path in "$@"; do
+    [ -f "$backup_path" ] || fail "Anki backup source file not found: $backup_path"
+    [ -r "$backup_path" ] || fail "Anki backup source file is not readable: $backup_path"
+  done
+}
+
 module_ensure_storage_exists() {
   [ -f "$anki_prefs_file" ] || fail "Anki preferences database not found: $anki_prefs_file"
 }

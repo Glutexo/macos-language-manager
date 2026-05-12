@@ -73,6 +73,7 @@ Each module is sourced by the runner and must define `module_init` plus these fu
 - `module_ensure_storage_exists`
 - `module_print_supported_languages`
 - `module_backup_paths`
+- `module_validate_backup_paths`
 - `module_canonicalize_language`
 - `module_is_running`
 - `module_read_current_language`
@@ -106,9 +107,10 @@ For a write:
 4. canonicalize and validate the requested language through the module
 5. block the write if the app appears to be running unless `--force` was provided
 6. ask the module for the files that must be backed up
-7. create `.bak` copies of those files
-8. ask the module to write the new value
-9. print the old and new value and ask the user to restart the app
+7. ask the module to validate that full backup set
+8. create `.bak` copies of those files
+9. ask the module to write the new value
+10. print the old and new value and ask the user to restart the app
 
 ## Error Handling
 
@@ -121,7 +123,7 @@ The runner owns generic argument and flow errors, for example:
 - read-only mode without a detectable current language
 - running-application protection
 
-Modules own application-specific errors, primary-path reporting, and backup scope declarations, for example:
+Modules own application-specific errors, primary-path reporting, backup scope declarations, and backup-set validation, for example:
 
 - missing storage file
 - invalid or unsupported language identifiers

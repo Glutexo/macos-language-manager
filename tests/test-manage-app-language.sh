@@ -57,5 +57,6 @@ assert_contains "$output" "Current Steam interface language: english" "unified r
 
 output="$(STEAM_DIR="$steam_dir" "$script" steam japanese)"
 assert_contains "$output" "Backup saved to $steam_dir/registry.vdf.bak" "runner should own module backup creation"
+assert_contains "$(cat "$steam_dir/registry.vdf.bak")" '"language"    "english"' "backup validation path should still lead to a real backup copy"
 
 echo "All tests passed."
