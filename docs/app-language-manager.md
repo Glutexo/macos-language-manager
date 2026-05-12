@@ -69,7 +69,7 @@ The runner handles:
 
 Each module is sourced by the runner and must define `module_init` plus these functions:
 
-- `module_storage_path`
+- `module_primary_path`
 - `module_ensure_storage_exists`
 - `module_print_supported_languages`
 - `module_backup_paths`
@@ -77,6 +77,8 @@ Each module is sourced by the runner and must define `module_init` plus these fu
 - `module_is_running`
 - `module_read_current_language`
 - `module_write_language`
+
+`module_primary_path` returns the canonical file path the runner should mention in diagnostics for that module.
 
 `module_init` must also populate these variables:
 
@@ -119,7 +121,7 @@ The runner owns generic argument and flow errors, for example:
 - read-only mode without a detectable current language
 - running-application protection
 
-Modules own application-specific errors and backup scope declarations, for example:
+Modules own application-specific errors, primary-path reporting, and backup scope declarations, for example:
 
 - missing storage file
 - invalid or unsupported language identifiers

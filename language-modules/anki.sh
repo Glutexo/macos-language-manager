@@ -15,7 +15,7 @@ module_init() {
   )
 }
 
-module_storage_path() {
+module_primary_path() {
   echo "$anki_prefs_file"
 }
 

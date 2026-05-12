@@ -13,7 +13,7 @@ module_init() {
   )
 }
 
-module_storage_path() {
+module_primary_path() {
   echo "$factorio_config_file"
 }
 

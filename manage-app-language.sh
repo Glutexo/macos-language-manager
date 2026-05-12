@@ -79,6 +79,8 @@ load_module() {
   : "${module_storage_label:?}"
   : "${module_example_language:?}"
   : "${module_example_dry_run_language:?}"
+  module_primary_storage_path="$(module_primary_path)"
+  [ -n "$module_primary_storage_path" ] || fail "Module $module_key did not report a primary storage path."
 }
 
 backup_module_files() {
@@ -193,7 +195,7 @@ module_ensure_storage_exists
 current_language="$(module_read_current_language || true)"
 
 if [ -z "$requested_language" ]; then
-  [ -n "$current_language" ] || fail "Could not detect the current $module_display_name language in $(module_storage_path)"
+  [ -n "$current_language" ] || fail "Could not detect the current $module_display_name language in $module_primary_storage_path"
   echo "Current $module_display_name interface language: $current_language"
   exit 0
 fi
