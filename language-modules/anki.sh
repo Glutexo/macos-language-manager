@@ -40,6 +40,64 @@ module_print_supported_languages() {
   printf '  %s\n' "${module_supported_languages[@]}"
 }
 
+module_print_aliases() {
+  cat <<'EOF'
+  af -> af_ZA
+  ar -> ar_SA
+  be -> be_BY
+  bg -> bg_BG
+  ca -> ca_ES
+  cs -> cs_CZ
+  da -> da_DK
+  de -> de_DE
+  el -> el_GR
+  en -> en_US
+  eo -> eo_UY
+  es -> es_ES
+  et -> et_EE
+  eu -> eu_ES
+  fa -> fa_IR
+  fi -> fi_FI
+  fr -> fr_FR
+  ga -> ga_IE
+  gl -> gl_ES
+  he -> he_IL
+  hr -> hr_HR
+  hu -> hu_HU
+  hy -> hy_AM
+  it -> it_IT
+  ja -> ja_JP
+  jbo -> jbo_EN
+  kk -> kk_KZ
+  ko -> ko_KR
+  la -> la_LA
+  mn -> mn_MN
+  ms -> ms_MY
+  nb -> nb_NO
+  no -> nb_NO
+  nl -> nl_NL
+  oc -> oc_FR
+  or -> or_OR
+  pl -> pl_PL
+  pt -> pt_PT
+  ro -> ro_RO
+  ru -> ru_RU
+  sk -> sk_SK
+  sl -> sl_SI
+  sr -> sr_SP
+  sv -> sv_SE
+  th -> th_TH
+  tl -> tl
+  tr -> tr_TR
+  ug -> ug
+  uk -> uk_UA
+  uz -> uz_UZ
+  vi -> vi_VN
+  yi -> yi
+  zh -> zh_CN
+EOF
+}
+
 module_canonicalize_language() {
   local original_language="$1"
   local language="$1"

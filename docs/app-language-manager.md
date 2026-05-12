@@ -68,6 +68,7 @@ Each module is sourced by the runner and must define `module_init` plus these fu
 - `module_primary_path`
 - `module_ensure_storage_exists`
 - `module_print_supported_languages`
+- `module_print_aliases`
 - `module_backup_paths`
 - `module_validate_backup_paths`
 - `module_canonicalize_language`

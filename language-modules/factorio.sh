@@ -38,6 +38,19 @@ module_print_supported_languages() {
   printf '  %s\n' "${module_supported_languages[@]}"
 }
 
+module_print_aliases() {
+  cat <<'EOF'
+  es -> es-ES
+  fy -> fy-NL
+  ga -> ga-IE
+  pt -> pt-PT
+  pt-BR -> pt-BR
+  sv -> sv-SE
+  zh -> zh-CN
+  zh-TW -> zh-TW
+EOF
+}
+
 module_canonicalize_language() {
   local original_language="$1"
   local normalized_language=""

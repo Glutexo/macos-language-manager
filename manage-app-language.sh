@@ -113,6 +113,7 @@ run_module_self_test() {
   assert_module_function "module_primary_path"
   assert_module_function "module_ensure_storage_exists"
   assert_module_function "module_print_supported_languages"
+  assert_module_function "module_print_aliases"
   assert_module_function "module_backup_paths"
   assert_module_function "module_validate_backup_paths"
   assert_module_function "module_canonicalize_language"
@@ -218,6 +219,12 @@ show_module_usage() {
     if [ -n "${module_alias_help:-}" ]; then
       echo
       echo "$module_alias_help"
+    fi
+
+    if declare -F module_print_aliases >/dev/null 2>&1; then
+      echo
+      echo "Accepted aliases:"
+      module_print_aliases
     fi
   fi
 }

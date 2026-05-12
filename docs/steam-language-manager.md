@@ -199,7 +199,7 @@ Unlike the macOS script, Steam language values do not come from the system.
 
 They come from the in-script `supported_languages` array.
 
-`--verbose` also mentions the accepted ISO-style aliases.
+`--verbose` also prints an explicit alias list together with the accepted ISO-style mappings.
 `--verbose` prints that array.
 
 ## Environment Variables Used For Testing Or Overrides

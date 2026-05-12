@@ -39,6 +39,45 @@ module_print_supported_languages() {
   printf '  %s\n' "${module_supported_languages[@]}"
 }
 
+module_print_aliases() {
+  cat <<'EOF'
+  bg -> bulgarian
+  cs -> czech
+  da -> danish
+  de -> german
+  el -> greek
+  en -> english
+  es -> spanish
+  es-419 -> latam
+  es-latam -> latam
+  fi -> finnish
+  fr -> french
+  hu -> hungarian
+  id -> indonesian
+  it -> italian
+  ja -> japanese
+  ko -> koreana
+  nl -> dutch
+  no -> norwegian
+  nb -> norwegian
+  pl -> polish
+  pt -> portuguese
+  pt-BR -> brazilian
+  ro -> romanian
+  ru -> russian
+  sv -> swedish
+  th -> thai
+  tr -> turkish
+  uk -> ukrainian
+  vi -> vietnamese
+  zh -> schinese
+  zh-CN -> schinese
+  zh-Hans -> schinese
+  zh-TW -> tchinese
+  zh-Hant -> tchinese
+EOF
+}
+
 module_canonicalize_language() {
   local original_language="$1"
   local language="$1"
