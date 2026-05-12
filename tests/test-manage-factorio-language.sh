@@ -92,6 +92,7 @@ assert_eq "Current Factorio interface language: en" "$output" "script should pri
 
 output="$(run_case --help)"
 assert_contains "$output" "Usage: ./manage-factorio-language.sh [--dry-run|-n] [--force|-f] [language]" "help should show usage"
+assert_contains "$output" "./manage-factorio-language.sh --restore [--dry-run|-n] [--force|-f]" "help should show restore usage"
 assert_contains "$output" "Use --verbose or -v for the supported language list." "help should mention verbose help"
 if [[ "$output" == *"Supported Factorio interface language values:"* ]]; then
   echo "FAIL: plain help should stay concise"
@@ -126,6 +127,10 @@ assert_contains "$output" "Changed Factorio interface language from en to zh-CN.
 assert_contains "$output" "Backup saved to $config_file.bak" "force mode should report backup file"
 assert_contains "$(cat "$config_file")" "locale=zh-CN" "force mode should update config language"
 assert_contains "$(cat "$config_file.bak")" "locale=en" "force mode should preserve backup"
+
+output="$(run_case --restore)"
+assert_contains "$output" "Restored Factorio interface language from zh-CN to en." "restore should revert the language from backup"
+assert_contains "$(cat "$config_file")" "locale=en" "restore should put the original value back"
 
 write_config
 output="$(run_case pt 2>&1)"

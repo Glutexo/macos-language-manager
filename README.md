@@ -15,6 +15,7 @@ Usage:
 
 ```bash
 ./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]
+./manage-app-language.sh <app> --restore [--dry-run|-n] [--force|-f]
 ./manage-app-language.sh --list-apps
 ./manage-app-language.sh --self-test
 ```
@@ -22,6 +23,7 @@ Usage:
 Notes:
 
 - The script discovers application modules from `language-modules/`.
+- `--restore` restores the module's declared backup set from existing `.bak` files.
 - `--self-test` verifies that every discovered module exposes the required shell hooks and metadata for CI or manual contract checks.
 - `manage-steam-language.sh`, `manage-anki-language.sh`, and `manage-factorio-language.sh` remain as thin compatibility wrappers around this runner.
 

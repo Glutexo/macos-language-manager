@@ -52,6 +52,7 @@ Unified usage:
 
 ```bash
 ./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]
+./manage-app-language.sh <app> --restore [--dry-run|-n] [--force|-f]
 ./manage-app-language.sh --list-apps
 ./manage-app-language.sh --self-test
 ```
@@ -67,6 +68,7 @@ The runner handles:
 - dry-run mode
 - running-application protection
 - backup creation before writing, based on file paths reported by the module
+- restore from `.bak` files for the same module-declared backup set
 - generic status output
 
 ## Module Contract
@@ -116,6 +118,16 @@ For a write:
 9. ask the module to write the new value
 10. print the old and new value and ask the user to restart the app
 
+For a restore:
+
+1. parse options and select a module
+2. ask the module for the files that belong to its backup set
+3. verify that the matching `.bak` files exist and are readable
+4. block the restore if the app appears to be running unless `--force` was provided
+5. in `--dry-run`, print the planned restore without copying files
+6. copy each `.bak` file back over its original path
+7. print the restored language when it can be detected and ask the user to restart the app
+
 ## Error Handling
 
 The runner owns generic argument and flow errors, for example:
@@ -124,6 +136,7 @@ The runner owns generic argument and flow errors, for example:
 - unknown application
 - missing application name
 - multiple language arguments
+- restore mode combined with a language argument
 - read-only mode without a detectable current language
 - running-application protection
 

@@ -111,6 +111,7 @@ assert_eq "Current Anki interface language: en_US" "$output" "script should prin
 
 output="$(run_case --help)"
 assert_contains "$output" "Usage: ./manage-anki-language.sh [--dry-run|-n] [--force|-f] [language]" "help should show usage"
+assert_contains "$output" "./manage-anki-language.sh --restore [--dry-run|-n] [--force|-f]" "help should show restore usage"
 assert_contains "$output" "Use --verbose or -v for the supported language list." "help should mention verbose help"
 if [[ "$output" == *"Supported Anki interface language values:"* ]]; then
   echo "FAIL: plain help should stay concise"
@@ -166,6 +167,10 @@ print(pickle.loads(row[0])["defaultLang"])
 PY
 )"
 assert_eq "en_US" "$backup_lang" "force mode should preserve backup"
+
+output="$(run_case --restore)"
+assert_contains "$output" "Restored Anki interface language from ja_JP to en_US." "restore should revert the language from backup"
+assert_eq "en_US" "$(read_default_lang)" "restore should put the original value back"
 
 write_prefs
 output="$(run_case zh 2>&1)"

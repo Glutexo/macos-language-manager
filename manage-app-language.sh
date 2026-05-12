@@ -11,6 +11,7 @@ dry_run=false
 force_write=false
 list_apps=false
 self_test=false
+restore_from_backup=false
 requested_app="$default_app"
 requested_language=""
 
@@ -43,6 +44,7 @@ show_global_usage() {
   echo "Read or change interface languages for supported macOS applications."
   echo
   echo "Usage: $display_command <app> [--dry-run|-n] [--force|-f] [language]"
+  echo "       $display_command <app> --restore [--dry-run|-n] [--force|-f]"
   echo "       $display_command --list-apps"
   echo "       $display_command --self-test"
   echo
@@ -51,6 +53,7 @@ show_global_usage() {
   echo "  --force, -f      Write even if the application appears to be running."
   echo "  --help, -h       Show help. Add an app name for app-specific help."
   echo "  --verbose, -v    Show help together with supported language values."
+  echo "  --restore, -R    Restore the application language files from their .bak backups."
   echo "  --list-apps      List supported application modules."
   echo "  --self-test      Verify that all discovered modules implement the required contract."
   echo
@@ -157,6 +160,32 @@ backup_module_files() {
   done
 }
 
+validate_restore_sources() {
+  local restore_source=""
+
+  for backup_path in "${module_backup_file_paths[@]}"; do
+    restore_source="$backup_path.bak"
+    [ -f "$restore_source" ] || fail "Backup file not found: $restore_source"
+    [ -r "$restore_source" ] || fail "Backup file is not readable: $restore_source"
+  done
+}
+
+restore_module_files() {
+  local restore_source=""
+
+  for backup_path in "${module_backup_file_paths[@]}"; do
+    restore_source="$backup_path.bak"
+    cp "$restore_source" "$backup_path"
+    echo "Restored $backup_path from $restore_source"
+  done
+}
+
+try_read_current_language() {
+  if [ -f "$module_primary_storage_path" ]; then
+    module_read_current_language || true
+  fi
+}
+
 show_module_usage() {
   local usage_target="$display_command $module_key"
 
@@ -167,12 +196,14 @@ show_module_usage() {
   echo "Read or change the $module_display_name interface language on macOS."
   echo
   echo "Usage: $usage_target [--dry-run|-n] [--force|-f] [language]"
+  echo "       $usage_target --restore [--dry-run|-n] [--force|-f]"
   echo
   echo "Options:"
   echo "  --dry-run, -n   Print the planned change without writing it."
   echo "  --force, -f     Write even if $module_display_name appears to be running."
   echo "  --help, -h      Show this help message. Use --verbose or -v for the supported language list."
   echo "  --verbose, -v   Show help together with supported language values."
+  echo "  --restore, -R   Restore the $module_display_name language files from their .bak backups."
   echo
   echo "Examples:"
   echo "  $usage_target"
@@ -210,6 +241,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --self-test)
       self_test=true
+      ;;
+    --restore|-R)
+      restore_from_backup=true
       ;;
     -*)
       fail "Unknown option: $1"
@@ -255,8 +289,43 @@ if $show_help || $verbose_help; then
   exit 0
 fi
 
+if $restore_from_backup && [ -n "$requested_language" ]; then
+  fail "The --restore mode does not accept a language value."
+fi
+
+collect_module_backup_paths
+
+if $restore_from_backup; then
+  current_language="$(try_read_current_language)"
+
+  if ! $dry_run && ! $force_write && module_is_running; then
+    fail "$module_display_name appears to be running. Quit $module_display_name first, or rerun with --force."
+  fi
+
+  validate_restore_sources
+
+  if $dry_run; then
+    echo "Would restore $module_display_name interface language files from backup."
+    exit 0
+  fi
+
+  restore_module_files
+  restored_language="$(try_read_current_language)"
+
+  if [ -n "$current_language" ] && [ -n "$restored_language" ]; then
+    echo "Restored $module_display_name interface language from $current_language to $restored_language."
+  elif [ -n "$restored_language" ]; then
+    echo "Restored $module_display_name interface language to $restored_language from backup."
+  else
+    echo "Restored $module_display_name interface language files from backup."
+  fi
+
+  echo "Restart $module_display_name to apply the restored interface language."
+  exit 0
+fi
+
 module_ensure_storage_exists
-current_language="$(module_read_current_language || true)"
+current_language="$(try_read_current_language)"
 
 if [ -z "$requested_language" ]; then
   [ -n "$current_language" ] || fail "Could not detect the current $module_display_name language in $module_primary_storage_path"
@@ -281,7 +350,6 @@ if $dry_run; then
   exit 0
 fi
 
-collect_module_backup_paths
 module_validate_backup_paths "${module_backup_file_paths[@]}"
 backup_module_files
 module_write_language "$requested_language"

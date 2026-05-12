@@ -76,6 +76,7 @@ assert_eq "Current Steam interface language: english" "$output" "script should p
 
 output="$(run_case --help)"
 assert_contains "$output" "Usage: ./manage-steam-language.sh [--dry-run|-n] [--force|-f] [language]" "help should show usage"
+assert_contains "$output" "./manage-steam-language.sh --restore [--dry-run|-n] [--force|-f]" "help should show restore usage"
 assert_contains "$output" "Use --verbose or -v for the supported language list." "help should mention verbose help"
 if [[ "$output" == *"Supported Steam interface language values:"* ]]; then
   echo "FAIL: plain help should stay concise"
@@ -110,6 +111,10 @@ assert_contains "$output" "Changed Steam interface language from english to japa
 assert_contains "$output" "Backup saved to $registry_file.bak" "force mode should report backup file"
 assert_contains "$(cat "$registry_file")" '"language"    "japanese"' "force mode should update registry language"
 assert_contains "$(cat "$registry_file.bak")" '"language"    "english"' "force mode should preserve backup"
+
+output="$(run_case --restore)"
+assert_contains "$output" "Restored Steam interface language from japanese to english." "restore should revert the language from backup"
+assert_contains "$(cat "$registry_file")" '"language"    "english"' "restore should put the original value back"
 
 write_registry
 output="$(run_case english japanese 2>&1 || true)"

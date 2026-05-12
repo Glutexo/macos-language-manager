@@ -36,6 +36,7 @@ assert_contains() {
 
 output="$("$script" --help)"
 assert_contains "$output" "Usage: ./manage-app-language.sh <app> [--dry-run|-n] [--force|-f] [language]" "global help should show unified usage"
+assert_contains "$output" "./manage-app-language.sh <app> --restore [--dry-run|-n] [--force|-f]" "global help should show restore usage"
 assert_contains "$output" "Available apps:" "global help should list apps"
 assert_contains "$output" "  anki" "global help should include anki"
 assert_contains "$output" "  factorio" "global help should include factorio"
@@ -56,6 +57,7 @@ assert_contains "$output" "Unknown application: nope" "unknown apps should fail 
 
 output="$(STEAM_DIR="$steam_dir" "$script" steam --help)"
 assert_contains "$output" "Usage: ./manage-app-language.sh steam [--dry-run|-n] [--force|-f] [language]" "app help should show app-specific usage"
+assert_contains "$output" "./manage-app-language.sh steam --restore [--dry-run|-n] [--force|-f]" "app help should show restore usage"
 
 output="$(STEAM_DIR="$steam_dir" "$script" steam)"
 assert_contains "$output" "Current Steam interface language: english" "unified runner should execute steam module"
@@ -63,5 +65,9 @@ assert_contains "$output" "Current Steam interface language: english" "unified r
 output="$(STEAM_DIR="$steam_dir" "$script" steam japanese)"
 assert_contains "$output" "Backup saved to $steam_dir/registry.vdf.bak" "runner should own module backup creation"
 assert_contains "$(cat "$steam_dir/registry.vdf.bak")" '"language"    "english"' "backup validation path should still lead to a real backup copy"
+
+output="$(STEAM_DIR="$steam_dir" "$script" steam --restore)"
+assert_contains "$output" "Restored Steam interface language from japanese to english." "runner should restore module state from backup"
+assert_contains "$(cat "$steam_dir/registry.vdf")" '"language"    "english"' "restore should put the original value back"
 
 echo "All tests passed."
