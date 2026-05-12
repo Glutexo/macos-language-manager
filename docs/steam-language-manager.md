@@ -1,6 +1,6 @@
 # Steam Language Manager Technical Notes
 
-This document describes how the Steam module behind `manage-app-language.sh` reads and writes Steam language settings on macOS, where the language is stored, and how the file format is handled. `manage-steam-language.sh` remains as a compatibility wrapper.
+This document describes how the Steam module behind `manage-app-language.sh` reads and writes Steam language settings on macOS, where the language is stored, and how the file format is handled.
 
 ## Scope
 
@@ -204,7 +204,7 @@ They come from the in-script `supported_languages` array.
 
 ## Related Tests
 
-- `./tests/test-manage-steam-language.sh`
+- `./tests/test-manage-app-language.sh`
 
 The test suite verifies:
 

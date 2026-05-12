@@ -16,16 +16,6 @@ Primary runner:
 ./manage-app-language.sh
 ```
 
-Compatibility wrappers:
-
-```text
-./manage-steam-language.sh
-./manage-anki-language.sh
-./manage-factorio-language.sh
-```
-
-The wrappers only preselect the module and delegate to the shared runner.
-
 ## Module Discovery
 
 The runner loads modules from:

@@ -1,6 +1,6 @@
 # Factorio Language Manager Technical Notes
 
-This document describes how the Factorio module behind `manage-app-language.sh` reads and writes Factorio language settings on macOS, where the language is stored, and how locale identifiers are validated. `manage-factorio-language.sh` remains as a compatibility wrapper.
+This document describes how the Factorio module behind `manage-app-language.sh` reads and writes Factorio language settings on macOS, where the language is stored, and how locale identifiers are validated.
 
 ## Scope
 
@@ -217,7 +217,7 @@ They come from the in-script `supported_languages` array.
 
 ## Related Tests
 
-- `./tests/test-manage-factorio-language.sh`
+- `./tests/test-manage-app-language.sh`
 
 The test suite verifies:
 

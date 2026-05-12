@@ -25,7 +25,6 @@ Notes:
 - The script discovers application modules from `language-modules/`.
 - `--restore` restores the module's declared backup set from existing `.bak` files.
 - `--self-test` verifies that every discovered module exposes the required shell hooks and metadata for CI or manual contract checks.
-- `manage-steam-language.sh`, `manage-anki-language.sh`, and `manage-factorio-language.sh` remain as thin compatibility wrappers around this runner.
 
 Technical details:
 
@@ -84,12 +83,6 @@ Technical details:
 
 - [extract-system-settings-languages.md](docs/extract-system-settings-languages.md)
 
-### Compatibility Wrappers
-
-- `./manage-steam-language.sh` → `./manage-app-language.sh steam`
-- `./manage-anki-language.sh` → `./manage-app-language.sh anki`
-- `./manage-factorio-language.sh` → `./manage-app-language.sh factorio`
-
 ### Application Technical Details
 
 - [steam-language-manager.md](docs/steam-language-manager.md)
@@ -100,9 +93,6 @@ Technical details:
 
 - `./tests/test-manage-macos-languages.sh`
 - `./tests/test-manage-app-language.sh`
-- `./tests/test-manage-steam-language.sh`
-- `./tests/test-manage-anki-language.sh`
-- `./tests/test-manage-factorio-language.sh`
 
 ## Repository Workflow
 
