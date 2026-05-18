@@ -72,3 +72,10 @@ assert_contains_word "en" "${COMPLETION_WORDS[@]}"
 assert_contains_word "--inherit-macos" "${COMPLETION_WORDS[@]}"
 
 printf 'All completion tests passed.\n'
+
+zsh_output="$(zsh -lc 'source "'"$repo_root"'"/completions/manage-languages.zsh' 2>&1)"
+if [ -n "$zsh_output" ]; then
+  echo "FAIL: zsh wrapper should load cleanly"
+  printf '%s\n' "$zsh_output"
+  exit 1
+fi

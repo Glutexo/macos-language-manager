@@ -1,3 +1,8 @@
+autoload -U compinit
+if ! typeset -f compdef >/dev/null 2>&1; then
+  compinit
+fi
+
 autoload -U bashcompinit
 bashcompinit
 
