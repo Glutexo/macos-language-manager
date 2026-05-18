@@ -207,20 +207,31 @@ assert_contains "$output" "Usage: ./manage-languages.sh anki [--dry-run|-n] [--f
 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --help)"
 assert_contains "$output" "Usage: ./manage-languages.sh google-account [--dry-run|-n] [language ...]" "google-account help should show module usage"
+assert_contains "$output" 'xx:yy' "google-account help should show macOS-style token syntax"
 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account)"
 assert_contains "$output" "Current Google Account preferred languages:" "google-account read mode should print a heading"
 assert_contains "$output" "  English" "google-account read mode should include the first preferred language"
 assert_contains "$output" "  Czech" "google-account read mode should include the second preferred language"
 
-output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --dry-run "Czech" "English")"
-assert_contains "$output" "Requested Google Account preferred languages:" "google-account dry-run should print the requested order"
-assert_contains "$output" "Would reorder the Google Account preferred-language list in Safari." "google-account dry-run should describe the planned write"
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --dry-run "Czech")"
+assert_contains "$output" "New Google Account preferred languages:" "google-account dry-run should print the new order"
+assert_contains "$output" $'  Czech\n  English' "google-account dry-run should move a language to the front"
+assert_contains "$output" "Would change the Google Account preferred-language list in Safari." "google-account dry-run should describe the planned write"
+
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --dry-run "English:" "-Czech")"
+assert_contains "$output" $'New Google Account preferred languages:\n  English' "google-account dry-run should support end placement plus removal"
+
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --dry-run "English:Czech")"
+assert_contains "$output" "Google Account preferred languages are already in the requested order." "google-account should treat an anchored no-op as already ordered"
 
 rm -f "$google_helper_log"
-output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account "Czech" "English")"
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account "Czech")"
 assert_contains "$output" "Applied Google Account preferred languages:" "google-account write should print the applied order"
-assert_contains "$(cat "$google_helper_log")" $'write\nCzech\nEnglish' "google-account write should pass the requested order to the helper"
+assert_contains "$(cat "$google_helper_log")" $'write\nCzech\nEnglish' "google-account write should pass the computed order to the helper"
+
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account Klingon 2>&1 || true)"
+assert_contains "$output" "Google Account cannot add a missing preferred language yet: Klingon" "google-account should reject missing languages through the shared parser flow"
 
 output="$("$script" steam macos ja 2>&1 || true)"
 assert_contains "$output" "The macos module cannot be combined with other modules." "macos should stay exclusive"

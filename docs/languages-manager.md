@@ -71,6 +71,7 @@ The runner handles:
 - backup creation before writing, based on file paths reported by the module
 - restore from `.bak` files for the same module-declared backup set
 - generic status output
+- shared ordered-language token parsing is implemented once in `language-modules/ordered-language-list-helper.sh` and reused by modules that manage ordered language lists
 
 ## Module Contract
 

@@ -10,9 +10,9 @@ Version 1 is intentionally narrow:
 
 - it uses Safari browser automation
 - it reads the current preferred-language list from the Google Account language page
-- it attempts to reorder the existing list only
+- it uses the same command-line token syntax as the macOS module
+- it attempts to reorder or remove entries from the existing list only
 - it does not add new languages yet
-- it does not remove existing languages yet
 - it does not use a public Google API, because no supported public API for preferred-language ordering was identified
 
 ## Entry Point
@@ -25,15 +25,22 @@ Version 1 is intentionally narrow:
 
 ```bash
 ./manage-languages.sh google-account
-./manage-languages.sh google-account --dry-run "English" "Czech"
-./manage-languages.sh google-account "English" "Czech"
+./manage-languages.sh google-account --dry-run "English:Czech"
+./manage-languages.sh google-account "English" "-Czech"
 ```
 
 Behavior:
 
 - without language arguments, the module prints the current preferred-language list
-- with language arguments, the module expects the full final list in the requested order
+- with language arguments, the module applies the same token parsing model as `manage-languages.sh macos`
 - language arguments currently match the visible labels from the Google Account page rather than a separate ISO-tag mapping layer
+
+Token forms:
+
+- `xx` or `+xx` → move the matching language to the front
+- `-xx` → remove the matching language after ordering
+- `xx:yy` or `+xx:yy` → move `xx` immediately before `yy`
+- `xx:` or `+xx:` → move `xx` to the end
 
 ## Automation Strategy
 
@@ -63,6 +70,7 @@ The page is forced to `hl=en` so the automation can rely on stable English UI te
 
 - the write path is best-effort DOM automation against a live Google page and may break when Google changes the page structure
 - page structure changes on Google's side may break the helper
+- missing requested languages are rejected because the current helper does not add them yet
 - there is no backup or restore mode because the data lives remotely in the Google account
 - `--inherit-macos` and `--force` are not supported for this module
 

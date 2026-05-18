@@ -85,13 +85,14 @@ Usage:
 
 ```bash
 ./manage-languages.sh google-account
-./manage-languages.sh google-account --dry-run "English" "Czech"
-./manage-languages.sh google-account "English" "Czech"
+./manage-languages.sh google-account --dry-run "English:Czech"
+./manage-languages.sh google-account "English" "-Czech"
 ```
 
 Notes:
 
-- Version 1 only reorders languages that already exist in the Google account.
+- The command-line token syntax matches the macOS module: `xx`, `+xx`, `-xx`, `xx:yy`, and `xx:`.
+- Version 1 only reorders or removes languages that already exist in the Google account.
 - Arguments are the visible labels from the Google Account page, not a separate ISO-tag mapping layer.
 - Safari may prompt for sign-in or 2-step verification.
 - There is no public Google API in this repository for preferred-language ordering.

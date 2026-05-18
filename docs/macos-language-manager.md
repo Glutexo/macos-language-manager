@@ -207,7 +207,7 @@ The script does not just prepend values blindly. It builds an internal ordered e
 - `base`
 - `end`
 
-Argument tokens are parsed and normalized before ordering is applied. The behavior summary, state diagram, and field table below describe that parsing step.
+Argument tokens are parsed and normalized before ordering is applied. That parsing step now lives in the shared helper `language-modules/ordered-language-list-helper.sh`, and the behavior summary, state diagram, and field table below describe that shared flow.
 
 Behavior by argument type:
 
@@ -258,15 +258,15 @@ flowchart TD
         LeadingPlus -- otherwise --> FrontPlacement
 
         Removal -- source contains : --> TokenLoopInvalidEnd
-        Removal -- source is empty or invalid tag --> TokenLoopInvalidEnd
+        Removal -- source is empty or invalid value --> TokenLoopInvalidEnd
         Removal --> QueueRemoval
 
-        AnchoredPlacement -- source is empty or invalid tag --> TokenLoopInvalidEnd
-        AnchoredPlacement -- anchor is empty or invalid tag --> TokenLoopInvalidEnd
+        AnchoredPlacement -- source is empty or invalid value --> TokenLoopInvalidEnd
+        AnchoredPlacement -- anchor is empty or invalid value --> TokenLoopInvalidEnd
         AnchoredPlacement -- anchor is not present --> QueueEnd
         AnchoredPlacement -- anchor is present --> QueueBefore
 
-        FrontPlacement -- invalid tag --> TokenLoopInvalidEnd
+        FrontPlacement -- invalid value --> TokenLoopInvalidEnd
         FrontPlacement --> QueueFront
 
         QueueRemoval --> NextToken[Next token]
