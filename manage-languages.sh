@@ -261,13 +261,74 @@ standard_module_show_usage() {
 
   if $module_requested_verbose_help; then
     echo
-    echo "Supported $module_display_name interface language values and aliases:"
-    module_print_supported_languages
-
-    if declare -F module_print_aliases >/dev/null 2>&1; then
-      module_print_aliases
-    fi
+    echo "Supported $module_display_name interface language values:"
+    print_standard_module_language_reference
   fi
+}
+
+join_by_comma() {
+  local first_item=true
+  local item=""
+
+  for item in "$@"; do
+    if $first_item; then
+      printf '%s' "$item"
+      first_item=false
+    else
+      printf ', %s' "$item"
+    fi
+  done
+}
+
+print_standard_module_language_reference() {
+  local supported_values=()
+  local alias_values=()
+  local alias_targets=()
+  local line=""
+  local trimmed_line=""
+  local alias_value=""
+  local alias_target=""
+  local supported_value=""
+  local matched_aliases=()
+  local index=0
+
+  while IFS= read -r line; do
+    trimmed_line="${line#"${line%%[![:space:]]*}"}"
+    [ -n "$trimmed_line" ] || continue
+    supported_values+=("$trimmed_line")
+  done < <(module_print_supported_languages)
+
+  if declare -F module_print_aliases >/dev/null 2>&1; then
+    while IFS= read -r line; do
+      trimmed_line="${line#"${line%%[![:space:]]*}"}"
+      [ -n "$trimmed_line" ] || continue
+      case "$trimmed_line" in
+        *" -> "*)
+          alias_value="${trimmed_line%% -> *}"
+          alias_target="${trimmed_line#* -> }"
+          alias_values+=("$alias_value")
+          alias_targets+=("$alias_target")
+          ;;
+      esac
+    done < <(module_print_aliases)
+  fi
+
+  for supported_value in "${supported_values[@]}"; do
+    matched_aliases=()
+    index=0
+    while [ "$index" -lt "${#alias_values[@]}" ]; do
+      if [ "${alias_targets[$index]}" = "$supported_value" ]; then
+        matched_aliases+=("${alias_values[$index]}")
+      fi
+      index=$((index + 1))
+    done
+
+    if [ "${#matched_aliases[@]}" -gt 0 ]; then
+      printf '  %s (%s)\n' "$supported_value" "$(join_by_comma "${matched_aliases[@]}")"
+    else
+      printf '  %s\n' "$supported_value"
+    fi
+  done
 }
 
 collect_module_backup_paths() {
