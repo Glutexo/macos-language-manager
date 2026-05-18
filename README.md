@@ -103,6 +103,16 @@ Installer:
 ./install-manage-languages-completion.sh
 ```
 
+The installer does two things:
+
+- links the completion file into a per-shell completion directory
+- adds one loader block to the shell rc file that sources every completion from that directory
+
+Default completion directories:
+
+- Zsh → `~/.config/zsh/completions`
+- Bash → `~/.config/bash/completions`
+
 Explicit shell selection:
 
 ```bash
