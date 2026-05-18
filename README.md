@@ -97,6 +97,19 @@ Technical details:
 
 ### Shell Completion
 
+Installer:
+
+```bash
+./install-manage-languages-completion.sh
+```
+
+Explicit shell selection:
+
+```bash
+./install-manage-languages-completion.sh --shell zsh
+./install-manage-languages-completion.sh --shell bash
+```
+
 Bash:
 
 ```bash
@@ -124,6 +137,7 @@ Both completion files register completions for `manage-languages` and `./manage-
 - `./tests/test-manage-languages.sh`
 - `./tests/test-manage-languages-macos.sh`
 - `./tests/test-manage-languages-completion.sh`
+- `./tests/test-install-manage-languages-completion.sh`
 
 ## Repository Workflow
 
