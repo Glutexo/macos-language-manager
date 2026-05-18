@@ -51,6 +51,7 @@ print_available_apps() {
   local app
 
   echo "  all"
+  echo "  everything"
   for app in $(available_modules); do
     echo "  $app"
   done
@@ -60,7 +61,7 @@ is_known_app() {
   local candidate="$1"
   local app
 
-  if [ "$candidate" = "all" ]; then
+  if [ "$candidate" = "all" ] || [ "$candidate" = "everything" ]; then
     return 0
   fi
 
@@ -104,6 +105,7 @@ show_global_usage() {
   echo "Usage: $display_command <module> [<module> ...] [--dry-run|-n] [--force|-f] [language]"
   echo "       $display_command <module> [<module> ...] --inherit-macos [--dry-run|-n] [--force|-f]"
   echo "       $display_command <module> [<module> ...] --restore [--dry-run|-n] [--force|-f]"
+  echo "       $display_command everything [--dry-run|-n] [language ...]"
   echo "       $display_command --list-apps|--list-modules"
   echo "       $display_command --self-test"
   echo
@@ -129,6 +131,7 @@ show_global_usage() {
   echo "  $display_command macos account ja:cs"
   echo "  $display_command steam --inherit-macos"
   echo "  $display_command all --inherit-macos"
+  echo "  $display_command everything de"
 }
 
 load_module() {
@@ -469,6 +472,25 @@ show_all_usage() {
   echo "  $display_command all --restore"
 }
 
+show_everything_usage() {
+  echo "Read or change both application interface languages and macOS language settings in one run."
+  echo
+  echo "Usage: $display_command everything [--dry-run|-n] [language ...]"
+  echo
+  echo "Behavior:"
+  echo "  1. Runs the existing application pseudo-module: $display_command all ..."
+  echo "  2. Runs the existing macOS command: $display_command macos all ..."
+  echo
+  echo "Notes:"
+  echo "  Use arguments that make sense for both flows."
+  echo "  The most useful shared forms are read-only mode, --dry-run, and explicit language tokens such as de or ja."
+  echo
+  echo "Examples:"
+  echo "  $display_command everything"
+  echo "  $display_command everything de"
+  echo "  $display_command everything --dry-run de"
+}
+
 parse_global_arguments() {
   local module_found=false
   local module_selection_finished=false
@@ -478,7 +500,7 @@ parse_global_arguments() {
       requested_app="$1"
       selected_apps+=("$1")
       module_found=true
-      if [ "$1" = "macos" ] || [ "$1" = "all" ]; then
+      if [ "$1" = "macos" ] || [ "$1" = "all" ] || [ "$1" = "everything" ]; then
         module_selection_finished=true
       fi
       shift
@@ -534,10 +556,23 @@ validate_selected_apps() {
       if [ "$app" = "all" ]; then
         fail "The all pseudo-module cannot be combined with other modules."
       fi
+      if [ "$app" = "everything" ]; then
+        fail "The everything pseudo-module cannot be combined with other modules."
+      fi
       if [ "$app" = "macos" ]; then
         fail "The macos module cannot be combined with other modules."
       fi
     done
+  fi
+
+  if [ "$requested_app" = "everything" ]; then
+    if [ "${#module_post_args[@]}" -gt 0 ]; then
+      for arg in "${module_post_args[@]}"; do
+        if is_known_app "$arg"; then
+          fail "The everything pseudo-module cannot be combined with other modules."
+        fi
+      done
+    fi
   fi
 }
 
@@ -602,6 +637,37 @@ run_selected_modules() {
   done
 }
 
+run_everything() {
+  local everything_args=("$@")
+  local macos_args=("all")
+
+  if [ "${#everything_args[@]}" -gt 0 ]; then
+    standard_module_parse_arguments "${everything_args[@]}" || true
+  else
+    standard_module_parse_arguments
+  fi
+
+  if $module_requested_help || $module_requested_verbose_help; then
+    show_everything_usage
+    return 0
+  fi
+
+  if [ "${#everything_args[@]}" -gt 0 ]; then
+    run_all_modules "${everything_args[@]}"
+    macos_args+=("${everything_args[@]}")
+  else
+    run_all_modules
+  fi
+
+  load_module "macos"
+  if [ "${#macos_args[@]}" -gt 0 ]; then
+    module_parse_arguments "${macos_args[@]}"
+  else
+    module_parse_arguments
+  fi
+  module_run
+}
+
 parse_global_arguments "$@"
 validate_selected_apps
 
@@ -637,6 +703,15 @@ if [ "$requested_app" = "all" ]; then
     run_all_modules "${module_cli_args[@]}"
   else
     run_all_modules
+  fi
+  exit 0
+fi
+
+if [ "$requested_app" = "everything" ]; then
+  if [ "${#module_cli_args[@]}" -gt 0 ]; then
+    run_everything "${module_cli_args[@]}"
+  else
+    run_everything
   fi
   exit 0
 fi

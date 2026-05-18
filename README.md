@@ -20,6 +20,7 @@ Usage:
 ./manage-languages.sh all [--dry-run|-n] [--force|-f] [language]
 ./manage-languages.sh all --inherit-macos [--dry-run|-n] [--force|-f]
 ./manage-languages.sh all --restore [--dry-run|-n] [--force|-f]
+./manage-languages.sh everything [--dry-run|-n] [language ...]
 ./manage-languages.sh --list-apps|--list-modules
 ./manage-languages.sh --self-test
 ```
@@ -29,8 +30,9 @@ Notes:
 - The script discovers modules from `language-modules/`.
 - You can target multiple application modules in one run, for example `./manage-languages.sh steam anki ja`.
 - The pseudo-module `all` runs the shared application-language flow across every simple application module.
+- The pseudo-module `everything` runs `all` and then `macos all` in one command.
 - The `macos` module keeps its own target-based CLI under `./manage-languages.sh macos ...`, but it is still loaded through the same module lifecycle as the other modules.
-- `macos` and `all` stay exclusive and cannot be combined with other module names.
+- `macos`, `all`, and `everything` stay exclusive and cannot be combined with other module names.
 - `--inherit-macos` uses the first tag from the current macOS `AppleLanguages` list and lets the selected module map it to its own language format.
 - `--restore` restores the module's declared backup set from existing `.bak` files.
 - `--self-test` verifies that every discovered module exposes the required shell hooks and metadata for CI or manual contract checks.

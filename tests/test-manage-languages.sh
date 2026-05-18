@@ -111,6 +111,7 @@ assert_contains "$output" "./manage-languages.sh <module> [<module> ...] --inher
 assert_contains "$output" "./manage-languages.sh <module> [<module> ...] --restore [--dry-run|-n] [--force|-f]" "global help should show restore usage"
 assert_contains "$output" "Available modules:" "global help should list modules"
 assert_contains "$output" "  all" "global help should include the all pseudo-app"
+assert_contains "$output" "  everything" "global help should include the everything pseudo-app"
 assert_contains "$output" "  anki" "global help should include anki"
 assert_contains "$output" "  factorio" "global help should include factorio"
 assert_contains "$output" "  macos" "global help should include macos"
@@ -144,6 +145,9 @@ assert_contains "$output" "The macos module cannot be combined with other module
 output="$("$script" all steam ja 2>&1 || true)"
 assert_contains "$output" "The all pseudo-module cannot be combined with other modules." "all should stay exclusive"
 
+output="$("$script" everything steam ja 2>&1 || true)"
+assert_contains "$output" "The everything pseudo-module cannot be combined with other modules." "everything should stay exclusive"
+
 output="$("$script" macos --help)"
 assert_contains "$output" "Usage: ./manage-languages.sh macos account [--dry-run|-n] [--restart|-r] [language ...]" "macos module help should be routed through the shared entry point"
 
@@ -151,6 +155,9 @@ output="$("$script" all --help)"
 assert_contains "$output" "Usage: ./manage-languages.sh all [--dry-run|-n] [--force|-f] [language]" "all help should show bulk usage"
 assert_contains "$output" "./manage-languages.sh all --inherit-macos [--dry-run|-n] [--force|-f]" "all help should show bulk inheritance usage"
 assert_contains "$output" "./manage-languages.sh all --restore [--dry-run|-n] [--force|-f]" "all help should show bulk restore usage"
+
+output="$("$script" everything --help)"
+assert_contains "$output" "Usage: ./manage-languages.sh everything [--dry-run|-n] [language ...]" "everything help should show combined usage"
 
 output="$(STEAM_DIR="$steam_dir" "$script" steam --help)"
 assert_contains "$output" "Usage: ./manage-languages.sh steam [--dry-run|-n] [--force|-f] [language]" "app help should show steam usage"

@@ -47,6 +47,7 @@ Unified usage:
 ./manage-languages.sh all [--dry-run|-n] [--force|-f] [language]
 ./manage-languages.sh all --inherit-macos [--dry-run|-n] [--force|-f]
 ./manage-languages.sh all --restore [--dry-run|-n] [--force|-f]
+./manage-languages.sh everything [--dry-run|-n] [language ...]
 ./manage-languages.sh --list-apps|--list-modules
 ./manage-languages.sh --self-test
 ./manage-languages.sh macos ...
@@ -117,6 +118,13 @@ For `all`:
 2. run the selected read, write, inherit, or restore flow for each module in order
 3. stop on the first module error
 
+For `everything`:
+
+1. run the existing application pseudo-module flow: `all`
+2. then run the existing macOS command flow: `macos all`
+3. pass the same argument vector to both flows
+4. stop on the first error
+
 For an explicit multi-module selection such as `steam anki ja`:
 
 1. collect the consecutive module names at the beginning of the command line
@@ -166,6 +174,7 @@ The runner owns generic argument and flow errors, for example:
 
 - unknown option
 - unknown module
+- invalid combination of the exclusive pseudo-modules `all` or `everything` with other module names
 - invalid combination of exclusive modules such as `all` or `macos` with other module names
 - missing module name
 - multiple language arguments

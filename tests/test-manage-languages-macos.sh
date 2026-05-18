@@ -7,6 +7,69 @@ script="$repo_root/manage-languages.sh"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
+steam_dir="$tmp_dir/Steam"
+mkdir -p "$steam_dir"
+steam_registry_file="$steam_dir/registry.vdf"
+cat > "$steam_registry_file" <<'EOS'
+"Steam"
+{
+  "steamglobal"
+  {
+    "language"    "english"
+  }
+  "language"    "english"
+}
+EOS
+
+anki_dir="$tmp_dir/Anki2"
+mkdir -p "$anki_dir"
+anki_prefs_file="$anki_dir/prefs21.db"
+PREFS_FILE="$anki_prefs_file" python3 - <<'PY'
+import os
+import pickle
+import sqlite3
+
+path = os.environ["PREFS_FILE"]
+meta = {
+    "defaultLang": "en_US",
+    "ver": 0,
+    "updates": True,
+    "created": 0,
+    "id": 1,
+    "lastMsg": 0,
+    "suppressUpdate": False,
+    "firstRun": False,
+}
+
+conn = sqlite3.connect(path)
+conn.execute(
+    "create table if not exists profiles (name text primary key collate nocase, data blob not null)"
+)
+conn.execute("delete from profiles")
+conn.execute(
+    "insert into profiles values ('_global', ?)",
+    (sqlite3.Binary(pickle.dumps(meta, protocol=4)),),
+)
+conn.commit()
+conn.close()
+PY
+
+factorio_dir="$tmp_dir/factorio"
+mkdir -p "$factorio_dir/config"
+factorio_config_file="$factorio_dir/config/config.ini"
+cat > "$factorio_config_file" <<'EOS'
+; version=13
+[path]
+read-data=__PATH__system-read-data__
+write-data=__PATH__system-write-data__
+
+[general]
+locale=en
+
+[other]
+; verbose-logging=false
+EOS
+
 stub_dir="$tmp_dir/stubs"
 mkdir -p "$stub_dir"
 renderable_languages_file="$tmp_dir/RenderableUILanguages.plist"
@@ -148,8 +211,20 @@ assert_contains() {
 
 run_case() {
   PATH="$stub_dir:$PATH" \
+    STEAM_DIR="$steam_dir" \
+    ANKI_BASE_DIR="$anki_dir" \
+    FACTORIO_DIR="$factorio_dir" \
     MACOS_LANGUAGE_RENDERABLE_UI_LANGUAGES_PATH="$renderable_languages_file" \
     "$script" macos "$@"
+}
+
+run_everything_case() {
+  PATH="$stub_dir:$PATH" \
+    STEAM_DIR="$steam_dir" \
+    ANKI_BASE_DIR="$anki_dir" \
+    FACTORIO_DIR="$factorio_dir" \
+    MACOS_LANGUAGE_RENDERABLE_UI_LANGUAGES_PATH="$renderable_languages_file" \
+    "$script" everything "$@"
 }
 
 run_and_capture_order() {
@@ -190,6 +265,14 @@ assert_contains "$output" $'New locale value:
   fr_FR' "all target should derive locale from the first resulting language"
 assert_contains "$output" $'New startup language setting:
   fr:252' "all target should derive startup language from the first resulting language"
+
+output="$(run_everything_case --dry-run de)"
+assert_contains "$output" "Would change Steam interface language from english to german." "everything should include Steam app planning"
+assert_contains "$output" "Would change Anki interface language from en_US to de_DE." "everything should include Anki app planning"
+assert_contains "$output" "Would change Factorio interface language from en to de." "everything should include Factorio app planning"
+assert_contains "$output" $'New language order:
+  de-CZ' "everything should include macOS all planning"
+assert_contains "$output" "Dry run: no changes were saved." "everything should include macOS dry-run confirmation"
 
 order="$(run_and_capture_order ja:cs)"
 assert_eq "en-US,ko-KR,fr-FR,ja-CZ,cs-CZ" "$order" "ja:cs should place Japanese immediately before Czech"
