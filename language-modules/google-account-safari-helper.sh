@@ -4,6 +4,7 @@ set -euo pipefail
 preferred_languages_url="${GOOGLE_ACCOUNT_LANGUAGE_URL:-https://myaccount.google.com/language?hl=en}"
 timeout_seconds="${GOOGLE_ACCOUNT_LANGUAGE_TIMEOUT:-180}"
 session_marker="${GOOGLE_ACCOUNT_SAFARI_SESSION:-codex-google-language-$$-$(date +%s)}"
+browser_profile="${GOOGLE_ACCOUNT_BROWSER_PROFILE:-}"
 window_id=""
 
 fail() {
@@ -13,6 +14,30 @@ fail() {
 
 run_applescript() {
   osascript - "$@"
+}
+
+list_browser_profiles() {
+  if [ -n "${GOOGLE_ACCOUNT_BROWSER_PROFILES:-}" ]; then
+    printf '%s\n' "$GOOGLE_ACCOUNT_BROWSER_PROFILES" | while IFS= read -r profile_name; do
+      [ -n "$profile_name" ] || continue
+      printf '%s\n' "$profile_name"
+    done
+    return 0
+  fi
+
+  printf 'default\n'
+}
+
+ensure_valid_browser_profile() {
+  local candidate="$1"
+
+  [ -n "$candidate" ] || return 0
+
+  if list_browser_profiles | rg -Fx -- "$candidate" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  fail "Unknown browser profile: $candidate"
 }
 
 safari_open_page() {
@@ -434,6 +459,15 @@ PY
 command="${1:-}"
 [ -n "$command" ] || fail "Missing helper command."
 shift || true
+
+case "$command" in
+  list-profiles)
+    list_browser_profiles
+    exit 0
+    ;;
+esac
+
+ensure_valid_browser_profile "$browser_profile"
 
 window_id="$(safari_open_page "$preferred_languages_url")"
 [ -n "$window_id" ] || fail "Could not create a dedicated Safari window."

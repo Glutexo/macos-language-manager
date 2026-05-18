@@ -13,6 +13,9 @@ verbose_help=false
 inherit_macos=false
 disable_auto_add=false
 enable_auto_add=false
+list_browser_profiles=false
+all_browser_profiles=false
+selected_browser_profiles=()
 google_current_language_ids=()
 google_current_languages=()
 google_added_for_you_languages=()
@@ -32,12 +35,27 @@ read_current_languages_json() {
   "$helper_command" read-json
 }
 
+list_available_browser_profiles() {
+  "$helper_command" list-profiles
+}
+
 disable_google_auto_add() {
   "$helper_command" disable-auto-add
 }
 
 enable_google_auto_add() {
   "$helper_command" enable-auto-add
+}
+
+run_helper_for_profile() {
+  local profile_name="$1"
+  shift
+
+  if [ -n "$profile_name" ]; then
+    GOOGLE_ACCOUNT_BROWSER_PROFILE="$profile_name" "$helper_command" "$@"
+  else
+    "$helper_command" "$@"
+  fi
 }
 
 read_macos_preferred_languages() {
@@ -237,6 +255,9 @@ show_usage() {
   echo "  --inherit-macos, -M  Replace the Google Account language list with the current macOS preferred language order."
   echo "  --disable-auto-add   Turn off Google's automatic language additions before writing."
   echo "  --enable-auto-add    Turn on Google's automatic language additions before writing."
+  echo "  --browser-profile NAME  Use the named browser profile. Repeatable."
+  echo "  --all-browser-profiles  Apply the command to every valid browser profile."
+  echo "  --list-browser-profiles Print valid browser profile names."
   echo
   echo "Language arguments:"
   echo "  xx        Move the language at the front."
@@ -249,6 +270,8 @@ show_usage() {
   echo "  $display_command"
   echo "  $display_command --disable-auto-add"
   echo "  $display_command --enable-auto-add"
+  echo "  $display_command --list-browser-profiles"
+  echo "  $display_command --browser-profile default"
   echo "  $display_command --inherit-macos"
   echo "  $display_command --dry-run \"English\""
   echo "  $display_command --dry-run \"English:Czech\""
@@ -269,6 +292,7 @@ show_usage() {
   echo "  Missing languages are added through the Google Account editor when the helper can find them."
   echo "  --disable-auto-add clicks Google's \"Stop adding\" flow before the write."
   echo "  --enable-auto-add turns Google's automatic language additions back on."
+  echo "  --browser-profile can be repeated, and --all-browser-profiles targets every valid browser profile."
   echo "  This flow is experimental because Google does not expose a public API for preferred-language ordering."
 }
 
@@ -297,6 +321,20 @@ parse_arguments() {
       --enable-auto-add)
         enable_auto_add=true
         ;;
+      --browser-profile)
+        shift
+        [ "$#" -gt 0 ] || fail "The --browser-profile option requires a value."
+        selected_browser_profiles+=("$1")
+        ;;
+      --browser-profile=*)
+        selected_browser_profiles+=("${1#--browser-profile=}")
+        ;;
+      --all-browser-profiles)
+        all_browser_profiles=true
+        ;;
+      --list-browser-profiles)
+        list_browser_profiles=true
+        ;;
       --force|-f)
         fail "The Google Account module does not support --force."
         ;;
@@ -311,6 +349,45 @@ parse_arguments() {
   done
 }
 
+load_target_browser_profiles() {
+  local available_profiles=()
+  local line=""
+  local requested_profile=""
+  local found=false
+
+  if ! $all_browser_profiles && [ "${#selected_browser_profiles[@]}" -eq 0 ]; then
+    target_browser_profiles=("")
+    return 0
+  fi
+
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    available_profiles+=("$line")
+  done < <(list_available_browser_profiles)
+
+  [ "${#available_profiles[@]}" -gt 0 ] || fail "No valid browser profiles were found."
+
+  if $all_browser_profiles; then
+    target_browser_profiles=("${available_profiles[@]}")
+    return 0
+  fi
+
+  target_browser_profiles=()
+  for requested_profile in "${selected_browser_profiles[@]}"; do
+    found=false
+    for line in "${available_profiles[@]}"; do
+      if [ "$line" = "$requested_profile" ]; then
+        found=true
+        break
+      fi
+    done
+    if ! $found; then
+      fail "Unknown browser profile: $requested_profile"
+    fi
+    target_browser_profiles+=("$requested_profile")
+  done
+}
+
 print_list() {
   local prefix="$1"
   shift
@@ -320,6 +397,7 @@ print_list() {
 }
 
 load_google_current_state() {
+  local profile_name="${1:-}"
   local payload=""
   local kind=""
   local value=""
@@ -331,7 +409,7 @@ load_google_current_state() {
   google_added_for_you_languages=()
   google_auto_add_enabled=false
 
-  payload="$(read_current_languages_json)"
+  payload="$(run_helper_for_profile "$profile_name" read-json)"
 
   while IFS=$'\t' read -r kind value display added_for_you; do
     case "$kind" in
@@ -386,132 +464,176 @@ main() {
   local source_entity=""
   local anchor_entity=""
   local result_joined=""
+  local target_browser_profiles=()
+  local profile_name=""
+  local multiple_profiles=false
+  local profile_loop_index=0
+  local last_profile_index=0
 
   parse_arguments "$@"
+
+  if $list_browser_profiles; then
+    if $all_browser_profiles || [ "${#selected_browser_profiles[@]}" -gt 0 ] || [ "${#requested_languages[@]}" -gt 0 ] || [ "${#removed_languages[@]}" -gt 0 ] || $inherit_macos || $disable_auto_add || $enable_auto_add; then
+      fail "The --list-browser-profiles mode does not accept other options."
+    fi
+    list_available_browser_profiles
+    return 0
+  fi
 
   if $disable_auto_add && $enable_auto_add; then
     fail "Use either --disable-auto-add or --enable-auto-add, not both."
   fi
-
-  if ! $dry_run; then
-    if $disable_auto_add; then
-      disable_google_auto_add >/dev/null
-    elif $enable_auto_add; then
-      enable_google_auto_add >/dev/null
-    fi
+  load_target_browser_profiles
+  if [ "${#target_browser_profiles[@]}" -gt 1 ]; then
+    multiple_profiles=true
   fi
+  last_profile_index=$((${#target_browser_profiles[@]} - 1))
 
-  load_google_current_state
+  for profile_name in "${target_browser_profiles[@]}"; do
+    reset_ordered_language_runtime_state
+    result=()
+    base_index=0
+    operation_order=0
+    operation_index=0
 
-  if [ "${#google_current_languages[@]}" -eq 0 ]; then
-    fail "Could not detect any Google Account preferred languages from Safari."
-  fi
-
-  if $inherit_macos; then
-    if [ "${#requested_languages[@]}" -gt 0 ] || [ "${#removed_languages[@]}" -gt 0 ]; then
-      fail "The --inherit-macos mode does not accept explicit language arguments."
-    fi
-    prepare_inherited_google_language_requests
-  fi
-
-  if [ "${#requested_languages[@]}" -eq 0 ] && [ "${#removed_languages[@]}" -eq 0 ]; then
-    print_list "Current Google Account preferred languages:" "${google_current_languages[@]}"
-    if $disable_auto_add; then
-      if $dry_run; then
-        echo "Would disable automatic Google language additions in Safari."
-      else
-        echo "Disabled automatic Google language additions in Safari."
-      fi
-    elif $enable_auto_add; then
-      if $dry_run; then
-        echo "Would enable automatic Google language additions in Safari."
-      else
-        echo "Enabled automatic Google language additions in Safari."
+    if ! $dry_run; then
+      if $disable_auto_add; then
+        run_helper_for_profile "$profile_name" disable-auto-add >/dev/null
+      elif $enable_auto_add; then
+        run_helper_for_profile "$profile_name" enable-auto-add >/dev/null
       fi
     fi
-    print_added_for_you_warning
-    return 0
-  fi
 
-  entity_languages=()
-  entity_base_indexes=()
-  entity_parents=()
-  entity_root_sections=()
-  entity_orders=()
+    load_google_current_state "$profile_name"
 
-  for language in "${google_current_languages[@]}"; do
-    create_entity "$language" "$base_index" base "$base_index" >/dev/null
-    base_index=$((base_index + 1))
-  done
-
-  while [ "$operation_index" -lt "${#operation_kinds[@]}" ]; do
-    operation_order=$((operation_order + 1))
-    kind="${operation_kinds[$operation_index]}"
-    source_request="${operation_sources[$operation_index]}"
-    anchor_request="${operation_anchors[$operation_index]}"
-
-    ensure_entity "$source_request" front "$operation_order"
-    source_entity="$resolved_entity_index"
-
-    case "$kind" in
-      front)
-        set_entity_root "$source_entity" front "$operation_order"
-        ;;
-      end)
-        set_entity_root "$source_entity" end "$operation_order"
-        ;;
-      before)
-        ensure_entity "$anchor_request" front "$operation_order"
-        anchor_entity="$resolved_entity_index"
-        set_entity_parent "$source_entity" "$anchor_entity" "$operation_order"
-        ;;
-    esac
-
-    operation_index=$((operation_index + 1))
-  done
-
-  build_ordered_languages
-
-  for language in "${ordered_languages[@]}"; do
-    if ! should_remove_language "$language"; then
-      result+=("$language")
+    if [ "${#google_current_languages[@]}" -eq 0 ]; then
+      fail "Could not detect any Google Account preferred languages from Safari."
     fi
-  done
 
-  current_joined="$(printf '%s\n' "${google_current_languages[@]}")"
-  result_joined="$(printf '%s\n' "${result[@]}")"
-
-  if [ "$current_joined" = "$result_joined" ]; then
-    echo "Google Account preferred languages are already in the requested order."
-    return 0
-  fi
-
-  if [ "${#result[@]}" -eq 0 ]; then
-    fail "Google Account must keep at least one preferred language."
-  fi
-
-  if $dry_run; then
-    print_list "Current Google Account preferred languages:" "${google_current_languages[@]}"
-    print_list "New Google Account preferred languages:" "${result[@]}"
-    if $disable_auto_add; then
-      echo "Would disable automatic Google language additions in Safari before updating the list."
-    elif $enable_auto_add; then
-      echo "Would enable automatic Google language additions in Safari before updating the list."
+    if $multiple_profiles; then
+      if [ -n "$profile_name" ]; then
+        echo "Browser profile: $profile_name"
+      else
+        echo "Browser profile: default"
+      fi
     fi
-    echo "Would change the Google Account preferred-language list in Safari."
-    print_added_for_you_warning
-    return 0
-  fi
 
-  "$helper_command" write "${result[@]}"
-  load_google_current_state
-  print_list "Applied Google Account preferred languages:" "${result[@]}"
-  if $disable_auto_add && $google_auto_add_enabled; then
-    echo "Warning: Google still reports automatic language additions as enabled."
-  elif $enable_auto_add && ! $google_auto_add_enabled; then
-    echo "Warning: Google still reports automatic language additions as disabled."
-  fi
-  print_added_for_you_warning
+    if $inherit_macos; then
+      if [ "${#requested_languages[@]}" -gt 0 ] || [ "${#removed_languages[@]}" -gt 0 ]; then
+        fail "The --inherit-macos mode does not accept explicit language arguments."
+      fi
+      prepare_inherited_google_language_requests
+    fi
+
+    if [ "${#requested_languages[@]}" -eq 0 ] && [ "${#removed_languages[@]}" -eq 0 ]; then
+      print_list "Current Google Account preferred languages:" "${google_current_languages[@]}"
+      if $disable_auto_add; then
+        if $dry_run; then
+          echo "Would disable automatic Google language additions in Safari."
+        else
+          echo "Disabled automatic Google language additions in Safari."
+        fi
+      elif $enable_auto_add; then
+        if $dry_run; then
+          echo "Would enable automatic Google language additions in Safari."
+        else
+          echo "Enabled automatic Google language additions in Safari."
+        fi
+      fi
+      print_added_for_you_warning
+      if [ "$profile_loop_index" -lt "$last_profile_index" ]; then
+        echo
+      fi
+      profile_loop_index=$((profile_loop_index + 1))
+      continue
+    fi
+
+    for language in "${google_current_languages[@]}"; do
+      create_entity "$language" "$base_index" base "$base_index" >/dev/null
+      base_index=$((base_index + 1))
+    done
+
+    while [ "$operation_index" -lt "${#operation_kinds[@]}" ]; do
+      operation_order=$((operation_order + 1))
+      kind="${operation_kinds[$operation_index]}"
+      source_request="${operation_sources[$operation_index]}"
+      anchor_request="${operation_anchors[$operation_index]}"
+
+      ensure_entity "$source_request" front "$operation_order"
+      source_entity="$resolved_entity_index"
+
+      case "$kind" in
+        front)
+          set_entity_root "$source_entity" front "$operation_order"
+          ;;
+        end)
+          set_entity_root "$source_entity" end "$operation_order"
+          ;;
+        before)
+          ensure_entity "$anchor_request" front "$operation_order"
+          anchor_entity="$resolved_entity_index"
+          set_entity_parent "$source_entity" "$anchor_entity" "$operation_order"
+          ;;
+      esac
+
+      operation_index=$((operation_index + 1))
+    done
+
+    build_ordered_languages
+
+    for language in "${ordered_languages[@]}"; do
+      if ! should_remove_language "$language"; then
+        result+=("$language")
+      fi
+    done
+
+    current_joined="$(printf '%s\n' "${google_current_languages[@]}")"
+    result_joined="$(printf '%s\n' "${result[@]}")"
+
+    if [ "$current_joined" = "$result_joined" ]; then
+      echo "Google Account preferred languages are already in the requested order."
+      if [ "$profile_loop_index" -lt "$last_profile_index" ]; then
+        echo
+      fi
+      profile_loop_index=$((profile_loop_index + 1))
+      continue
+    fi
+
+    if [ "${#result[@]}" -eq 0 ]; then
+      fail "Google Account must keep at least one preferred language."
+    fi
+
+    if $dry_run; then
+      print_list "Current Google Account preferred languages:" "${google_current_languages[@]}"
+      print_list "New Google Account preferred languages:" "${result[@]}"
+      if $disable_auto_add; then
+        echo "Would disable automatic Google language additions in Safari before updating the list."
+      elif $enable_auto_add; then
+        echo "Would enable automatic Google language additions in Safari before updating the list."
+      fi
+      echo "Would change the Google Account preferred-language list in Safari."
+      print_added_for_you_warning
+      if [ "$profile_loop_index" -lt "$last_profile_index" ]; then
+        echo
+      fi
+      profile_loop_index=$((profile_loop_index + 1))
+      continue
+    fi
+
+    run_helper_for_profile "$profile_name" write "${result[@]}"
+    load_google_current_state "$profile_name"
+    print_list "Applied Google Account preferred languages:" "${result[@]}"
+    if $disable_auto_add && $google_auto_add_enabled; then
+      echo "Warning: Google still reports automatic language additions as enabled."
+    elif $enable_auto_add && ! $google_auto_add_enabled; then
+      echo "Warning: Google still reports automatic language additions as disabled."
+    fi
+    print_added_for_you_warning
+    if [ "$profile_loop_index" -lt "$last_profile_index" ]; then
+      echo
+    fi
+    profile_loop_index=$((profile_loop_index + 1))
+  done
 }
 
 main "$@"

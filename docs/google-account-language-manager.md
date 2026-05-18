@@ -27,6 +27,8 @@ Version 1 is intentionally narrow:
 
 ```bash
 ./manage-languages.sh google-account
+./manage-languages.sh google-account --list-browser-profiles
+./manage-languages.sh google-account --browser-profile work --browser-profile personal
 ./manage-languages.sh google-account --disable-auto-add
 ./manage-languages.sh google-account --enable-auto-add
 ./manage-languages.sh google-account --inherit-macos
@@ -47,6 +49,9 @@ Token forms:
 - `xx:yy` or `+xx:yy` → move `xx` immediately before `yy`
 - `xx:` or `+xx:` → move `xx` to the end
 - `--inherit-macos` or `-M` → replace the Google Account list with the full current macOS preferred language order
+- `--browser-profile NAME` → target one browser profile; repeat the switch to target more than one
+- `--all-browser-profiles` → target every valid browser profile
+- `--list-browser-profiles` → print the valid browser profile names
 - `--disable-auto-add` → turn off Google's `Automatically add languages` setting before writing; with no language arguments it performs only that maintenance step
 - `--enable-auto-add` → turn Google's `Automatically add languages` setting back on before writing; with no language arguments it performs only that maintenance step
 
@@ -67,6 +72,7 @@ The helper:
 5. when writing, opens a dedicated Safari window for the session and sends the same Google internal update request that the page uses for preferred-language ordering
 6. when `--disable-auto-add` is requested, follows Google's own `Stop adding` confirmation flow through page JavaScript without depending on the window being frontmost
 7. when `--enable-auto-add` is requested, toggles the same setting back on through page JavaScript
+8. when browser profiles are selected, runs the same flow once per selected profile
 
 The page is forced to `hl=en` so the automation can rely on stable English UI text when it looks for sign-in or page-state hints.
 
@@ -80,6 +86,7 @@ The page is forced to `hl=en` so the automation can rely on stable English UI te
 
 - the write path depends on internal Google page requests and maintenance controls rather than a supported public API, so Google-side changes may still break it
 - Google may still surface `Added for you` entries separately from the main preferred-language list; the command warns when it sees them
+- Safari does not expose named profiles through its AppleScript dictionary here, so the helper currently reports the scriptable `default` profile unless a test override provides more names
 - page structure changes on Google's side may break the helper
 - there is no backup or restore mode because the data lives remotely in the Google account
 - `--force` is not supported for this module
@@ -90,6 +97,8 @@ The page is forced to `hl=en` so the automation can rely on stable English UI te
 - `GOOGLE_ACCOUNT_LANGUAGE_HELPER` → override the Safari helper, useful for tests
 - `GOOGLE_ACCOUNT_LANGUAGE_URL` → override the Google Account language page URL
 - `GOOGLE_ACCOUNT_LANGUAGE_TIMEOUT` → timeout in seconds for sign-in and page loading
+- `GOOGLE_ACCOUNT_BROWSER_PROFILE` → helper-internal selector for one browser profile
+- `GOOGLE_ACCOUNT_BROWSER_PROFILES` → newline-separated helper override for valid browser profile names, useful for tests
 
 ## Related Files
 

@@ -13,12 +13,7 @@ resolved_entity_index=""
 
 ordered_languages=()
 
-reset_ordered_language_state() {
-  requested_languages=()
-  removed_languages=()
-  operation_kinds=()
-  operation_sources=()
-  operation_anchors=()
+reset_ordered_language_runtime_state() {
   entity_languages=()
   entity_base_indexes=()
   entity_parents=()
@@ -26,6 +21,19 @@ reset_ordered_language_state() {
   entity_orders=()
   resolved_entity_index=""
   ordered_languages=()
+}
+
+reset_ordered_language_request_state() {
+  requested_languages=()
+  removed_languages=()
+  operation_kinds=()
+  operation_sources=()
+  operation_anchors=()
+}
+
+reset_ordered_language_state() {
+  reset_ordered_language_request_state
+  reset_ordered_language_runtime_state
 }
 
 parse_language_argument() {
