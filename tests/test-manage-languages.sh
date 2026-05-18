@@ -185,8 +185,7 @@ assert_contains "$output" "./manage-languages.sh steam --restore [--dry-run|-n] 
 output="$(STEAM_DIR="$steam_dir" "$script" steam)"
 assert_contains "$output" "Current Steam interface language: english" "runner should read steam language"
 output="$(STEAM_DIR="$steam_dir" "$script" steam --verbose)"
-assert_contains "$output" "Supported Steam interface language values:" "steam verbose help should show supported languages"
-assert_contains "$output" "Accepted aliases:" "steam verbose help should show alias section"
+assert_contains "$output" "Supported Steam interface language values and aliases:" "steam verbose help should show one unified language list"
 assert_contains "$output" "  ja -> japanese" "steam verbose help should list steam aliases"
 assert_contains "$output" "  zh-CN -> schinese" "steam verbose help should list normalized Chinese aliases"
 
@@ -242,7 +241,7 @@ assert_contains "$output" "./manage-languages.sh wingspan --restore [--dry-run|-
 output="$(WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" wingspan)"
 assert_contains "$output" "Current Wingspan interface language: English" "runner should read Wingspan language"
 output="$(WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" wingspan --verbose)"
-assert_contains "$output" "Supported Wingspan interface language values:" "wingspan verbose help should show supported languages"
+assert_contains "$output" "Supported Wingspan interface language values and aliases:" "wingspan verbose help should show one unified language list"
 assert_contains "$output" "  de -> Deutsch" "wingspan verbose help should list aliases"
 output="$(WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" MACOS_APP_LANGUAGE_INHERIT=de-DE "$script" wingspan --dry-run --inherit-macos)"
 assert_contains "$output" "Would change Wingspan interface language from English to Deutsch." "wingspan should inherit macOS locale tags"

@@ -261,17 +261,10 @@ standard_module_show_usage() {
 
   if $module_requested_verbose_help; then
     echo
-    echo "Supported $module_display_name interface language values:"
+    echo "Supported $module_display_name interface language values and aliases:"
     module_print_supported_languages
 
-    if [ -n "${module_alias_help:-}" ]; then
-      echo
-      echo "$module_alias_help"
-    fi
-
     if declare -F module_print_aliases >/dev/null 2>&1; then
-      echo
-      echo "Accepted aliases:"
       module_print_aliases
     fi
   fi
