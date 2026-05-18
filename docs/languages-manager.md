@@ -31,6 +31,7 @@ Examples:
 - `language-modules/anki.sh` → `anki`
 - `language-modules/factorio.sh` → `factorio`
 - `language-modules/wingspan.sh` → `wingspan`
+- `language-modules/terraforming-mars.sh` → `terraforming-mars`
 - `language-modules/macos.sh` → `macos`
 
 `--list-apps` and `--list-modules` print the discovered ids.
@@ -199,3 +200,4 @@ Modules own application-specific errors, and shared-flow modules additionally ow
 - [anki-language-manager.md](anki-language-manager.md)
 - [factorio-language-manager.md](factorio-language-manager.md)
 - [wingspan-language-manager.md](wingspan-language-manager.md)
+- [terraforming-mars-language-manager.md](terraforming-mars-language-manager.md)

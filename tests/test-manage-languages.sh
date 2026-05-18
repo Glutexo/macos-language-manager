@@ -90,6 +90,22 @@ with open(path, "wb") as handle:
     plistlib.dump(data, handle, sort_keys=False)
 PY
 
+terraforming_mars_prefs_file="$tmp_dir/Terraforming Mars.plist"
+TERRAFORMING_MARS_PREFERENCES_FILE="$terraforming_mars_prefs_file" python3 - <<'PY'
+import os
+import plistlib
+
+path = os.environ["TERRAFORMING_MARS_PREFERENCES_FILE"]
+data = {
+    "I2 Language": "English",
+    "OSXPlayerCurrentLanguage": "en_US",
+    "Screenmanager Fullscreen mode": 1,
+}
+
+with open(path, "wb") as handle:
+    plistlib.dump(data, handle, sort_keys=False)
+PY
+
 assert_contains() {
   local haystack="$1"
   local needle="$2"
@@ -132,6 +148,7 @@ assert_contains "$output" "  factorio" "global help should include factorio"
 assert_contains "$output" "  macos" "global help should include macos"
 assert_contains "$output" "  steam" "global help should include steam"
 assert_contains "$output" "  wingspan" "global help should include wingspan"
+assert_contains "$output" "  terraforming-mars" "global help should include terraforming-mars"
 
 output="$("$script" --list-apps)"
 assert_contains "$output" "anki" "list-apps should print app ids"
@@ -139,6 +156,7 @@ assert_contains "$output" "factorio" "list-apps should print app ids"
 assert_contains "$output" "macos" "list-apps should print module ids"
 assert_contains "$output" "steam" "list-apps should print app ids"
 assert_contains "$output" "wingspan" "list-apps should print app ids"
+assert_contains "$output" "terraforming-mars" "list-apps should print app ids"
 
 output="$("$symlink_script" --list-apps)"
 assert_contains "$output" "steam" "symlinked runner should discover modules from the repository"
@@ -149,6 +167,7 @@ assert_contains "$output" "OK: factorio" "self-test should verify factorio modul
 assert_contains "$output" "OK: macos" "self-test should verify macos module contract"
 assert_contains "$output" "OK: steam" "self-test should verify steam module contract"
 assert_contains "$output" "OK: wingspan" "self-test should verify wingspan module contract"
+assert_contains "$output" "OK: terraforming-mars" "self-test should verify terraforming-mars module contract"
 
 output="$("$script" nope 2>&1 || true)"
 assert_contains "$output" "Unknown module: nope" "unknown modules should fail clearly"
@@ -254,11 +273,36 @@ output="$(WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" wingspan --
 assert_contains "$output" "Restored Wingspan interface language from Deutsch to English." "runner should restore wingspan language"
 assert_contains "$(plutil -p "$wingspan_prefs_file")" '"I2 Language" => "English"' "wingspan restore should put original value back"
 
-output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" all)"
+
+output="$(TERRAFORMING_MARS_PREFERENCES_FILE="$terraforming_mars_prefs_file" "$script" terraforming-mars --help)"
+assert_contains "$output" "Usage: ./manage-languages.sh terraforming-mars [--dry-run|-n] [--force|-f] [language]" "app help should show terraforming-mars usage"
+assert_contains "$output" "./manage-languages.sh terraforming-mars --inherit-macos [--dry-run|-n] [--force|-f]" "app help should show terraforming-mars inheritance usage"
+assert_contains "$output" "./manage-languages.sh terraforming-mars --restore [--dry-run|-n] [--force|-f]" "app help should show terraforming-mars restore usage"
+
+output="$(TERRAFORMING_MARS_PREFERENCES_FILE="$terraforming_mars_prefs_file" "$script" terraforming-mars)"
+assert_contains "$output" "Current Terraforming Mars interface language: English" "runner should read Terraforming Mars language"
+output="$(TERRAFORMING_MARS_PREFERENCES_FILE="$terraforming_mars_prefs_file" "$script" terraforming-mars --verbose)"
+assert_contains "$output" "Supported Terraforming Mars interface language values:" "terraforming-mars verbose help should show unified language lines"
+assert_contains "$output" "  English (en)" "terraforming-mars verbose help should show canonical values with aliases inline"
+assert_contains "$output" "  Swedish (sv)" "terraforming-mars verbose help should list aliases inline"
+output="$(TERRAFORMING_MARS_PREFERENCES_FILE="$terraforming_mars_prefs_file" MACOS_APP_LANGUAGE_INHERIT=de-DE "$script" terraforming-mars --dry-run --inherit-macos)"
+assert_contains "$output" "Would change Terraforming Mars interface language from English to German." "terraforming-mars should inherit macOS locale tags"
+output="$(TERRAFORMING_MARS_PREFERENCES_FILE="$terraforming_mars_prefs_file" "$script" terraforming-mars de)"
+assert_contains "$output" "Changed Terraforming Mars interface language from English to German." "runner should change terraforming-mars language"
+assert_contains "$output" "Backup saved to $terraforming_mars_prefs_file.bak" "runner should back up terraforming-mars file"
+assert_contains "$(plutil -p "$terraforming_mars_prefs_file")" '"I2 Language" => "German"' "terraforming-mars change should persist canonical value"
+assert_contains "$(plutil -p "$terraforming_mars_prefs_file")" '"OSXPlayerCurrentLanguage" => "de_DE"' "terraforming-mars change should persist locale companion value"
+output="$(TERRAFORMING_MARS_PREFERENCES_FILE="$terraforming_mars_prefs_file" "$script" terraforming-mars --restore)"
+assert_contains "$output" "Restored Terraforming Mars interface language from German to English." "runner should restore terraforming-mars language"
+assert_contains "$(plutil -p "$terraforming_mars_prefs_file")" '"I2 Language" => "English"' "terraforming-mars restore should put original value back"
+assert_contains "$(plutil -p "$terraforming_mars_prefs_file")" '"OSXPlayerCurrentLanguage" => "en_US"' "terraforming-mars restore should put original locale companion value back"
+
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" TERRAFORMING_MARS_PREFERENCES_FILE="$terraforming_mars_prefs_file" "$script" all)"
 assert_contains "$output" "Current Steam interface language: english" "all mode should read steam"
 assert_contains "$output" "Current Anki interface language: en_US" "all mode should read anki"
 assert_contains "$output" "Current Factorio interface language: en" "all mode should read factorio"
 assert_contains "$output" "Current Wingspan interface language: English" "all mode should read wingspan"
+assert_contains "$output" "Current Terraforming Mars interface language: English" "all mode should read terraforming-mars"
 
 output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" "$script" steam anki)"
 assert_contains "$output" "Current Steam interface language: english" "multi-module mode should read steam"
@@ -272,22 +316,25 @@ output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" "$script" steam anki 
 assert_contains "$output" "Restored Steam interface language from japanese to english." "multi-module restore should revert steam"
 assert_contains "$output" "Restored Anki interface language from ja_JP to en_US." "multi-module restore should revert anki"
 
-output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" MACOS_APP_LANGUAGE_INHERIT=ja-CZ "$script" all --dry-run --inherit-macos)"
-assert_contains "$output" "Would change Steam interface language from english to japanese." "all inherit should plan steam change"
-assert_contains "$output" "Would change Anki interface language from en_US to ja_JP." "all inherit should plan anki change"
-assert_contains "$output" "Would change Factorio interface language from en to ja." "all inherit should plan factorio change"
-assert_contains "$output" "Would change Wingspan interface language from English to 日本語." "all inherit should plan wingspan change"
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" TERRAFORMING_MARS_PREFERENCES_FILE="$terraforming_mars_prefs_file" MACOS_APP_LANGUAGE_INHERIT=de-DE "$script" all --dry-run --inherit-macos)"
+assert_contains "$output" "Would change Steam interface language from english to german." "all inherit should plan steam change"
+assert_contains "$output" "Would change Anki interface language from en_US to de_DE." "all inherit should plan anki change"
+assert_contains "$output" "Would change Factorio interface language from en to de." "all inherit should plan factorio change"
+assert_contains "$output" "Would change Wingspan interface language from English to Deutsch." "all inherit should plan wingspan change"
+assert_contains "$output" "Would change Terraforming Mars interface language from English to German." "all inherit should plan terraforming-mars change"
 
-output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" all ja)"
-assert_contains "$output" "Changed Steam interface language from english to japanese." "all mode should change steam"
-assert_contains "$output" "Changed Anki interface language from en_US to ja_JP." "all mode should change anki"
-assert_contains "$output" "Changed Factorio interface language from en to ja." "all mode should change factorio"
-assert_contains "$output" "Changed Wingspan interface language from English to 日本語." "all mode should change wingspan"
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" TERRAFORMING_MARS_PREFERENCES_FILE="$terraforming_mars_prefs_file" "$script" all de)"
+assert_contains "$output" "Changed Steam interface language from english to german." "all mode should change steam"
+assert_contains "$output" "Changed Anki interface language from en_US to de_DE." "all mode should change anki"
+assert_contains "$output" "Changed Factorio interface language from en to de." "all mode should change factorio"
+assert_contains "$output" "Changed Wingspan interface language from English to Deutsch." "all mode should change wingspan"
+assert_contains "$output" "Changed Terraforming Mars interface language from English to German." "all mode should change terraforming-mars"
 
-output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" all --restore)"
-assert_contains "$output" "Restored Steam interface language from japanese to english." "all restore should revert steam"
-assert_contains "$output" "Restored Anki interface language from ja_JP to en_US." "all restore should revert anki"
-assert_contains "$output" "Restored Factorio interface language from ja to en." "all restore should revert factorio"
-assert_contains "$output" "Restored Wingspan interface language from 日本語 to English." "all restore should revert wingspan"
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" TERRAFORMING_MARS_PREFERENCES_FILE="$terraforming_mars_prefs_file" "$script" all --restore)"
+assert_contains "$output" "Restored Steam interface language from german to english." "all restore should revert steam"
+assert_contains "$output" "Restored Anki interface language from de_DE to en_US." "all restore should revert anki"
+assert_contains "$output" "Restored Factorio interface language from de to en." "all restore should revert factorio"
+assert_contains "$output" "Restored Wingspan interface language from Deutsch to English." "all restore should revert wingspan"
+assert_contains "$output" "Restored Terraforming Mars interface language from German to English." "all restore should revert terraforming-mars"
 
 echo "All tests passed."
