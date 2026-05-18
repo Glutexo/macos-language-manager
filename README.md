@@ -85,6 +85,7 @@ Usage:
 
 ```bash
 ./manage-languages.sh google-account
+./manage-languages.sh google-account --inherit-macos
 ./manage-languages.sh google-account --dry-run "English:Czech"
 ./manage-languages.sh google-account "English" "-Czech"
 ```
@@ -92,7 +93,8 @@ Usage:
 Notes:
 
 - The command-line token syntax matches the macOS module: `xx`, `+xx`, `-xx`, `xx:yy`, and `xx:`.
-- Version 1 only reorders or removes languages that already exist in the Google account.
+- `--inherit-macos` moves or adds the first macOS preferred language at the front of the Google Account list.
+- Version 1 reorders, removes, or adds languages through Safari automation.
 - Arguments are the visible labels from the Google Account page, not a separate ISO-tag mapping layer.
 - Safari may prompt for sign-in or 2-step verification.
 - There is no public Google API in this repository for preferred-language ordering.

@@ -11,8 +11,8 @@ Version 1 is intentionally narrow:
 - it uses Safari browser automation
 - it reads the current preferred-language list from the Google Account language page
 - it uses the same command-line token syntax as the macOS module
-- it attempts to reorder or remove entries from the existing list only
-- it does not add new languages yet
+- it can reorder, remove, or add languages through the Google Account page
+- it supports `--inherit-macos` by deriving the first macOS preferred language and resolving it against the current Google list or an addable Google language label
 - it does not use a public Google API, because no supported public API for preferred-language ordering was identified
 
 ## Entry Point
@@ -25,6 +25,7 @@ Version 1 is intentionally narrow:
 
 ```bash
 ./manage-languages.sh google-account
+./manage-languages.sh google-account --inherit-macos
 ./manage-languages.sh google-account --dry-run "English:Czech"
 ./manage-languages.sh google-account "English" "-Czech"
 ```
@@ -41,6 +42,7 @@ Token forms:
 - `-xx` → remove the matching language after ordering
 - `xx:yy` or `+xx:yy` → move `xx` immediately before `yy`
 - `xx:` or `+xx:` → move `xx` to the end
+- `--inherit-macos` or `-M` → move or add the first current macOS preferred language at the front
 
 ## Automation Strategy
 
@@ -56,7 +58,7 @@ The helper:
 2. waits for the Google Account language page to become available
 3. executes JavaScript in the active Safari tab to inspect the page
 4. returns the detected preferred-language labels back to the shell command
-5. when writing, opens the preferred-language editor, tries to reorder the existing rows to the requested sequence, and clicks Save
+5. when writing, opens a dedicated Safari window for the session, adds missing languages when needed, removes extra ones, and repeatedly uses the page controls until the on-page order matches the requested sequence
 
 The page is forced to `hl=en` so the automation can rely on stable English UI text when it looks for sign-in or page-state hints.
 
@@ -70,9 +72,8 @@ The page is forced to `hl=en` so the automation can rely on stable English UI te
 
 - the write path is best-effort DOM automation against a live Google page and may break when Google changes the page structure
 - page structure changes on Google's side may break the helper
-- missing requested languages are rejected because the current helper does not add them yet
 - there is no backup or restore mode because the data lives remotely in the Google account
-- `--inherit-macos` and `--force` are not supported for this module
+- `--force` is not supported for this module
 
 ## Environment Variables
 

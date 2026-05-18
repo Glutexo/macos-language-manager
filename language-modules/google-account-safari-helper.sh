@@ -3,6 +3,8 @@ set -euo pipefail
 
 preferred_languages_url="${GOOGLE_ACCOUNT_LANGUAGE_URL:-https://myaccount.google.com/language?hl=en}"
 timeout_seconds="${GOOGLE_ACCOUNT_LANGUAGE_TIMEOUT:-180}"
+session_marker="${GOOGLE_ACCOUNT_SAFARI_SESSION:-codex-google-language-$$-$(date +%s)}"
+window_id=""
 
 fail() {
   echo "$1" >&2
@@ -15,16 +17,22 @@ run_applescript() {
 
 safari_open_page() {
   local url="$1"
+  local separator='?'
 
-  run_applescript "$url" <<'APPLESCRIPT' >/dev/null
+  if [[ "$url" == *\?* ]]; then
+    separator='&'
+  fi
+  url="${url}${separator}codex_session=${session_marker}"
+
+  run_applescript "$url" <<'APPLESCRIPT'
 on run argv
   set targetUrl to item 1 of argv
   tell application "Safari"
     activate
-    if (count of documents) = 0 then
-      make new document
-    end if
-    set URL of front document to targetUrl
+    set newDocument to make new document
+    delay 0.2
+    set URL of newDocument to targetUrl
+    return id of front window
   end tell
 end run
 APPLESCRIPT
@@ -33,13 +41,31 @@ APPLESCRIPT
 safari_eval_js() {
   local script="$1"
 
-  GOOGLE_ACCOUNT_SAFARI_JS="$script" run_applescript <<'APPLESCRIPT'
+  GOOGLE_ACCOUNT_SAFARI_JS="$script" GOOGLE_ACCOUNT_SAFARI_SESSION="$session_marker" GOOGLE_ACCOUNT_SAFARI_WINDOW_ID="$window_id" run_applescript <<'APPLESCRIPT'
 set jsSource to system attribute "GOOGLE_ACCOUNT_SAFARI_JS"
+set sessionMarker to system attribute "GOOGLE_ACCOUNT_SAFARI_SESSION"
+set rawWindowId to system attribute "GOOGLE_ACCOUNT_SAFARI_WINDOW_ID"
+set targetWindowId to 0
+if rawWindowId is not "" then
+  set targetWindowId to rawWindowId as integer
+end if
 tell application "Safari"
-  if (count of documents) = 0 then
+  if (count of documents) is 0 then
     error "Safari has no open document."
   end if
-  return do JavaScript jsSource in front document
+  if targetWindowId is not 0 then
+    try
+      return do JavaScript jsSource in current tab of (first window whose id is targetWindowId)
+    end try
+  end if
+  repeat with currentDocument in documents
+    try
+      if (URL of currentDocument) contains sessionMarker then
+        return do JavaScript jsSource in currentDocument
+      end if
+    end try
+  end repeat
+  error "Could not locate the dedicated Safari document for session " & sessionMarker
 end tell
 APPLESCRIPT
 }
@@ -79,45 +105,33 @@ language_page_script() {
     return JSON.stringify({ status: "waiting", message: "Waiting for Google sign-in to finish in Safari." });
   }
 
-  const sectionRoot = (() => {
-    const heading = [...pageRoot.querySelectorAll("h1, h2, h3, div, span")]
-      .find((node) => isVisible(node) && /preferred language/i.test(textOf(node)));
-    return heading ? (heading.closest("section, [role='region'], c-wiz, div") || pageRoot) : pageRoot;
-  })();
+  const cardRoot = [...pageRoot.querySelectorAll("div, section, c-wiz")]
+    .find((node) => isVisible(node) && /preferred language/i.test(textOf(node)) && /other languages/i.test(textOf(node)));
 
-  const collectLanguages = (root) => {
-    const results = [];
-    const seen = new Set();
-
-    for (const node of root.querySelectorAll("[draggable='true'], [role='listitem'], li, button, div, span")) {
-      if (!isVisible(node)) {
-        continue;
-      }
-
-      const text = textOf(node);
-      if (!text || text.length < 2 || text.length > 80) {
-        continue;
-      }
-
-      if (!/[A-Za-z]/.test(text)) {
-        continue;
-      }
-
-      if (/^(preferred language|google account|edit|save|cancel|done|remove|add another language)$/i.test(text)) {
-        continue;
-      }
-
-      if (text.split(/\s+/).length > 4) {
-        continue;
-      }
-
-      if (!seen.has(text)) {
-        seen.add(text);
-        results.push({ text, slug: slug(text), node });
-      }
-    }
-
-    return results;
+  const collectLanguageRows = () => {
+    const root = cardRoot || pageRoot;
+    return [...root.querySelectorAll('li[data-id][jsname="sgblj"]')]
+      .filter((node) => isVisible(node))
+      .map((node) => {
+        const labelNode = node.querySelector("label");
+        const regionNode = node.querySelector(".xsr7od");
+        const label = textOf(labelNode);
+        const region = textOf(regionNode);
+        const display = region ? `${label} (${region})` : label;
+        return {
+          id: node.getAttribute("data-id") || "",
+          label,
+          region,
+          display,
+          slug: slug(display),
+          labelSlug: slug(label),
+          node,
+          moveButton: [...node.querySelectorAll("button")].find((button) => /Move language up|Make this my preferred language/i.test(button.getAttribute("aria-label") || "")),
+          removeButton: [...node.querySelectorAll("button")].find((button) => /Remove language/i.test(button.getAttribute("aria-label") || "")),
+          editButton: [...node.querySelectorAll("button")].find((button) => /Edit language/i.test(button.getAttribute("aria-label") || ""))
+        };
+      })
+      .filter((item) => item.label);
   };
 
   const findClickable = (labels, root = pageRoot) => {
@@ -135,70 +149,128 @@ language_page_script() {
     return null;
   };
 
-  const currentLanguages = collectLanguages(sectionRoot);
-  if (currentLanguages.length < 1) {
+  const currentRows = collectLanguageRows();
+  if (currentRows.length < 1) {
     return JSON.stringify({ status: "waiting", message: "Waiting for the preferred-language list to render." });
   }
 
   if (mode === "read") {
-    return JSON.stringify({ status: "ok", languages: currentLanguages.map((item) => item.text) });
+    return JSON.stringify({ status: "ok", languages: currentRows.map((item) => item.display) });
+  }
+
+  if (mode === "read-json") {
+    return JSON.stringify({
+      status: "ok",
+      languages: currentRows.map((item) => ({
+        id: item.id,
+        label: item.label,
+        region: item.region,
+        display: item.display
+      }))
+    });
   }
 
   const expected = requested.map((item) => slug(item));
-  const actual = currentLanguages.map((item) => item.slug);
-
-  if (expected.length !== actual.length) {
-    return JSON.stringify({
-      status: "error",
-      message: `Requested ${expected.length} languages, but the page shows ${actual.length}.`
-    });
-  }
-
+  const actual = currentRows.map((item) => item.slug);
   const missing = expected.filter((item) => !actual.includes(item));
-  if (missing.length > 0) {
-    return JSON.stringify({
-      status: "error",
-      message: `Requested languages are not present on the page: ${missing.join(", ")}.`
-    });
-  }
 
-  const dialog = [...document.querySelectorAll("[role='dialog'], dialog, c-wiz")]
-    .find((node) => isVisible(node) && /save|cancel|done/i.test(textOf(node)));
+  const findSearchInput = (root) => {
+    return [...root.querySelectorAll("input, textarea")]
+      .find((node) => isVisible(node) && (node.type === "search" || node.type === "text" || node.getAttribute("role") === "combobox"));
+  };
 
-  if (!dialog) {
-    const editButton = findClickable(["edit"], sectionRoot) || findClickable(["edit"]);
-    if (!editButton) {
-      return JSON.stringify({ status: "error", message: "Could not locate the Edit button on the Google Account language page." });
+  const setInputValue = (node, value) => {
+    const prototype = Object.getPrototypeOf(node);
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+    if (descriptor && descriptor.set) {
+      descriptor.set.call(node, value);
+    } else {
+      node.value = value;
     }
-    editButton.click();
-    return JSON.stringify({ status: "waiting", message: "Opening the preferred-language editor." });
-  }
+    node.dispatchEvent(new Event("input", { bubbles: true }));
+    node.dispatchEvent(new Event("change", { bubbles: true }));
+  };
 
-  const editableLanguages = collectLanguages(dialog);
-  if (editableLanguages.length < 1) {
-    return JSON.stringify({ status: "waiting", message: "Waiting for the preferred-language editor contents." });
-  }
-
-  const matchesOrder = editableLanguages.map((item) => item.slug).join("\n") === expected.join("\n");
-  if (!matchesOrder) {
-    const listRoot = editableLanguages[0].node.closest("[role='list'], ul, ol, div") || dialog;
-    const itemBySlug = new Map(editableLanguages.map((item) => [item.slug, item.node]));
-
-    for (const targetSlug of expected) {
-      const item = itemBySlug.get(targetSlug);
-      if (!item) {
-        return JSON.stringify({ status: "error", message: `Could not find editable row for ${targetSlug}.` });
+  const findMatchingOption = (root, wantedSlug) => {
+    for (const node of root.querySelectorAll('[role="option"], [role="listitem"], li, button, div, span')) {
+      if (!isVisible(node)) {
+        continue;
       }
-      listRoot.appendChild(item);
+      const optionSlug = slug(textOf(node));
+      if (!optionSlug) {
+        continue;
+      }
+      if (optionSlug === wantedSlug || optionSlug.includes(wantedSlug) || wantedSlug.includes(optionSlug)) {
+        return node;
+      }
     }
+    return null;
+  };
+
+  const addDialog = [...document.querySelectorAll("[role='dialog'], dialog, c-wiz")]
+    .find((node) => isVisible(node) && (/language/i.test(textOf(node)) || !!findSearchInput(node)));
+
+  if (missing.length > 0) {
+    const nextMissing = missing[0];
+    if (!addDialog) {
+      const addButton = findClickable(["add another language", "add language", "add"], cardRoot || pageRoot) || findClickable(["add another language", "add language", "add"]);
+      if (!addButton) {
+        return JSON.stringify({ status: "error", message: `Could not locate the add-language button while trying to add ${nextMissing}.` });
+      }
+      addButton.click();
+      return JSON.stringify({ status: "waiting", message: `Opening the add-language dialog for ${nextMissing}.` });
+    }
+
+    const searchInput = findSearchInput(addDialog);
+    if (!searchInput) {
+      return JSON.stringify({ status: "error", message: `Could not locate the language search field while trying to add ${nextMissing}.` });
+    }
+
+    if (slug(searchInput.value || "") !== nextMissing) {
+      setInputValue(searchInput, requested[expected.indexOf(nextMissing)]);
+      return JSON.stringify({ status: "waiting", message: `Searching for ${nextMissing}.` });
+    }
+
+    const optionNode = findMatchingOption(addDialog, nextMissing);
+    if (!optionNode) {
+      return JSON.stringify({ status: "waiting", message: `Waiting for a search result for ${nextMissing}.` });
+    }
+
+    optionNode.click();
+
+    const confirmButton = findClickable(["done", "save", "add"], addDialog);
+    if (confirmButton) {
+      confirmButton.click();
+    }
+
+    return JSON.stringify({ status: "waiting", message: `Adding ${nextMissing}.` });
   }
 
-  const saveButton = findClickable(["save", "done"], dialog) || findClickable(["save", "done"]);
-  if (!saveButton) {
-    return JSON.stringify({ status: "error", message: "Could not locate the Save button in the preferred-language editor." });
+  const extras = currentRows.filter((item) => !expected.includes(item.slug));
+  if (extras.length > 0) {
+    const removable = extras.find((item) => item.removeButton);
+    if (!removable) {
+      return JSON.stringify({ status: "error", message: `Could not locate a remove button for ${extras[0].display}.` });
+    }
+    removable.removeButton.click();
+    return JSON.stringify({ status: "waiting", message: `Removing ${removable.display}.` });
   }
 
-  saveButton.click();
+  const actualOrder = currentRows.map((item) => item.slug);
+  const firstMismatch = expected.findIndex((item, index) => actualOrder[index] !== item);
+  if (firstMismatch >= 0) {
+    const wantedSlug = expected[firstMismatch];
+    const targetRow = currentRows.find((item) => item.slug === wantedSlug);
+    if (!targetRow) {
+      return JSON.stringify({ status: "error", message: `Could not locate the requested language row for ${wantedSlug}.` });
+    }
+    if (!targetRow.moveButton) {
+      return JSON.stringify({ status: "error", message: `Could not locate a move-up button for ${targetRow.display}.` });
+    }
+    targetRow.moveButton.click();
+    return JSON.stringify({ status: "waiting", message: `Moving ${targetRow.display} upward.` });
+  }
+
   return JSON.stringify({ status: "ok", languages: requested });
 })()
 EOF
@@ -276,11 +348,15 @@ command="${1:-}"
 [ -n "$command" ] || fail "Missing helper command."
 shift || true
 
-safari_open_page "$preferred_languages_url"
+window_id="$(safari_open_page "$preferred_languages_url")"
+[ -n "$window_id" ] || fail "Could not create a dedicated Safari window."
 
 case "$command" in
   read)
     wait_for_payload read | json_extract languages
+    ;;
+  read-json)
+    wait_for_payload read-json
     ;;
   write)
     [ "$#" -gt 0 ] || fail "The write helper requires at least one requested language label."
