@@ -12,6 +12,7 @@ dry_run=false
 verbose_help=false
 inherit_macos=false
 disable_auto_add=false
+enable_auto_add=false
 google_current_language_ids=()
 google_current_languages=()
 google_added_for_you_languages=()
@@ -33,6 +34,10 @@ read_current_languages_json() {
 
 disable_google_auto_add() {
   "$helper_command" disable-auto-add
+}
+
+enable_google_auto_add() {
+  "$helper_command" enable-auto-add
 }
 
 read_macos_preferred_languages() {
@@ -231,6 +236,7 @@ show_usage() {
   echo "  --verbose, -v   Show help together with the Safari automation notes."
   echo "  --inherit-macos, -M  Replace the Google Account language list with the current macOS preferred language order."
   echo "  --disable-auto-add   Turn off Google's automatic language additions before writing."
+  echo "  --enable-auto-add    Turn on Google's automatic language additions before writing."
   echo
   echo "Language arguments:"
   echo "  xx        Move the language at the front."
@@ -242,6 +248,7 @@ show_usage() {
   echo "Examples:"
   echo "  $display_command"
   echo "  $display_command --disable-auto-add"
+  echo "  $display_command --enable-auto-add"
   echo "  $display_command --inherit-macos"
   echo "  $display_command --dry-run \"English\""
   echo "  $display_command --dry-run \"English:Czech\""
@@ -261,6 +268,7 @@ show_usage() {
   echo "  Use the exact labels printed by read-only mode."
   echo "  Missing languages are added through the Google Account editor when the helper can find them."
   echo "  --disable-auto-add clicks Google's \"Stop adding\" flow before the write."
+  echo "  --enable-auto-add turns Google's automatic language additions back on."
   echo "  This flow is experimental because Google does not expose a public API for preferred-language ordering."
 }
 
@@ -285,6 +293,9 @@ parse_arguments() {
         ;;
       --disable-auto-add)
         disable_auto_add=true
+        ;;
+      --enable-auto-add)
+        enable_auto_add=true
         ;;
       --force|-f)
         fail "The Google Account module does not support --force."
@@ -378,8 +389,16 @@ main() {
 
   parse_arguments "$@"
 
-  if $disable_auto_add && ! $dry_run; then
-    disable_google_auto_add >/dev/null
+  if $disable_auto_add && $enable_auto_add; then
+    fail "Use either --disable-auto-add or --enable-auto-add, not both."
+  fi
+
+  if ! $dry_run; then
+    if $disable_auto_add; then
+      disable_google_auto_add >/dev/null
+    elif $enable_auto_add; then
+      enable_google_auto_add >/dev/null
+    fi
   fi
 
   load_google_current_state
@@ -402,6 +421,12 @@ main() {
         echo "Would disable automatic Google language additions in Safari."
       else
         echo "Disabled automatic Google language additions in Safari."
+      fi
+    elif $enable_auto_add; then
+      if $dry_run; then
+        echo "Would enable automatic Google language additions in Safari."
+      else
+        echo "Enabled automatic Google language additions in Safari."
       fi
     fi
     print_added_for_you_warning
@@ -470,6 +495,8 @@ main() {
     print_list "New Google Account preferred languages:" "${result[@]}"
     if $disable_auto_add; then
       echo "Would disable automatic Google language additions in Safari before updating the list."
+    elif $enable_auto_add; then
+      echo "Would enable automatic Google language additions in Safari before updating the list."
     fi
     echo "Would change the Google Account preferred-language list in Safari."
     print_added_for_you_warning
@@ -481,6 +508,8 @@ main() {
   print_list "Applied Google Account preferred languages:" "${result[@]}"
   if $disable_auto_add && $google_auto_add_enabled; then
     echo "Warning: Google still reports automatic language additions as enabled."
+  elif $enable_auto_add && ! $google_auto_add_enabled; then
+    echo "Warning: Google still reports automatic language additions as disabled."
   fi
   print_added_for_you_warning
 }

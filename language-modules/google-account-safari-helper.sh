@@ -209,6 +209,17 @@ language_page_script() {
     return JSON.stringify({ status: "waiting", message: "Opening Google's stop-adding confirmation." });
   }
 
+  if (mode === "enable-auto-add") {
+    if (autoAddEnabled) {
+      return JSON.stringify({ status: "ok", auto_add_enabled: true });
+    }
+    if (!autoAddToggle) {
+      return JSON.stringify({ status: "error", message: "Could not locate Google's automatic language additions switch." });
+    }
+    autoAddToggle.click();
+    return JSON.stringify({ status: "waiting", message: "Starting Google's automatic language additions." });
+  }
+
   const buildLanguageCatalog = () => {
     const html = document.documentElement?.outerHTML || "";
     const entryPattern = /\[\["ac\.c\.lang\.l","([^"]+)","([^"]+)","([^"]+)","([^"]*)","([^"]*)"\],0,\d+(?:,null,\[.*?\],\["([^"]+)","([^"]+)"\])?/gs;
@@ -436,6 +447,9 @@ case "$command" in
     ;;
   disable-auto-add)
     wait_for_payload disable-auto-add >/dev/null
+    ;;
+  enable-auto-add)
+    wait_for_payload enable-auto-add >/dev/null
     ;;
   write)
     [ "$#" -gt 0 ] || fail "The write helper requires at least one requested language label."

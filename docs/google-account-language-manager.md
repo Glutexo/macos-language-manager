@@ -13,6 +13,7 @@ Version 1 is intentionally narrow:
 - it uses the same command-line token syntax as the macOS module
 - it can reorder, remove, or add languages through the Google Account page
 - it can disable Google's `Automatically add languages` setting through the same page when requested
+- it can enable Google's `Automatically add languages` setting through the same page when requested
 - it supports `--inherit-macos` by resolving the full current macOS preferred language list against the current Google list or addable Google language labels
 - it does not use a public Google API, because no supported public API for preferred-language ordering was identified
 
@@ -27,6 +28,7 @@ Version 1 is intentionally narrow:
 ```bash
 ./manage-languages.sh google-account
 ./manage-languages.sh google-account --disable-auto-add
+./manage-languages.sh google-account --enable-auto-add
 ./manage-languages.sh google-account --inherit-macos
 ./manage-languages.sh google-account --dry-run "English:Czech"
 ./manage-languages.sh google-account "English" "-Czech"
@@ -46,6 +48,7 @@ Token forms:
 - `xx:` or `+xx:` → move `xx` to the end
 - `--inherit-macos` or `-M` → replace the Google Account list with the full current macOS preferred language order
 - `--disable-auto-add` → turn off Google's `Automatically add languages` setting before writing; with no language arguments it performs only that maintenance step
+- `--enable-auto-add` → turn Google's `Automatically add languages` setting back on before writing; with no language arguments it performs only that maintenance step
 
 ## Automation Strategy
 
@@ -63,6 +66,7 @@ The helper:
 4. returns the detected preferred-language labels back to the shell command
 5. when writing, opens a dedicated Safari window for the session and sends the same Google internal update request that the page uses for preferred-language ordering
 6. when `--disable-auto-add` is requested, follows Google's own `Stop adding` confirmation flow through page JavaScript without depending on the window being frontmost
+7. when `--enable-auto-add` is requested, toggles the same setting back on through page JavaScript
 
 The page is forced to `hl=en` so the automation can rely on stable English UI text when it looks for sign-in or page-state hints.
 
