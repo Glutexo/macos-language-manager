@@ -36,6 +36,7 @@ Notes:
 - `--inherit-macos` uses the first tag from the current macOS `AppleLanguages` list and lets the selected module map it to its own language format.
 - `--restore` restores the module's declared backup set from existing `.bak` files.
 - `--self-test` verifies that every discovered module exposes the required shell hooks and metadata for CI or manual contract checks.
+- Shell completion files are available in `completions/` for Bash and Zsh.
 
 Technical details:
 
@@ -94,6 +95,22 @@ Technical details:
 
 - [extract-system-settings-languages.md](docs/extract-system-settings-languages.md)
 
+### Shell Completion
+
+Bash:
+
+```bash
+source ./completions/manage-languages.bash
+```
+
+Zsh:
+
+```zsh
+source ./completions/manage-languages.zsh
+```
+
+Both completion files register completions for `manage-languages` and `./manage-languages.sh`.
+
 ### Application Technical Details
 
 - [steam-language-manager.md](docs/steam-language-manager.md)
@@ -106,6 +123,7 @@ Technical details:
 
 - `./tests/test-manage-languages.sh`
 - `./tests/test-manage-languages-macos.sh`
+- `./tests/test-manage-languages-completion.sh`
 
 ## Repository Workflow
 
