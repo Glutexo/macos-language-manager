@@ -1,7 +1,27 @@
 #!/bin/bash
 set -euo pipefail
 
-script_dir="$(cd "$(dirname "$0")" && pwd)"
+resolve_script_path() {
+  local source_path="$1"
+  local source_dir=""
+  local target_path=""
+
+  while [ -L "$source_path" ]; do
+    source_dir="$(cd "$(dirname "$source_path")" && pwd)"
+    target_path="$(readlink "$source_path")"
+    if [[ "$target_path" != /* ]]; then
+      source_path="$source_dir/$target_path"
+    else
+      source_path="$target_path"
+    fi
+  done
+
+  source_dir="$(cd "$(dirname "$source_path")" && pwd)"
+  printf '%s\n' "$source_dir/$(basename "$source_path")"
+}
+
+script_path="$(resolve_script_path "$0")"
+script_dir="$(cd "$(dirname "$script_path")" && pwd)"
 modules_dir="$script_dir/language-modules"
 display_command="${DISPLAY_COMMAND:-./manage-languages.sh}"
 default_app="${DEFAULT_APP:-}"

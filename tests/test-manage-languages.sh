@@ -7,6 +7,11 @@ script="$repo_root/manage-languages.sh"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
+symlink_dir="$tmp_dir/bin"
+mkdir -p "$symlink_dir"
+ln -s "$script" "$symlink_dir/manage-languages"
+symlink_script="$symlink_dir/manage-languages"
+
 steam_dir="$tmp_dir/Steam"
 mkdir -p "$steam_dir"
 steam_registry_file="$steam_dir/registry.vdf"
@@ -116,6 +121,9 @@ assert_contains "$output" "anki" "list-apps should print app ids"
 assert_contains "$output" "factorio" "list-apps should print app ids"
 assert_contains "$output" "macos" "list-apps should print module ids"
 assert_contains "$output" "steam" "list-apps should print app ids"
+
+output="$("$symlink_script" --list-apps)"
+assert_contains "$output" "steam" "symlinked runner should discover modules from the repository"
 
 output="$("$script" --self-test)"
 assert_contains "$output" "OK: anki" "self-test should verify anki module contract"
