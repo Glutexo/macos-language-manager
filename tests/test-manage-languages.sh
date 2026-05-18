@@ -106,6 +106,32 @@ with open(path, "wb") as handle:
     plistlib.dump(data, handle, sort_keys=False)
 PY
 
+google_helper_stub="$tmp_dir/google-account-helper.sh"
+google_helper_log="$tmp_dir/google-account-helper.log"
+cat > "$google_helper_stub" <<'EOS'
+#!/bin/bash
+set -euo pipefail
+
+log_file="${GOOGLE_ACCOUNT_HELPER_LOG:?}"
+command="${1:?}"
+shift || true
+
+case "$command" in
+  read)
+    printf 'English\nCzech\n'
+    ;;
+  write)
+    printf 'write\n' >>"$log_file"
+    printf '%s\n' "$@" >>"$log_file"
+    ;;
+  *)
+    echo "Unknown helper command: $command" >&2
+    exit 1
+    ;;
+esac
+EOS
+chmod +x "$google_helper_stub"
+
 assert_contains() {
   local haystack="$1"
   local needle="$2"
@@ -145,6 +171,7 @@ assert_contains "$output" "  all" "global help should include the all pseudo-app
 assert_contains "$output" "  everything" "global help should include the everything pseudo-app"
 assert_contains "$output" "  anki" "global help should include anki"
 assert_contains "$output" "  factorio" "global help should include factorio"
+assert_contains "$output" "  google-account" "global help should include google-account"
 assert_contains "$output" "  macos" "global help should include macos"
 assert_contains "$output" "  steam" "global help should include steam"
 assert_contains "$output" "  wingspan" "global help should include wingspan"
@@ -153,6 +180,7 @@ assert_contains "$output" "  terraforming-mars" "global help should include terr
 output="$("$script" --list-apps)"
 assert_contains "$output" "anki" "list-apps should print app ids"
 assert_contains "$output" "factorio" "list-apps should print app ids"
+assert_contains "$output" "google-account" "list-apps should print module ids"
 assert_contains "$output" "macos" "list-apps should print module ids"
 assert_contains "$output" "steam" "list-apps should print app ids"
 assert_contains "$output" "wingspan" "list-apps should print app ids"
@@ -164,6 +192,7 @@ assert_contains "$output" "steam" "symlinked runner should discover modules from
 output="$("$script" --self-test)"
 assert_contains "$output" "OK: anki" "self-test should verify anki module contract"
 assert_contains "$output" "OK: factorio" "self-test should verify factorio module contract"
+assert_contains "$output" "OK: google-account" "self-test should verify google-account module contract"
 assert_contains "$output" "OK: macos" "self-test should verify macos module contract"
 assert_contains "$output" "OK: steam" "self-test should verify steam module contract"
 assert_contains "$output" "OK: wingspan" "self-test should verify wingspan module contract"
@@ -175,6 +204,23 @@ assert_contains "$output" "Unknown module: nope" "unknown modules should fail cl
 output="$("$script" steam anki --help)"
 assert_contains "$output" "Usage: ./manage-languages.sh steam [--dry-run|-n] [--force|-f] [language]" "multi-module help should include steam usage"
 assert_contains "$output" "Usage: ./manage-languages.sh anki [--dry-run|-n] [--force|-f] [language]" "multi-module help should include anki usage"
+
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --help)"
+assert_contains "$output" "Usage: ./manage-languages.sh google-account [--dry-run|-n] [language ...]" "google-account help should show module usage"
+
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account)"
+assert_contains "$output" "Current Google Account preferred languages:" "google-account read mode should print a heading"
+assert_contains "$output" "  English" "google-account read mode should include the first preferred language"
+assert_contains "$output" "  Czech" "google-account read mode should include the second preferred language"
+
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --dry-run "Czech" "English")"
+assert_contains "$output" "Requested Google Account preferred languages:" "google-account dry-run should print the requested order"
+assert_contains "$output" "Would reorder the Google Account preferred-language list in Safari." "google-account dry-run should describe the planned write"
+
+rm -f "$google_helper_log"
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account "Czech" "English")"
+assert_contains "$output" "Applied Google Account preferred languages:" "google-account write should print the applied order"
+assert_contains "$(cat "$google_helper_log")" $'write\nCzech\nEnglish' "google-account write should pass the requested order to the helper"
 
 output="$("$script" steam macos ja 2>&1 || true)"
 assert_contains "$output" "The macos module cannot be combined with other modules." "macos should stay exclusive"

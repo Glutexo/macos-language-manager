@@ -5,6 +5,7 @@ This document describes the shared architecture behind `manage-languages.sh` and
 ## Scope
 
 The runner manages application interface languages for supported macOS applications and loads the macOS target-based workflow through the same module lifecycle as the application modules.
+It also supports external modules whose implementation lives behind a module-specific CLI, such as `macos` and `google-account`.
 
 ## Entry Points
 
@@ -33,6 +34,7 @@ Examples:
 - `language-modules/wingspan.sh` → `wingspan`
 - `language-modules/terraforming-mars.sh` → `terraforming-mars`
 - `language-modules/macos.sh` → `macos`
+- `language-modules/google-account.sh` → `google-account`
 
 `--list-apps` and `--list-modules` print the discovered ids.
 
@@ -202,3 +204,4 @@ Modules own application-specific errors, and shared-flow modules additionally ow
 - [factorio-language-manager.md](factorio-language-manager.md)
 - [wingspan-language-manager.md](wingspan-language-manager.md)
 - [terraforming-mars-language-manager.md](terraforming-mars-language-manager.md)
+- [google-account-language-manager.md](google-account-language-manager.md)

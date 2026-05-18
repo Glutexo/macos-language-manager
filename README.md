@@ -3,6 +3,7 @@
 Simple shell tooling for macOS language management:
 
 - managing the preferred macOS language order
+- reading or reordering the preferred language list in a Google account through Safari automation
 - managing application interface languages for Steam, Anki, Factorio, Wingspan, and Terraforming Mars
 
 ## Scripts
@@ -29,6 +30,7 @@ Notes:
 
 - The script discovers modules from `language-modules/`.
 - You can target multiple application modules in one run, for example `./manage-languages.sh steam anki ja`.
+- The `google-account` module keeps its own browser-automation CLI and is not part of `all` or `everything`.
 - The pseudo-module `all` runs the shared application-language flow across every simple application module.
 - In `all` mode, a requested language may be applied only to the modules that support it; unsupported modules are skipped and left unchanged.
 - The pseudo-module `everything` runs `all` and then `macos all` in one command.
@@ -74,6 +76,29 @@ Technical details:
 - [macos-language-manager.md](docs/macos-language-manager.md)
 
 Verbose supported-language help uses Apple's renderable UI language list from `IntlPreferences.framework`.
+
+### `manage-languages.sh google-account`
+
+Reads or reorders the preferred language list in the signed-in Google account through Safari automation.
+
+Usage:
+
+```bash
+./manage-languages.sh google-account
+./manage-languages.sh google-account --dry-run "English" "Czech"
+./manage-languages.sh google-account "English" "Czech"
+```
+
+Notes:
+
+- Version 1 only reorders languages that already exist in the Google account.
+- Arguments are the visible labels from the Google Account page, not a separate ISO-tag mapping layer.
+- Safari may prompt for sign-in or 2-step verification.
+- There is no public Google API in this repository for preferred-language ordering.
+
+Technical details:
+
+- [google-account-language-manager.md](docs/google-account-language-manager.md)
 
 ### `extract-system-settings-languages.swift`
 
@@ -142,6 +167,7 @@ Both completion files register completions for `manage-languages` and `./manage-
 - [factorio-language-manager.md](docs/factorio-language-manager.md)
 - [wingspan-language-manager.md](docs/wingspan-language-manager.md)
 - [terraforming-mars-language-manager.md](docs/terraforming-mars-language-manager.md)
+- [google-account-language-manager.md](docs/google-account-language-manager.md)
 
 ## Tests
 

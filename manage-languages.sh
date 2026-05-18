@@ -43,7 +43,7 @@ available_modules() {
   find "$modules_dir" -maxdepth 1 -type f -name '*.sh' -print 2>/dev/null \
     | sed 's#.*/##' \
     | sed 's#\.sh$##' \
-    | grep -v '^macos-command$' \
+    | grep -Ev '(-command|-helper)$' \
     | sort
 }
 

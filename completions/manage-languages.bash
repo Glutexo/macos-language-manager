@@ -26,7 +26,7 @@ _manage_languages_bulk_modules() {
 
   while IFS= read -r module; do
     case "$module" in
-      all|everything|macos)
+      all|everything|macos|google-account)
         ;;
       *)
         printf '%s\n' "$module"
@@ -154,7 +154,7 @@ _manage_languages() {
   done < <(_manage_languages_modules "$command_path")
 
   if [ "$COMP_CWORD" -eq 1 ] && [[ "$current_word" == -* || -z "$current_word" ]]; then
-    candidate_words="$global_options $( _manage_languages_array_words "${modules[@]}" )"
+    candidate_words="$global_options $( _manage_languages_array_words "${modules[@]-}" )"
     _manage_languages_compgen "$current_word" "$candidate_words"
     return 0
   fi
@@ -182,7 +182,7 @@ _manage_languages() {
   done
 
   if [ "${#selected_modules[@]}" -eq 0 ]; then
-    candidate_words="$global_options $( _manage_languages_array_words "${modules[@]}" )"
+    candidate_words="$global_options $( _manage_languages_array_words "${modules[@]-}" )"
     _manage_languages_compgen "$current_word" "$candidate_words"
     return 0
   fi
@@ -217,7 +217,7 @@ _manage_languages() {
         if [[ "$current_word" == -* ]]; then
           _manage_languages_compgen "$current_word" "$app_options"
         else
-          candidate_words="$app_options $( _manage_languages_array_words "${language_candidates[@]}" )"
+          candidate_words="$app_options $( _manage_languages_array_words "${language_candidates[@]-}" )"
           _manage_languages_compgen "$current_word" "$candidate_words"
         fi
         return 0
@@ -229,7 +229,7 @@ _manage_languages() {
         if [[ "$current_word" == -* ]]; then
           _manage_languages_compgen "$current_word" "$everything_options"
         else
-          candidate_words="$everything_options $( _manage_languages_array_words "${language_candidates[@]}" )"
+          candidate_words="$everything_options $( _manage_languages_array_words "${language_candidates[@]-}" )"
           _manage_languages_compgen "$current_word" "$candidate_words"
         fi
         return 0
@@ -259,18 +259,18 @@ _manage_languages() {
   fi
 
   if [ "${#post_args[@]}" -eq 0 ]; then
-    candidate_words="$app_options $( _manage_languages_array_words "${module_candidates[@]}" )$( _manage_languages_array_words "${language_candidates[@]}" )"
+    candidate_words="$app_options $( _manage_languages_array_words "${module_candidates[@]-}" )$( _manage_languages_array_words "${language_candidates[@]-}" )"
     _manage_languages_compgen "$current_word" "$candidate_words"
     return 0
   fi
 
   if [ "${#post_args[@]}" -eq 1 ] && [[ "${post_args[0]}" == -* ]]; then
-    candidate_words="$app_options $( _manage_languages_array_words "${language_candidates[@]}" )"
+    candidate_words="$app_options $( _manage_languages_array_words "${language_candidates[@]-}" )"
     _manage_languages_compgen "$current_word" "$candidate_words"
     return 0
   fi
 
-  candidate_words="$( _manage_languages_array_words "${language_candidates[@]}" )"
+  candidate_words="$( _manage_languages_array_words "${language_candidates[@]-}" )"
   _manage_languages_compgen "$current_word" "$candidate_words"
 }
 
