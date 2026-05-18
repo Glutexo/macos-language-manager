@@ -11,8 +11,11 @@ source "$script_dir/ordered-language-list-helper.sh"
 dry_run=false
 verbose_help=false
 inherit_macos=false
+disable_auto_add=false
 google_current_language_ids=()
 google_current_languages=()
+google_added_for_you_languages=()
+google_auto_add_enabled=false
 reset_ordered_language_state
 
 fail() {
@@ -24,12 +27,12 @@ normalize_whitespace() {
   printf '%s\n' "$1" | awk '{$1=$1; print}'
 }
 
-read_current_languages() {
-  "$helper_command" read
-}
-
 read_current_languages_json() {
   "$helper_command" read-json
+}
+
+disable_google_auto_add() {
+  "$helper_command" disable-auto-add
 }
 
 read_macos_preferred_languages() {
@@ -142,7 +145,7 @@ resolve_inherited_google_language() {
   fi
 
   for candidate in "${label_candidates[@]}"; do
-    for current_language in "${current_languages[@]}"; do
+    for current_language in "${google_current_languages[@]}"; do
       if matches_requested_language "$candidate" "$current_language"; then
         printf '%s\n' "$current_language"
         return 0
@@ -227,6 +230,7 @@ show_usage() {
   echo "  --help, -h      Show this help message."
   echo "  --verbose, -v   Show help together with the Safari automation notes."
   echo "  --inherit-macos, -M  Replace the Google Account language list with the current macOS preferred language order."
+  echo "  --disable-auto-add   Turn off Google's automatic language additions before writing."
   echo
   echo "Language arguments:"
   echo "  xx        Move the language at the front."
@@ -237,6 +241,7 @@ show_usage() {
   echo
   echo "Examples:"
   echo "  $display_command"
+  echo "  $display_command --disable-auto-add"
   echo "  $display_command --inherit-macos"
   echo "  $display_command --dry-run \"English\""
   echo "  $display_command --dry-run \"English:Czech\""
@@ -255,6 +260,7 @@ show_usage() {
   echo "  If Google requests sign-in or 2-step verification, complete it in Safari before the timeout expires."
   echo "  Use the exact labels printed by read-only mode."
   echo "  Missing languages are added through the Google Account editor when the helper can find them."
+  echo "  --disable-auto-add clicks Google's \"Stop adding\" flow before the write."
   echo "  This flow is experimental because Google does not expose a public API for preferred-language ordering."
 }
 
@@ -276,6 +282,9 @@ parse_arguments() {
         ;;
       --inherit-macos|-M)
         inherit_macos=true
+        ;;
+      --disable-auto-add)
+        disable_auto_add=true
         ;;
       --force|-f)
         fail "The Google Account module does not support --force."
@@ -299,9 +308,62 @@ print_list() {
   printf '  %s\n' "$@"
 }
 
+load_google_current_state() {
+  local payload=""
+  local kind=""
+  local value=""
+  local display=""
+  local added_for_you=""
+
+  google_current_language_ids=()
+  google_current_languages=()
+  google_added_for_you_languages=()
+  google_auto_add_enabled=false
+
+  payload="$(read_current_languages_json)"
+
+  while IFS=$'\t' read -r kind value display added_for_you; do
+    case "$kind" in
+      auto-add)
+        if [ "$value" = "true" ]; then
+          google_auto_add_enabled=true
+        fi
+        ;;
+      language)
+        [ -n "$display" ] || continue
+        google_current_language_ids+=("$value")
+        google_current_languages+=("$display")
+        if [ "$added_for_you" = "true" ]; then
+          google_added_for_you_languages+=("$display")
+        fi
+        ;;
+    esac
+  done < <(
+    printf '%s' "$payload" | python3 -c 'import json, sys
+payload = json.load(sys.stdin)
+print("auto-add\t{}".format("true" if payload.get("auto_add_enabled") else "false"))
+for item in payload.get("languages", []):
+    print("language\t{}\t{}\t{}".format(
+        item.get("id", ""),
+        item.get("display", ""),
+        "true" if item.get("added_for_you") else "false",
+    ))'
+  )
+}
+
+print_added_for_you_warning() {
+  if [ "${#google_added_for_you_languages[@]}" -eq 0 ]; then
+    return 0
+  fi
+
+  echo "Warning: Google still marks these languages as Added for you:"
+  printf '  %s\n' "${google_added_for_you_languages[@]}"
+  if $google_auto_add_enabled; then
+    echo "Use $display_command --disable-auto-add to turn off automatic Google language additions."
+  fi
+}
+
 main() {
-  local current_languages=()
-  local line=""
   local current_joined=""
   local result=()
   local base_index=0
@@ -316,24 +378,13 @@ main() {
 
   parse_arguments "$@"
 
-  while IFS= read -r line; do
-    [ -n "$line" ] || continue
-    current_languages+=("$(normalize_whitespace "$line")")
-  done < <(read_current_languages)
-  google_current_languages=("${current_languages[@]-}")
+  if $disable_auto_add && ! $dry_run; then
+    disable_google_auto_add >/dev/null
+  fi
 
-  google_current_language_ids=()
-  while IFS=$'\t' read -r language_id language_display; do
-    [ -n "$language_display" ] || continue
-    google_current_language_ids+=("$language_id")
-  done < <(
-    read_current_languages_json | python3 -c "import json, sys
-payload = json.load(sys.stdin)
-for item in payload.get('languages', []):
-    print('{}\\t{}'.format(item.get('id', ''), item.get('display', '')))"
-  )
+  load_google_current_state
 
-  if [ "${#current_languages[@]}" -eq 0 ]; then
+  if [ "${#google_current_languages[@]}" -eq 0 ]; then
     fail "Could not detect any Google Account preferred languages from Safari."
   fi
 
@@ -345,7 +396,15 @@ for item in payload.get('languages', []):
   fi
 
   if [ "${#requested_languages[@]}" -eq 0 ] && [ "${#removed_languages[@]}" -eq 0 ]; then
-    print_list "Current Google Account preferred languages:" "${current_languages[@]}"
+    print_list "Current Google Account preferred languages:" "${google_current_languages[@]}"
+    if $disable_auto_add; then
+      if $dry_run; then
+        echo "Would disable automatic Google language additions in Safari."
+      else
+        echo "Disabled automatic Google language additions in Safari."
+      fi
+    fi
+    print_added_for_you_warning
     return 0
   fi
 
@@ -355,7 +414,7 @@ for item in payload.get('languages', []):
   entity_root_sections=()
   entity_orders=()
 
-  for language in "${current_languages[@]}"; do
+  for language in "${google_current_languages[@]}"; do
     create_entity "$language" "$base_index" base "$base_index" >/dev/null
     base_index=$((base_index + 1))
   done
@@ -394,7 +453,7 @@ for item in payload.get('languages', []):
     fi
   done
 
-  current_joined="$(printf '%s\n' "${current_languages[@]}")"
+  current_joined="$(printf '%s\n' "${google_current_languages[@]}")"
   result_joined="$(printf '%s\n' "${result[@]}")"
 
   if [ "$current_joined" = "$result_joined" ]; then
@@ -407,14 +466,23 @@ for item in payload.get('languages', []):
   fi
 
   if $dry_run; then
-    print_list "Current Google Account preferred languages:" "${current_languages[@]}"
+    print_list "Current Google Account preferred languages:" "${google_current_languages[@]}"
     print_list "New Google Account preferred languages:" "${result[@]}"
+    if $disable_auto_add; then
+      echo "Would disable automatic Google language additions in Safari before updating the list."
+    fi
     echo "Would change the Google Account preferred-language list in Safari."
+    print_added_for_you_warning
     return 0
   fi
 
   "$helper_command" write "${result[@]}"
+  load_google_current_state
   print_list "Applied Google Account preferred languages:" "${result[@]}"
+  if $disable_auto_add && $google_auto_add_enabled; then
+    echo "Warning: Google still reports automatic language additions as enabled."
+  fi
+  print_added_for_you_warning
 }
 
 main "$@"

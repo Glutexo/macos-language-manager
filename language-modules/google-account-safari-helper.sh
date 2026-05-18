@@ -107,11 +107,6 @@ language_page_script() {
   const slug = (value) => normalize(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   const textOf = (node) => normalize((node && (node.innerText || node.textContent)) || "");
   const isVisible = (node) => !!(node && node.getBoundingClientRect && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
-  const isEnabled = (node) => !!node && !node.disabled && node.getAttribute("aria-disabled") !== "true";
-  const parseRequestedRegion = (value) => {
-    const match = /\(([^)]+)\)\s*$/.exec(value);
-    return match ? slug(match[1]) : "";
-  };
 
   const loginHints = ["sign in", "choose an account", "verify it’s you", "2-step verification"];
   const pageRoot = document.body || document.documentElement;
@@ -135,13 +130,16 @@ language_page_script() {
         const labelNode = node.querySelector("label");
         const regionNode = node.querySelector(".xsr7od");
         const label = textOf(labelNode);
-        const region = textOf(regionNode);
+        const saveButton = [...node.querySelectorAll("button")].find((button) => /Save language/i.test(button.getAttribute("aria-label") || ""));
+        const addedForYou = !!saveButton || /Added for you/i.test(textOf(node));
+        const region = addedForYou ? "Added for you" : textOf(regionNode);
         const display = region ? `${label} (${region})` : label;
         return {
           id: node.getAttribute("data-id") || "",
           label,
           region,
           display,
+          addedForYou,
           slug: slug(display),
           labelSlug: slug(label),
           node,
@@ -168,6 +166,11 @@ language_page_script() {
     return null;
   };
 
+  const autoAddToggle = [...pageRoot.querySelectorAll("button[role='switch']")]
+    .find((node) => /Automatically add languages/i.test(node.getAttribute("aria-label") || ""));
+  const autoAddEnabled = !!(autoAddToggle && autoAddToggle.getAttribute("aria-checked") === "true");
+  const stopAddingButton = findClickable(["stop adding"], pageRoot);
+
   const currentRows = collectLanguageRows();
   if (currentRows.length < 1) {
     return JSON.stringify({ status: "waiting", message: "Waiting for the preferred-language list to render." });
@@ -180,13 +183,30 @@ language_page_script() {
   if (mode === "read-json") {
     return JSON.stringify({
       status: "ok",
+      auto_add_enabled: autoAddEnabled,
       languages: currentRows.map((item) => ({
         id: item.id,
         label: item.label,
         region: item.region,
-        display: item.display
+        display: item.display,
+        added_for_you: item.addedForYou
       }))
     });
+  }
+
+  if (mode === "disable-auto-add") {
+    if (stopAddingButton) {
+      stopAddingButton.click();
+      return JSON.stringify({ status: "waiting", message: "Stopping Google's automatic language additions." });
+    }
+    if (!autoAddEnabled) {
+      return JSON.stringify({ status: "ok", auto_add_enabled: false });
+    }
+    if (!autoAddToggle) {
+      return JSON.stringify({ status: "error", message: "Could not locate Google's automatic language additions switch." });
+    }
+    autoAddToggle.click();
+    return JSON.stringify({ status: "waiting", message: "Opening Google's stop-adding confirmation." });
   }
 
   const buildLanguageCatalog = () => {
@@ -413,6 +433,9 @@ case "$command" in
     ;;
   read-json)
     wait_for_payload read-json
+    ;;
+  disable-auto-add)
+    wait_for_payload disable-auto-add >/dev/null
     ;;
   write)
     [ "$#" -gt 0 ] || fail "The write helper requires at least one requested language label."

@@ -85,6 +85,7 @@ Usage:
 
 ```bash
 ./manage-languages.sh google-account
+./manage-languages.sh google-account --disable-auto-add
 ./manage-languages.sh google-account --inherit-macos
 ./manage-languages.sh google-account --dry-run "English:Czech"
 ./manage-languages.sh google-account "English" "-Czech"
@@ -94,8 +95,10 @@ Notes:
 
 - The command-line token syntax matches the macOS module: `xx`, `+xx`, `-xx`, `xx:yy`, and `xx:`.
 - `--inherit-macos` replaces the Google Account language list with the full current macOS preferred language order.
+- `--disable-auto-add` turns off Google's `Automatically add languages` setting before writing, and it can be used on its own without language arguments.
 - Version 1 reorders, removes, or adds languages through Safari automation.
 - Arguments are the visible labels from the Google Account page, not a separate ISO-tag mapping layer.
+- If Google still shows a language as `Added for you`, the command warns about it after reading or writing.
 - Safari may prompt for sign-in or 2-step verification.
 - There is no public Google API in this repository for preferred-language ordering.
 

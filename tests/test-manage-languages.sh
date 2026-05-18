@@ -113,6 +113,7 @@ cat > "$google_helper_stub" <<'EOS'
 set -euo pipefail
 
 log_file="${GOOGLE_ACCOUNT_HELPER_LOG:?}"
+scenario="${GOOGLE_ACCOUNT_HELPER_SCENARIO:-default}"
 command="${1:?}"
 shift || true
 
@@ -121,7 +122,14 @@ case "$command" in
     printf 'English\nCzech\n'
     ;;
   read-json)
-    printf '%s\n' '{"status":"ok","languages":[{"id":"en","display":"English"},{"id":"cs","display":"Czech"}]}'
+    if [ "$scenario" = "added-for-you" ]; then
+      printf '%s\n' '{"status":"ok","auto_add_enabled":true,"languages":[{"id":"en","display":"English","added_for_you":false},{"id":"ja","display":"Japanese (Added for you)","added_for_you":true},{"id":"cs","display":"Czech","added_for_you":false}]}'
+    else
+      printf '%s\n' '{"status":"ok","auto_add_enabled":false,"languages":[{"id":"en","display":"English","added_for_you":false},{"id":"cs","display":"Czech","added_for_you":false}]}'
+    fi
+    ;;
+  disable-auto-add)
+    printf 'disable-auto-add\n' >>"$log_file"
     ;;
   write)
     printf 'write\n' >>"$log_file"
@@ -212,16 +220,24 @@ output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HE
 assert_contains "$output" "Usage: ./manage-languages.sh google-account [--dry-run|-n] [language ...]" "google-account help should show module usage"
 assert_contains "$output" 'xx:yy' "google-account help should show macOS-style token syntax"
 assert_contains "$output" '--inherit-macos' "google-account help should show inheritance support"
+assert_contains "$output" '--disable-auto-add' "google-account help should show auto-add cleanup support"
 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account)"
 assert_contains "$output" "Current Google Account preferred languages:" "google-account read mode should print a heading"
 assert_contains "$output" "  English" "google-account read mode should include the first preferred language"
 assert_contains "$output" "  Czech" "google-account read mode should include the second preferred language"
 
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" GOOGLE_ACCOUNT_HELPER_SCENARIO=added-for-you "$script" google-account)"
+assert_contains "$output" "Japanese (Added for you)" "google-account read mode should surface Added for you entries"
+assert_contains "$output" "Warning: Google still marks these languages as Added for you:" "google-account should warn about Added for you entries"
+
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --dry-run "Czech")"
 assert_contains "$output" "New Google Account preferred languages:" "google-account dry-run should print the new order"
 assert_contains "$output" $'  Czech\n  English' "google-account dry-run should move a language to the front"
 assert_contains "$output" "Would change the Google Account preferred-language list in Safari." "google-account dry-run should describe the planned write"
+
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --dry-run --disable-auto-add)"
+assert_contains "$output" "Would disable automatic Google language additions in Safari." "google-account dry-run should describe auto-add cleanup without language arguments"
 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --dry-run "English:" "-Czech")"
 assert_contains "$output" $'New Google Account preferred languages:\n  English' "google-account dry-run should support end placement plus removal"
@@ -236,6 +252,15 @@ rm -f "$google_helper_log"
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account "Czech")"
 assert_contains "$output" "Applied Google Account preferred languages:" "google-account write should print the applied order"
 assert_contains "$(cat "$google_helper_log")" $'write\nCzech\nEnglish' "google-account write should pass the computed order to the helper"
+
+rm -f "$google_helper_log"
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --disable-auto-add)"
+assert_contains "$output" "Disabled automatic Google language additions in Safari." "google-account should support disabling auto-add without language arguments"
+assert_contains "$(cat "$google_helper_log")" 'disable-auto-add' "google-account should call the helper cleanup mode"
+
+rm -f "$google_helper_log"
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --disable-auto-add "Czech")"
+assert_contains "$(cat "$google_helper_log")" $'disable-auto-add\nwrite\nCzech\nEnglish' "google-account should disable auto-add before writing the new list"
 
 output="$("$script" steam macos ja 2>&1 || true)"
 assert_contains "$output" "The macos module cannot be combined with other modules." "macos should stay exclusive"

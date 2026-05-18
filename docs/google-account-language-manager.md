@@ -12,6 +12,7 @@ Version 1 is intentionally narrow:
 - it reads the current preferred-language list from the Google Account language page
 - it uses the same command-line token syntax as the macOS module
 - it can reorder, remove, or add languages through the Google Account page
+- it can disable Google's `Automatically add languages` setting through the same page when requested
 - it supports `--inherit-macos` by resolving the full current macOS preferred language list against the current Google list or addable Google language labels
 - it does not use a public Google API, because no supported public API for preferred-language ordering was identified
 
@@ -25,6 +26,7 @@ Version 1 is intentionally narrow:
 
 ```bash
 ./manage-languages.sh google-account
+./manage-languages.sh google-account --disable-auto-add
 ./manage-languages.sh google-account --inherit-macos
 ./manage-languages.sh google-account --dry-run "English:Czech"
 ./manage-languages.sh google-account "English" "-Czech"
@@ -43,6 +45,7 @@ Token forms:
 - `xx:yy` or `+xx:yy` → move `xx` immediately before `yy`
 - `xx:` or `+xx:` → move `xx` to the end
 - `--inherit-macos` or `-M` → replace the Google Account list with the full current macOS preferred language order
+- `--disable-auto-add` → turn off Google's `Automatically add languages` setting before writing; with no language arguments it performs only that maintenance step
 
 ## Automation Strategy
 
@@ -58,7 +61,8 @@ The helper:
 2. waits for the Google Account language page to become available
 3. executes JavaScript in the active Safari tab to inspect the page
 4. returns the detected preferred-language labels back to the shell command
-5. when writing, opens a dedicated Safari window for the session, adds missing languages when needed, removes extra ones, and repeatedly uses the page controls until the on-page order matches the requested sequence
+5. when writing, opens a dedicated Safari window for the session and sends the same Google internal update request that the page uses for preferred-language ordering
+6. when `--disable-auto-add` is requested, follows Google's own `Stop adding` confirmation flow through page JavaScript without depending on the window being frontmost
 
 The page is forced to `hl=en` so the automation can rely on stable English UI text when it looks for sign-in or page-state hints.
 
@@ -70,7 +74,8 @@ The page is forced to `hl=en` so the automation can rely on stable English UI te
 
 ## Current Limitations
 
-- the write path is best-effort DOM automation against a live Google page and may break when Google changes the page structure
+- the write path depends on internal Google page requests and maintenance controls rather than a supported public API, so Google-side changes may still break it
+- Google may still surface `Added for you` entries separately from the main preferred-language list; the command warns when it sees them
 - page structure changes on Google's side may break the helper
 - there is no backup or restore mode because the data lives remotely in the Google account
 - `--force` is not supported for this module
