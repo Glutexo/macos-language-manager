@@ -118,7 +118,8 @@ For `all`:
 
 1. discover all simple application modules
 2. run the selected read, write, inherit, or restore flow for each module in order
-3. stop on the first module error
+3. when `all` is changing a language, unsupported target languages are skipped per module and those modules remain unchanged
+4. stop on the first remaining module error
 
 For `everything`:
 

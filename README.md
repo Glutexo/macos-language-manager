@@ -30,6 +30,7 @@ Notes:
 - The script discovers modules from `language-modules/`.
 - You can target multiple application modules in one run, for example `./manage-languages.sh steam anki ja`.
 - The pseudo-module `all` runs the shared application-language flow across every simple application module.
+- In `all` mode, a requested language may be applied only to the modules that support it; unsupported modules are skipped and left unchanged.
 - The pseudo-module `everything` runs `all` and then `macos all` in one command.
 - The `macos` module keeps its own target-based CLI under `./manage-languages.sh macos ...`, but it is still loaded through the same module lifecycle as the other modules.
 - `macos`, `all`, and `everything` stay exclusive and cannot be combined with other module names.

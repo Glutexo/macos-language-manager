@@ -634,6 +634,10 @@ run_all_modules() {
   local app=""
   local found_any=false
   local module_args=("$@")
+  local bulk_requested_language=""
+  local bulk_change_mode=false
+  local module_output=""
+  local module_status=0
 
   if [ "${#module_args[@]}" -gt 0 ]; then
     standard_module_parse_arguments "${module_args[@]}"
@@ -644,6 +648,17 @@ run_all_modules() {
   if $module_requested_help || $module_requested_verbose_help; then
     show_all_usage
     return 0
+  fi
+
+  if [ -n "$module_requested_language" ] || $module_inherit_macos; then
+    bulk_change_mode=true
+  fi
+
+  if $module_inherit_macos; then
+    bulk_requested_language="$(read_macos_preferred_language || true)"
+    [ -n "$bulk_requested_language" ] || fail "Could not detect the current macOS preferred language."
+  else
+    bulk_requested_language="$module_requested_language"
   fi
 
   for app in $(available_modules); do
@@ -657,6 +672,27 @@ run_all_modules() {
     else
       module_parse_arguments
     fi
+
+    if $bulk_change_mode; then
+      set +e
+      module_output="$(module_run 2>&1)"
+      module_status=$?
+      set -e
+
+      if [ "$module_status" -eq 0 ]; then
+        [ -n "$module_output" ] && printf '%s\n' "$module_output"
+        continue
+      fi
+
+      if printf '%s\n' "$module_output" | grep -Eq '^Unsupported .+ interface language: '; then
+        printf 'Skipping %s: interface language %s is not supported.\n' "$module_display_name" "$bulk_requested_language"
+        continue
+      fi
+
+      printf '%s\n' "$module_output" >&2
+      exit "$module_status"
+    fi
+
     module_run
   done
 
