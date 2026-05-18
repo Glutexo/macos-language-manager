@@ -103,7 +103,7 @@ Notes:
 - `--all-browser-profiles` applies the same operation to every valid browser profile.
 - `--list-browser-profiles` prints the valid browser profile names that the automation currently accepts.
 - `--refresh-browser-profiles` refreshes the stored Safari profile-name cache through Safari UI automation.
-- Profile-name refresh does not depend on the localized Safari menu text; it extracts the quoted profile names from the menu items.
+- Profile-name refresh does not depend on the localized Safari menu text; it prefers Safari's accessibility identifiers and only falls back to visible menu text parsing.
 - `--list-browser-profiles` reads the current cached names, then falls back to local Safari data, then `default`.
 - `--disable-auto-add` turns off Google's `Automatically add languages` setting before writing, and it can be used on its own without language arguments.
 - `--enable-auto-add` turns Google's `Automatically add languages` setting back on, and it can also be used on its own.

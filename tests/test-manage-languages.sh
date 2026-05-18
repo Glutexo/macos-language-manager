@@ -274,7 +274,7 @@ output="$(HOME="$google_helper_test_home" "$google_helper_real" list-profiles)"
 assert_contains "$output" $'default\nWork\nPersonal' "google-account helper should read Safari profile names from SafariTabs.db"
 
 google_helper_menu_cache="$tmp_dir/google-helper-menu-cache.txt"
-output="$(GOOGLE_ACCOUNT_BROWSER_PROFILE_CACHE="$google_helper_menu_cache" GOOGLE_ACCOUNT_BROWSER_PROFILE_MENU_ITEMS=$'Neues Fenster „Glutexo“\nNové okno „Twisto“\nNew Private Window\nNew Tab' "$google_helper_real" refresh-profiles)"
+output="$(GOOGLE_ACCOUNT_BROWSER_PROFILE_CACHE="$google_helper_menu_cache" GOOGLE_ACCOUNT_BROWSER_PROFILE_MENU_DATA=$'NewGlutexoWindow?isDefaultProfile=true\t新規Glutexoウインドウ\nNewTwistoWindow?isDefaultProfile=false\t새로운 Twisto 윈도우\nNewPrivateWindow\t새로운 개인정보 보호 브라우징 윈도우\nNewTab\t새로운 탭' "$google_helper_real" refresh-profiles)"
 assert_contains "$output" $'Glutexo\nTwisto' "google-account helper should parse quoted Safari profile names independently of the menu language"
 assert_contains "$(cat "$google_helper_menu_cache")" $'Glutexo\nTwisto' "google-account helper should store refreshed browser profile names in cache"
 

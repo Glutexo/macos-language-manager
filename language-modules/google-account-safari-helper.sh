@@ -90,13 +90,15 @@ list_browser_profiles() {
 }
 
 refresh_browser_profiles() {
-  local raw_menu_items=""
+  local raw_menu_data=""
   local profile_names=""
 
-  if [ -n "${GOOGLE_ACCOUNT_BROWSER_PROFILE_MENU_ITEMS:-}" ]; then
-    raw_menu_items="${GOOGLE_ACCOUNT_BROWSER_PROFILE_MENU_ITEMS}"
+  if [ -n "${GOOGLE_ACCOUNT_BROWSER_PROFILE_MENU_DATA:-}" ]; then
+    raw_menu_data="${GOOGLE_ACCOUNT_BROWSER_PROFILE_MENU_DATA}"
+  elif [ -n "${GOOGLE_ACCOUNT_BROWSER_PROFILE_MENU_ITEMS:-}" ]; then
+    raw_menu_data="${GOOGLE_ACCOUNT_BROWSER_PROFILE_MENU_ITEMS}"
   else
-    raw_menu_items="$(run_applescript <<'APPLESCRIPT'
+    raw_menu_data="$(run_applescript <<'APPLESCRIPT'
 tell application "Safari"
   activate
 end tell
@@ -106,11 +108,23 @@ tell application "System Events"
     set frontmost to true
     repeat 30 times
       try
-        set fileMenuItems to name of every menu item of menu 1 of menu bar item 3 of menu bar 1
-        set AppleScript's text item delimiters to linefeed
-        set joinedItems to fileMenuItems as text
-        set AppleScript's text item delimiters to ""
-        return joinedItems
+        set out to ""
+        tell menu 1 of menu bar item 3 of menu bar 1
+          repeat with currentMenuItem in every menu item
+            try
+              set itemIdentifier to value of attribute "AXIdentifier" of currentMenuItem as text
+            on error
+              set itemIdentifier to ""
+            end try
+            try
+              set itemTitle to name of currentMenuItem as text
+            on error
+              set itemTitle to ""
+            end try
+            set out to out & itemIdentifier & tab & itemTitle & linefeed
+          end repeat
+        end tell
+        return out
       on error
         delay 0.2
       end try
@@ -124,16 +138,31 @@ APPLESCRIPT
   fi
 
   profile_names="$(
-    RAW_MENU_ITEMS="$raw_menu_items" python3 - <<'PY'
+    RAW_MENU_DATA="$raw_menu_data" python3 - <<'PY'
 import os
 import re
 
-raw = os.environ["RAW_MENU_ITEMS"]
-items = [part.strip() for part in raw.splitlines() if part.strip() and part.strip() != "missing value"]
+raw = os.environ["RAW_MENU_DATA"]
+items = [part.rstrip("\n") for part in raw.splitlines() if part.strip()]
 profiles = []
 
 for item in items:
-    match = re.search(r'[\"“”„«»「」『』](.+?)[\"“”„«»「」『』]', item)
+    if "\t" in item:
+        identifier, title = item.split("\t", 1)
+    else:
+        identifier, title = "", item
+
+    identifier = identifier.strip()
+    title = title.strip()
+    if not title or title == "missing value":
+        title = ""
+
+    match = re.fullmatch(r"New(.+)Window\?isDefaultProfile=(true|false)", identifier)
+    if match:
+        profiles.append(match.group(1))
+        continue
+
+    match = re.search(r'[\"“”„«»「」『』](.+?)[\"“”„«»「」『』]', title)
     if match:
         profiles.append(match.group(1))
 
@@ -191,7 +220,28 @@ tell application "System Events"
     else
       set profileMenuItem to missing value
       repeat with currentMenuItem in every menu item of menu 1 of menu bar item 3 of menu bar 1
-        if (name of currentMenuItem) contains targetProfile then
+        try
+          set currentIdentifier to value of attribute "AXIdentifier" of currentMenuItem as text
+        on error
+          set currentIdentifier to ""
+        end try
+        try
+          set currentTitle to name of currentMenuItem as text
+        on error
+          set currentTitle to ""
+        end try
+        if currentIdentifier ends with "isDefaultProfile=true" then
+          if targetProfile is "default" then
+            set profileMenuItem to currentMenuItem
+            exit repeat
+          end if
+        else if currentIdentifier starts with "New" and currentIdentifier ends with "Window?isDefaultProfile=false" then
+          set profileIdentifierName to text 4 thru ((offset of "Window?isDefaultProfile=false" in currentIdentifier) - 1) of currentIdentifier
+          if profileIdentifierName is targetProfile then
+            set profileMenuItem to currentMenuItem
+            exit repeat
+          end if
+        else if targetProfile is not "default" and currentTitle contains targetProfile then
           set profileMenuItem to currentMenuItem
           exit repeat
         end if
