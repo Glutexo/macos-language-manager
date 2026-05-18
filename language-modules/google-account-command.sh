@@ -14,6 +14,7 @@ inherit_macos=false
 disable_auto_add=false
 enable_auto_add=false
 list_browser_profiles=false
+refresh_browser_profiles=false
 all_browser_profiles=false
 selected_browser_profiles=()
 google_current_language_ids=()
@@ -37,6 +38,10 @@ read_current_languages_json() {
 
 list_available_browser_profiles() {
   "$helper_command" list-profiles
+}
+
+refresh_available_browser_profiles() {
+  "$helper_command" refresh-profiles
 }
 
 disable_google_auto_add() {
@@ -258,6 +263,7 @@ show_usage() {
   echo "  --browser-profile NAME  Use the named browser profile. Repeatable."
   echo "  --all-browser-profiles  Apply the command to every valid browser profile."
   echo "  --list-browser-profiles Print valid browser profile names."
+  echo "  --refresh-browser-profiles Refresh the stored Safari browser profile names through UI automation."
   echo
   echo "Language arguments:"
   echo "  xx        Move the language at the front."
@@ -271,6 +277,7 @@ show_usage() {
   echo "  $display_command --disable-auto-add"
   echo "  $display_command --enable-auto-add"
   echo "  $display_command --list-browser-profiles"
+  echo "  $display_command --refresh-browser-profiles"
   echo "  $display_command --browser-profile default"
   echo "  $display_command --inherit-macos"
   echo "  $display_command --dry-run \"English\""
@@ -293,6 +300,7 @@ show_usage() {
   echo "  --disable-auto-add clicks Google's \"Stop adding\" flow before the write."
   echo "  --enable-auto-add turns Google's automatic language additions back on."
   echo "  --browser-profile can be repeated, and --all-browser-profiles targets every valid browser profile."
+  echo "  --refresh-browser-profiles updates the stored Safari profile-name cache through Safari's File menu."
   echo "  This flow is experimental because Google does not expose a public API for preferred-language ordering."
 }
 
@@ -334,6 +342,9 @@ parse_arguments() {
         ;;
       --list-browser-profiles)
         list_browser_profiles=true
+        ;;
+      --refresh-browser-profiles)
+        refresh_browser_profiles=true
         ;;
       --force|-f)
         fail "The Google Account module does not support --force."
@@ -473,10 +484,18 @@ main() {
   parse_arguments "$@"
 
   if $list_browser_profiles; then
-    if $all_browser_profiles || [ "${#selected_browser_profiles[@]}" -gt 0 ] || [ "${#requested_languages[@]}" -gt 0 ] || [ "${#removed_languages[@]}" -gt 0 ] || $inherit_macos || $disable_auto_add || $enable_auto_add; then
+    if $refresh_browser_profiles || $all_browser_profiles || [ "${#selected_browser_profiles[@]}" -gt 0 ] || [ "${#requested_languages[@]}" -gt 0 ] || [ "${#removed_languages[@]}" -gt 0 ] || $inherit_macos || $disable_auto_add || $enable_auto_add; then
       fail "The --list-browser-profiles mode does not accept other options."
     fi
     list_available_browser_profiles
+    return 0
+  fi
+
+  if $refresh_browser_profiles; then
+    if $all_browser_profiles || [ "${#selected_browser_profiles[@]}" -gt 0 ] || [ "${#requested_languages[@]}" -gt 0 ] || [ "${#removed_languages[@]}" -gt 0 ] || $inherit_macos || $disable_auto_add || $enable_auto_add; then
+      fail "The --refresh-browser-profiles mode does not accept other options."
+    fi
+    refresh_available_browser_profiles
     return 0
   fi
 

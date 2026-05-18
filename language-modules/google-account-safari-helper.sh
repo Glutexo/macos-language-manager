@@ -5,6 +5,7 @@ preferred_languages_url="${GOOGLE_ACCOUNT_LANGUAGE_URL:-https://myaccount.google
 timeout_seconds="${GOOGLE_ACCOUNT_LANGUAGE_TIMEOUT:-180}"
 session_marker="${GOOGLE_ACCOUNT_SAFARI_SESSION:-codex-google-language-$$-$(date +%s)}"
 browser_profile="${GOOGLE_ACCOUNT_BROWSER_PROFILE:-}"
+profile_cache_path="${GOOGLE_ACCOUNT_BROWSER_PROFILE_CACHE:-$HOME/Library/Application Support/macos-language-manager/google-account-browser-profiles.txt}"
 window_id=""
 
 fail() {
@@ -14,6 +15,20 @@ fail() {
 
 run_applescript() {
   osascript - "$@"
+}
+
+read_profile_cache() {
+  [ -r "$profile_cache_path" ] || return 1
+
+  awk 'NF && !seen[$0]++' "$profile_cache_path"
+}
+
+write_profile_cache() {
+  local cache_dir=""
+
+  cache_dir="$(dirname "$profile_cache_path")"
+  mkdir -p "$cache_dir"
+  awk 'NF && !seen[$0]++' >"$profile_cache_path"
 }
 
 find_safari_tabs_db() {
@@ -46,6 +61,11 @@ list_browser_profiles() {
     return 0
   fi
 
+  if read_profile_cache >/dev/null 2>&1; then
+    read_profile_cache
+    return 0
+  fi
+
   safari_tabs_db="$(find_safari_tabs_db 2>/dev/null || true)"
   if [ -n "$safari_tabs_db" ]; then
     detected_profiles="$(
@@ -69,6 +89,65 @@ list_browser_profiles() {
   printf 'default\n'
 }
 
+refresh_browser_profiles() {
+  local raw_menu_items=""
+  local profile_names=""
+
+  raw_menu_items="$(run_applescript <<'APPLESCRIPT'
+tell application "Safari"
+  activate
+end tell
+
+tell application "System Events"
+  tell process "Safari"
+    set frontmost to true
+    repeat 30 times
+      try
+        set fileMenuItems to name of every menu item of menu 1 of menu bar item 3 of menu bar 1
+        set AppleScript's text item delimiters to linefeed
+        set joinedItems to fileMenuItems as text
+        set AppleScript's text item delimiters to ""
+        return joinedItems
+      on error
+        delay 0.2
+      end try
+    end repeat
+  end tell
+end tell
+
+error "Could not read Safari's File menu."
+APPLESCRIPT
+)"
+
+  profile_names="$(
+    RAW_MENU_ITEMS="$raw_menu_items" python3 - <<'PY'
+import os
+import re
+
+raw = os.environ["RAW_MENU_ITEMS"]
+items = [part.strip() for part in raw.splitlines() if part.strip() and part.strip() != "missing value"]
+profiles = []
+
+for item in items:
+    match = re.search(r'[\"“”„«»「」『』](.+?)[\"“”„«»「」『』]', item)
+    if match:
+        profiles.append(match.group(1))
+
+seen = set()
+for profile in profiles:
+    if profile and profile not in seen:
+        print(profile)
+        seen.add(profile)
+
+if not seen:
+    print("default")
+PY
+  )"
+
+  printf '%s\n' "$profile_names" | write_profile_cache
+  printf '%s\n' "$profile_names"
+}
+
 ensure_valid_browser_profile() {
   local candidate="$1"
 
@@ -81,9 +160,70 @@ ensure_valid_browser_profile() {
   fail "Unknown browser profile: $candidate"
 }
 
+safari_open_profile_page() {
+  local url="$1"
+  local profile_name="$2"
+  local separator='?'
+
+  if [[ "$url" == *\?* ]]; then
+    separator='&'
+  fi
+  url="${url}${separator}codex_session=${session_marker}"
+
+  GOOGLE_ACCOUNT_SAFARI_TARGET_URL="$url" GOOGLE_ACCOUNT_SAFARI_TARGET_PROFILE="$profile_name" run_applescript <<'APPLESCRIPT'
+set targetUrl to system attribute "GOOGLE_ACCOUNT_SAFARI_TARGET_URL"
+set targetProfile to system attribute "GOOGLE_ACCOUNT_SAFARI_TARGET_PROFILE"
+
+tell application "Safari"
+  activate
+  set existingIds to id of every window
+end tell
+
+tell application "System Events"
+  tell process "Safari"
+    set frontmost to true
+    if targetProfile is "" or targetProfile is "default" then
+      click menu item 1 of menu 1 of menu bar item 3 of menu bar 1
+    else
+      set profileMenuItem to missing value
+      repeat with currentMenuItem in every menu item of menu 1 of menu bar item 3 of menu bar 1
+        if (name of currentMenuItem) contains targetProfile then
+          set profileMenuItem to currentMenuItem
+          exit repeat
+        end if
+      end repeat
+      if profileMenuItem is missing value then
+        error "Could not locate Safari's profile menu item for " & targetProfile
+      end if
+      click profileMenuItem
+    end if
+  end tell
+end tell
+
+tell application "Safari"
+  repeat 60 times
+    repeat with currentWindow in windows
+      if existingIds does not contain (id of currentWindow) then
+        set URL of current tab of currentWindow to targetUrl
+        return id of currentWindow
+      end if
+    end repeat
+    delay 0.2
+  end repeat
+end tell
+
+error "Could not create a dedicated Safari window for browser profile " & targetProfile
+APPLESCRIPT
+}
+
 safari_open_page() {
   local url="$1"
   local separator='?'
+
+  if [ -n "$browser_profile" ]; then
+    safari_open_profile_page "$url" "$browser_profile"
+    return 0
+  fi
 
   if [[ "$url" == *\?* ]]; then
     separator='&'
@@ -504,6 +644,10 @@ shift || true
 case "$command" in
   list-profiles)
     list_browser_profiles
+    exit 0
+    ;;
+  refresh-profiles)
+    refresh_browser_profiles
     exit 0
     ;;
 esac

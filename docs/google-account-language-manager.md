@@ -28,6 +28,7 @@ Version 1 is intentionally narrow:
 ```bash
 ./manage-languages.sh google-account
 ./manage-languages.sh google-account --list-browser-profiles
+./manage-languages.sh google-account --refresh-browser-profiles
 ./manage-languages.sh google-account --browser-profile work --browser-profile personal
 ./manage-languages.sh google-account --disable-auto-add
 ./manage-languages.sh google-account --enable-auto-add
@@ -52,6 +53,7 @@ Token forms:
 - `--browser-profile NAME` → target one browser profile; repeat the switch to target more than one
 - `--all-browser-profiles` → target every valid browser profile
 - `--list-browser-profiles` → print the valid browser profile names
+- `--refresh-browser-profiles` → refresh the stored Safari profile-name cache through UI automation
 - `--disable-auto-add` → turn off Google's `Automatically add languages` setting before writing; with no language arguments it performs only that maintenance step
 - `--enable-auto-add` → turn Google's `Automatically add languages` setting back on before writing; with no language arguments it performs only that maintenance step
 
@@ -72,8 +74,9 @@ The helper:
 5. when writing, opens a dedicated Safari window for the session and sends the same Google internal update request that the page uses for preferred-language ordering
 6. when `--disable-auto-add` is requested, follows Google's own `Stop adding` confirmation flow through page JavaScript without depending on the window being frontmost
 7. when `--enable-auto-add` is requested, toggles the same setting back on through page JavaScript
-8. when browser profiles are selected, runs the same flow once per selected profile
-9. when profile names are needed, reads them from Safari's `SafariTabs.db` profile rows when that database is available, then falls back to `default`
+8. when browser profiles are selected, opens a dedicated Safari window for that profile through Safari's File menu and runs the same flow once per selected profile
+9. when `--refresh-browser-profiles` is requested, reads Safari's File menu through UI automation, extracts `New … Window` profile names, and stores them in a local cache
+10. when profile names are needed during normal runs, reads the local cache first, then Safari's `SafariTabs.db` profile rows when that database is available, then falls back to `default`
 
 The page is forced to `hl=en` so the automation can rely on stable English UI text when it looks for sign-in or page-state hints.
 
@@ -87,7 +90,7 @@ The page is forced to `hl=en` so the automation can rely on stable English UI te
 
 - the write path depends on internal Google page requests and maintenance controls rather than a supported public API, so Google-side changes may still break it
 - Google may still surface `Added for you` entries separately from the main preferred-language list; the command warns when it sees them
-- Safari does not expose named profiles through its AppleScript dictionary here; the helper therefore reads names from `~/Library/Containers/com.apple.Safari/Data/Library/Safari/SafariTabs.db` when available, but profile-specific window targeting still depends on Safari behavior that is not publicly documented
+- Safari does not expose named profiles through its AppleScript dictionary here; the helper therefore uses Safari UI automation for explicit profile discovery and profile-window creation
 - page structure changes on Google's side may break the helper
 - there is no backup or restore mode because the data lives remotely in the Google account
 - `--force` is not supported for this module
@@ -99,6 +102,7 @@ The page is forced to `hl=en` so the automation can rely on stable English UI te
 - `GOOGLE_ACCOUNT_LANGUAGE_URL` → override the Google Account language page URL
 - `GOOGLE_ACCOUNT_LANGUAGE_TIMEOUT` → timeout in seconds for sign-in and page loading
 - `GOOGLE_ACCOUNT_SAFARI_TABS_DB` → override the Safari profile database path, useful for tests
+- `GOOGLE_ACCOUNT_BROWSER_PROFILE_CACHE` → override the stored Safari profile-name cache path
 - `GOOGLE_ACCOUNT_BROWSER_PROFILE` → helper-internal selector for one browser profile
 - `GOOGLE_ACCOUNT_BROWSER_PROFILES` → newline-separated helper override for valid browser profile names, useful for tests
 

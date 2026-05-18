@@ -123,6 +123,9 @@ case "$command" in
   list-profiles)
     printf 'default\nwork\npersonal\n'
     ;;
+  refresh-profiles)
+    printf 'default\nwork\npersonal\n'
+    ;;
   read)
     printf 'English\nCzech\n'
     ;;
@@ -233,9 +236,13 @@ assert_contains "$output" '--enable-auto-add' "google-account help should show a
 assert_contains "$output" '--browser-profile NAME' "google-account help should show browser profile selection"
 assert_contains "$output" '--all-browser-profiles' "google-account help should show all-browser-profiles support"
 assert_contains "$output" '--list-browser-profiles' "google-account help should show browser profile listing"
+assert_contains "$output" '--refresh-browser-profiles' "google-account help should show browser profile refresh support"
 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --list-browser-profiles)"
 assert_contains "$output" $'default\nwork\npersonal' "google-account should list valid browser profiles"
+
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --refresh-browser-profiles)"
+assert_contains "$output" $'default\nwork\npersonal' "google-account should refresh and print valid browser profiles"
 
 google_helper_test_home="$tmp_dir/google-helper-home"
 google_helper_test_db_dir="$google_helper_test_home/Library/Containers/com.apple.Safari/Data/Library/Safari"
@@ -334,6 +341,9 @@ assert_contains "$output" "Use either --disable-auto-add or --enable-auto-add, n
 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --browser-profile nope 2>&1 || true)"
 assert_contains "$output" "Unknown browser profile: nope" "google-account should reject an unknown browser profile"
+
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --refresh-browser-profiles --browser-profile work 2>&1 || true)"
+assert_contains "$output" "The --refresh-browser-profiles mode does not accept other options." "google-account should keep browser profile refresh exclusive"
 
 output="$("$script" steam macos ja 2>&1 || true)"
 assert_contains "$output" "The macos module cannot be combined with other modules." "macos should stay exclusive"
