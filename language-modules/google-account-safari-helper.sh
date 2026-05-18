@@ -16,13 +16,54 @@ run_applescript() {
   osascript - "$@"
 }
 
+find_safari_tabs_db() {
+  local candidate=""
+
+  for candidate in \
+    "${GOOGLE_ACCOUNT_SAFARI_TABS_DB:-}" \
+    "$HOME/Library/Containers/com.apple.Safari/Data/Library/Safari/SafariTabs.db" \
+    "$HOME/Library/Containers/Safari/Data/Library/Safari/SafariTabs.db"
+  do
+    [ -n "$candidate" ] || continue
+    if [ -f "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 list_browser_profiles() {
+  local safari_tabs_db=""
+  local detected_profiles=""
+
   if [ -n "${GOOGLE_ACCOUNT_BROWSER_PROFILES:-}" ]; then
     printf '%s\n' "$GOOGLE_ACCOUNT_BROWSER_PROFILES" | while IFS= read -r profile_name; do
       [ -n "$profile_name" ] || continue
       printf '%s\n' "$profile_name"
     done
     return 0
+  fi
+
+  safari_tabs_db="$(find_safari_tabs_db 2>/dev/null || true)"
+  if [ -n "$safari_tabs_db" ]; then
+    detected_profiles="$(
+      sqlite3 -readonly "$safari_tabs_db" "
+        SELECT CASE
+          WHEN external_uuid = 'DefaultProfile' THEN 'default'
+          WHEN title = '' THEN external_uuid
+          ELSE title
+        END AS profile_name
+        FROM bookmarks
+        WHERE type = 1 AND subtype = 2
+        ORDER BY CASE WHEN external_uuid = 'DefaultProfile' THEN 0 ELSE 1 END, order_index, id;
+      " 2>/dev/null | awk 'NF && !seen[$0]++' || true
+    )"
+    if [ -n "$detected_profiles" ]; then
+      printf '%s\n' "$detected_profiles"
+      return 0
+    fi
   fi
 
   printf 'default\n'

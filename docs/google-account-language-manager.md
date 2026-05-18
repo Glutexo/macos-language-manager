@@ -73,6 +73,7 @@ The helper:
 6. when `--disable-auto-add` is requested, follows Google's own `Stop adding` confirmation flow through page JavaScript without depending on the window being frontmost
 7. when `--enable-auto-add` is requested, toggles the same setting back on through page JavaScript
 8. when browser profiles are selected, runs the same flow once per selected profile
+9. when profile names are needed, reads them from Safari's `SafariTabs.db` profile rows when that database is available, then falls back to `default`
 
 The page is forced to `hl=en` so the automation can rely on stable English UI text when it looks for sign-in or page-state hints.
 
@@ -86,7 +87,7 @@ The page is forced to `hl=en` so the automation can rely on stable English UI te
 
 - the write path depends on internal Google page requests and maintenance controls rather than a supported public API, so Google-side changes may still break it
 - Google may still surface `Added for you` entries separately from the main preferred-language list; the command warns when it sees them
-- Safari does not expose named profiles through its AppleScript dictionary here, so the helper currently reports the scriptable `default` profile unless a test override provides more names
+- Safari does not expose named profiles through its AppleScript dictionary here; the helper therefore reads names from `~/Library/Containers/com.apple.Safari/Data/Library/Safari/SafariTabs.db` when available, but profile-specific window targeting still depends on Safari behavior that is not publicly documented
 - page structure changes on Google's side may break the helper
 - there is no backup or restore mode because the data lives remotely in the Google account
 - `--force` is not supported for this module
@@ -97,6 +98,7 @@ The page is forced to `hl=en` so the automation can rely on stable English UI te
 - `GOOGLE_ACCOUNT_LANGUAGE_HELPER` → override the Safari helper, useful for tests
 - `GOOGLE_ACCOUNT_LANGUAGE_URL` → override the Google Account language page URL
 - `GOOGLE_ACCOUNT_LANGUAGE_TIMEOUT` → timeout in seconds for sign-in and page loading
+- `GOOGLE_ACCOUNT_SAFARI_TABS_DB` → override the Safari profile database path, useful for tests
 - `GOOGLE_ACCOUNT_BROWSER_PROFILE` → helper-internal selector for one browser profile
 - `GOOGLE_ACCOUNT_BROWSER_PROFILES` → newline-separated helper override for valid browser profile names, useful for tests
 

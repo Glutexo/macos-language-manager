@@ -101,6 +101,7 @@ Notes:
 - `--browser-profile NAME` can be repeated to target one or more browser profiles.
 - `--all-browser-profiles` applies the same operation to every valid browser profile.
 - `--list-browser-profiles` prints the valid browser profile names that the automation currently accepts.
+- Safari profile names are read from Safari's local profile database when it is available; otherwise the helper falls back to `default`.
 - `--disable-auto-add` turns off Google's `Automatically add languages` setting before writing, and it can be used on its own without language arguments.
 - `--enable-auto-add` turns Google's `Automatically add languages` setting back on, and it can also be used on its own.
 - Version 1 reorders, removes, or adds languages through Safari automation.

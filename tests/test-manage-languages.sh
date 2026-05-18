@@ -108,6 +108,7 @@ PY
 
 google_helper_stub="$tmp_dir/google-account-helper.sh"
 google_helper_log="$tmp_dir/google-account-helper.log"
+google_helper_real="$repo_root/language-modules/google-account-safari-helper.sh"
 cat > "$google_helper_stub" <<'EOS'
 #!/bin/bash
 set -euo pipefail
@@ -235,6 +236,35 @@ assert_contains "$output" '--list-browser-profiles' "google-account help should 
 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --list-browser-profiles)"
 assert_contains "$output" $'default\nwork\npersonal' "google-account should list valid browser profiles"
+
+google_helper_test_home="$tmp_dir/google-helper-home"
+google_helper_test_db_dir="$google_helper_test_home/Library/Containers/com.apple.Safari/Data/Library/Safari"
+mkdir -p "$google_helper_test_db_dir"
+google_helper_test_db="$google_helper_test_db_dir/SafariTabs.db"
+GOOGLE_HELPER_TEST_DB="$google_helper_test_db" python3 - <<'PY'
+import os
+import sqlite3
+
+path = os.environ["GOOGLE_HELPER_TEST_DB"]
+conn = sqlite3.connect(path)
+conn.execute(
+    "create table bookmarks (id integer primary key, title text, external_uuid text, type integer, subtype integer, order_index integer)"
+)
+conn.executemany(
+    "insert into bookmarks (id, title, external_uuid, type, subtype, order_index) values (?, ?, ?, ?, ?, ?)",
+    [
+        (1, "Ignored Folder", "folder-1", 2, 0, 0),
+        (2, "", "DefaultProfile", 1, 2, 0),
+        (3, "Work", "uuid-work", 1, 2, 1),
+        (4, "Personal", "uuid-personal", 1, 2, 2),
+    ],
+)
+conn.commit()
+conn.close()
+PY
+
+output="$(HOME="$google_helper_test_home" "$google_helper_real" list-profiles)"
+assert_contains "$output" $'default\nWork\nPersonal' "google-account helper should read Safari profile names from SafariTabs.db"
 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account)"
 assert_contains "$output" "Current Google Account preferred languages:" "google-account read mode should print a heading"
