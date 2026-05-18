@@ -459,6 +459,101 @@ language_page_script() {
     });
   }
 
+  if (mode === "resolve-labels") {
+    const buildLanguageCatalog = () => {
+      const html = document.documentElement?.outerHTML || "";
+      const entryPattern = /\[\["ac\.c\.lang\.l","([^"]+)","([^"]+)","([^"]+)","([^"]*)","([^"]*)"\],0,\d+(?:,null,\[.*?\],\["([^"]+)","([^"]+)"\])?/gs;
+      const catalog = [];
+      let match;
+
+      while ((match = entryPattern.exec(html)) !== null) {
+        catalog.push({
+          englishName: match[1],
+          languageId: match[2],
+          nativeName: match[3],
+          englishSearch: match[4],
+          nativeSearch: match[5],
+          defaultId: match[6] || match[2],
+          defaultRegion: match[7] || ""
+        });
+      }
+
+      return catalog.map((item) => ({
+        ...item,
+        englishSlug: slug(item.englishName),
+        nativeSlug: slug(item.nativeName),
+        englishSearchSlug: slug(item.englishSearch),
+        nativeSearchSlug: slug(item.nativeSearch),
+        displaySlug: slug(item.defaultRegion ? `${item.nativeName} (${item.defaultRegion})` : item.nativeName)
+      }));
+    };
+
+    const catalog = buildLanguageCatalog();
+    const resolved = requested.map((requestedLabel) => {
+      const requestedSlug = slug(requestedLabel);
+      const currentMatch = currentRows.find((item) =>
+        item.slug === requestedSlug ||
+        item.labelSlug === requestedSlug ||
+        item.slug.includes(requestedSlug) ||
+        requestedSlug.includes(item.slug)
+      );
+      if (currentMatch) {
+        return currentMatch.display;
+      }
+
+      const catalogMatch = catalog.find((item) =>
+        [
+          item.englishSlug,
+          item.nativeSlug,
+          item.englishSearchSlug,
+          item.nativeSearchSlug,
+          item.displaySlug
+        ].some((candidate) =>
+          candidate && (
+            candidate === requestedSlug ||
+            candidate.includes(requestedSlug) ||
+            requestedSlug.includes(candidate)
+          )
+        )
+      );
+
+      if (catalogMatch) {
+        return catalogMatch.defaultRegion ? `${catalogMatch.nativeName} (${catalogMatch.defaultRegion})` : catalogMatch.nativeName;
+      }
+
+      return requestedLabel;
+    });
+
+    return JSON.stringify({ status: "ok", labels: resolved });
+  }
+
+  if (mode === "write-ids") {
+    const actualIds = currentRows.map((item) => item.id);
+    if (JSON.stringify(actualIds) === JSON.stringify(requested)) {
+      return JSON.stringify({ status: "ok", languages: currentRows.map((item) => item.display) });
+    }
+
+    if (window.__codexLanguageUpdateSubmitted !== JSON.stringify(requested)) {
+      const submission = submitLanguageUpdate(requested);
+      if (!submission.ok) {
+        return JSON.stringify({ status: "error", message: submission.message });
+      }
+      window.__codexLanguageUpdateSubmitted = JSON.stringify(requested);
+      window.location.reload();
+      return JSON.stringify({ status: "waiting", message: "Submitting the Google preferred-language update." });
+    }
+
+    return JSON.stringify({ status: "waiting", message: "Waiting for the Google preferred-language page to refresh." });
+  }
+
+  if (mode === "write-ids-immediate") {
+    const submission = submitLanguageUpdate(requested);
+    if (!submission.ok) {
+      return JSON.stringify({ status: "error", message: submission.message });
+    }
+    return JSON.stringify({ status: "ok" });
+  }
+
   if (mode === "disable-auto-add") {
     if (stopAddingButton) {
       stopAddingButton.click();
@@ -722,6 +817,17 @@ case "$command" in
     ;;
   read-json)
     wait_for_payload read-json
+    ;;
+  resolve-labels)
+    wait_for_payload resolve-labels "$(requested_json_from_args "$@")" | json_extract labels
+    ;;
+  write-ids)
+    [ "$#" -gt 0 ] || fail "The write-ids helper requires at least one requested language id."
+    wait_for_payload write-ids "$(requested_json_from_args "$@")" >/dev/null
+    ;;
+  write-ids-immediate)
+    [ "$#" -gt 0 ] || fail "The write-ids-immediate helper requires at least one requested language id."
+    wait_for_payload write-ids-immediate "$(requested_json_from_args "$@")" >/dev/null
     ;;
   disable-auto-add)
     wait_for_payload disable-auto-add >/dev/null

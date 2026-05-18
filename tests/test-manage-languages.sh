@@ -136,6 +136,15 @@ case "$command" in
       printf '%s\n' '{"status":"ok","auto_add_enabled":false,"languages":[{"id":"en","display":"English","added_for_you":false},{"id":"cs","display":"Czech","added_for_you":false}]}'
     fi
     ;;
+  resolve-labels)
+    for label in "$@"; do
+      case "$label" in
+        German) printf 'German\n' ;;
+        Czech) printf 'Czech\n' ;;
+        *) printf '%s\n' "$label" ;;
+      esac
+    done
+    ;;
   disable-auto-add)
     printf 'disable-auto-add\t%s\n' "${profile_name:-default}" >>"$log_file"
     ;;
@@ -330,6 +339,13 @@ assert_contains "$output" "Browser profile: default" "google-account all-known-b
 assert_contains "$output" "Browser profile: work" "google-account all-known-browser-profiles should print the second profile heading"
 assert_contains "$output" "Browser profile: personal" "google-account all-known-browser-profiles should print the third profile heading"
 assert_contains "$(cat "$google_helper_log")" $'write\tdefault\nCzech\nEnglish\nwrite\twork\nCzech\nEnglish\nwrite\tpersonal\nCzech\nEnglish' "google-account all-known-browser-profiles should write to every known profile"
+
+rm -f "$google_helper_log"
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" MACOS_APP_LANGUAGE_INHERIT=$'de-CZ\ncs-CZ' "$script" google-account --all-known-browser-profiles --dry-run --inherit-macos)"
+assert_contains "$output" "Browser profile: default" "google-account all-known-browser-profiles inheritance should print the first profile heading"
+assert_contains "$output" "Browser profile: work" "google-account all-known-browser-profiles inheritance should print the second profile heading"
+assert_contains "$output" "Browser profile: personal" "google-account all-known-browser-profiles inheritance should print the third profile heading"
+assert_contains "$output" $'New Google Account preferred languages:\n  German\n  Czech' "google-account all-known-browser-profiles inheritance should keep per-profile inherited ordering isolated"
 
 rm -f "$google_helper_log"
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --disable-auto-add)"

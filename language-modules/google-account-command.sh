@@ -64,6 +64,14 @@ run_helper_for_profile() {
   fi
 }
 
+canonicalize_google_language_labels() {
+  local profile_name="$1"
+  shift
+
+  [ "$#" -gt 0 ] || return 0
+  run_helper_for_profile "$profile_name" resolve-labels "$@"
+}
+
 read_macos_preferred_languages() {
   local raw_language=""
   local candidate=""
@@ -118,16 +126,28 @@ let regionCode = components.languageComponents.region?.identifier
 
 if let languageCode {
     append(english.localizedString(forLanguageCode: languageCode))
+    append(locale.localizedString(forLanguageCode: languageCode))
 }
 append(english.localizedString(forIdentifier: normalizedTag))
+append(locale.localizedString(forIdentifier: normalizedTag))
 if let languageCode, let regionCode,
    let languageName = english.localizedString(forLanguageCode: languageCode),
    let regionName = english.localizedString(forRegionCode: regionCode) {
     append("\(languageName) (\(regionName))")
 }
+if let languageCode, let regionCode,
+   let languageName = locale.localizedString(forLanguageCode: languageCode),
+   let regionName = locale.localizedString(forRegionCode: regionCode) {
+    append("\(languageName) (\(regionName))")
+}
 if let languageCode, let scriptCode,
    let languageName = english.localizedString(forLanguageCode: languageCode),
    let scriptName = english.localizedString(forScriptCode: scriptCode) {
+    append("\(languageName) (\(scriptName))")
+}
+if let languageCode, let scriptCode,
+   let languageName = locale.localizedString(forLanguageCode: languageCode),
+   let scriptName = locale.localizedString(forScriptCode: scriptCode) {
     append("\(languageName) (\(scriptName))")
 }
 
@@ -144,19 +164,17 @@ resolve_inherited_google_language() {
   local current_language_id=""
   local label_candidates=()
   local normalized_tag=""
-  local base_tag=""
 
   language_tag="$1"
   [ -n "$language_tag" ] || fail "Could not detect the current macOS preferred language."
   normalized_tag="${language_tag//_/-}"
-  base_tag="${normalized_tag%%-*}"
 
   if [ "${#google_current_language_ids[@]}" -eq "${#google_current_languages[@]}" ]; then
     local index=0
     while [ "$index" -lt "${#google_current_language_ids[@]}" ]; do
       current_language_id="${google_current_language_ids[$index]}"
       current_language="${google_current_languages[$index]}"
-      if [ "$current_language_id" = "$normalized_tag" ] || [ "${current_language_id%%-*}" = "$base_tag" ]; then
+      if [ "$current_language_id" = "$normalized_tag" ]; then
         printf '%s\n' "$current_language"
         return 0
       fi
@@ -179,6 +197,10 @@ resolve_inherited_google_language() {
         printf '%s\n' "$current_language"
         return 0
       fi
+      if [ "$candidate" = "${current_language%% (*}" ]; then
+        printf '%s\n' "$current_language"
+        return 0
+      fi
     done
   done
 
@@ -186,8 +208,10 @@ resolve_inherited_google_language() {
 }
 
 prepare_inherited_google_language_requests() {
+  local profile_name="$1"
   local macos_languages=()
   local desired_google_languages=()
+  local canonical_google_languages=()
   local macos_language=""
   local google_language=""
   local current_language=""
@@ -206,6 +230,15 @@ prepare_inherited_google_language_requests() {
     google_language="$(resolve_inherited_google_language "$macos_language")"
     desired_google_languages+=("$google_language")
   done
+
+  while IFS= read -r google_language; do
+    [ -n "$google_language" ] || continue
+    canonical_google_languages+=("$google_language")
+  done < <(canonicalize_google_language_labels "$profile_name" "${desired_google_languages[@]}")
+
+  if [ "${#canonical_google_languages[@]}" -gt 0 ]; then
+    desired_google_languages=("${canonical_google_languages[@]}")
+  fi
 
   for wanted in "${desired_google_languages[@]}"; do
     parse_language_argument "$wanted"
@@ -235,7 +268,7 @@ matches_requested_language() {
   local requested="$1"
   local language="$2"
 
-  [ "$(normalize_whitespace "$requested")" = "$(normalize_whitespace "$language")" ]
+  [ "$(normalize_whitespace "$requested" | tr '[:upper:]' '[:lower:]')" = "$(normalize_whitespace "$language" | tr '[:upper:]' '[:lower:]')" ]
 }
 
 build_missing_language_tag() {
@@ -487,8 +520,25 @@ main() {
   local multiple_profiles=false
   local profile_loop_index=0
   local last_profile_index=0
+  local original_requested_languages=()
+  local original_removed_languages=()
+  local original_operation_kinds=()
+  local original_operation_sources=()
+  local original_operation_anchors=()
 
   parse_arguments "$@"
+
+  if [ "${#requested_languages[@]}" -gt 0 ]; then
+    original_requested_languages=("${requested_languages[@]}")
+  fi
+  if [ "${#removed_languages[@]}" -gt 0 ]; then
+    original_removed_languages=("${removed_languages[@]}")
+  fi
+  if [ "${#operation_kinds[@]}" -gt 0 ]; then
+    original_operation_kinds=("${operation_kinds[@]}")
+    original_operation_sources=("${operation_sources[@]}")
+    original_operation_anchors=("${operation_anchors[@]}")
+  fi
 
   if $list_browser_profiles; then
     if $refresh_browser_profiles || $all_browser_profiles || $all_known_browser_profiles || [ "${#selected_browser_profiles[@]}" -gt 0 ] || [ "${#requested_languages[@]}" -gt 0 ] || [ "${#removed_languages[@]}" -gt 0 ] || $inherit_macos || $disable_auto_add || $enable_auto_add; then
@@ -516,7 +566,19 @@ main() {
   last_profile_index=$((${#target_browser_profiles[@]} - 1))
 
   for profile_name in "${target_browser_profiles[@]}"; do
+    reset_ordered_language_request_state
     reset_ordered_language_runtime_state
+    if [ "${#original_requested_languages[@]}" -gt 0 ]; then
+      requested_languages=("${original_requested_languages[@]}")
+    fi
+    if [ "${#original_removed_languages[@]}" -gt 0 ]; then
+      removed_languages=("${original_removed_languages[@]}")
+    fi
+    if [ "${#original_operation_kinds[@]}" -gt 0 ]; then
+      operation_kinds=("${original_operation_kinds[@]}")
+      operation_sources=("${original_operation_sources[@]}")
+      operation_anchors=("${original_operation_anchors[@]}")
+    fi
     result=()
     base_index=0
     operation_order=0
@@ -548,7 +610,7 @@ main() {
       if [ "${#requested_languages[@]}" -gt 0 ] || [ "${#removed_languages[@]}" -gt 0 ]; then
         fail "The --inherit-macos mode does not accept explicit language arguments."
       fi
-      prepare_inherited_google_language_requests
+      prepare_inherited_google_language_requests "$profile_name"
     fi
 
     if [ "${#requested_languages[@]}" -eq 0 ] && [ "${#removed_languages[@]}" -eq 0 ]; then
