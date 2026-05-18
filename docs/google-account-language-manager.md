@@ -12,7 +12,7 @@ Version 1 is intentionally narrow:
 - it reads the current preferred-language list from the Google Account language page
 - it uses the same command-line token syntax as the macOS module
 - it can reorder, remove, or add languages through the Google Account page
-- it supports `--inherit-macos` by deriving the first macOS preferred language and resolving it against the current Google list or an addable Google language label
+- it supports `--inherit-macos` by resolving the full current macOS preferred language list against the current Google list or addable Google language labels
 - it does not use a public Google API, because no supported public API for preferred-language ordering was identified
 
 ## Entry Point
@@ -42,7 +42,7 @@ Token forms:
 - `-xx` → remove the matching language after ordering
 - `xx:yy` or `+xx:yy` → move `xx` immediately before `yy`
 - `xx:` or `+xx:` → move `xx` to the end
-- `--inherit-macos` or `-M` → move or add the first current macOS preferred language at the front
+- `--inherit-macos` or `-M` → replace the Google Account list with the full current macOS preferred language order
 
 ## Automation Strategy
 

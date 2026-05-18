@@ -15,6 +15,25 @@ run_applescript() {
   osascript - "$@"
 }
 
+safari_type_text() {
+  local value="$1"
+
+  run_applescript "$window_id" "$value" <<'APPLESCRIPT' >/dev/null
+on run argv
+  set targetWindowId to (item 1 of argv) as integer
+  set typedValue to item 2 of argv
+  tell application "Safari"
+    activate
+    set index of (first window whose id is targetWindowId) to 1
+  end tell
+  tell application "System Events"
+    keystroke "a" using command down
+    keystroke typedValue
+  end tell
+end run
+APPLESCRIPT
+}
+
 safari_open_page() {
   local url="$1"
   local separator='?'
@@ -136,7 +155,7 @@ language_page_script() {
 
   const findClickable = (labels, root = pageRoot) => {
     const wanted = labels.map((label) => slug(label));
-    for (const node of root.querySelectorAll("button, [role='button'], a, div")) {
+    for (const node of root.querySelectorAll("button, [role='button'], a")) {
       if (!isVisible(node)) {
         continue;
       }
@@ -176,18 +195,41 @@ language_page_script() {
 
   const findSearchInput = (root) => {
     return [...root.querySelectorAll("input, textarea")]
-      .find((node) => isVisible(node) && (node.type === "search" || node.type === "text" || node.getAttribute("role") === "combobox"));
+      .find((node) => isVisible(node) && (
+        node.type === "search" ||
+        node.type === "text" ||
+        node.getAttribute("role") === "combobox" ||
+        /add another language/i.test(node.getAttribute("aria-label") || "")
+      ));
   };
 
   const setInputValue = (node, value) => {
-    const prototype = Object.getPrototypeOf(node);
-    const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
-    if (descriptor && descriptor.set) {
-      descriptor.set.call(node, value);
+    node.focus();
+    if (typeof node.click === "function") {
+      node.click();
+    }
+    if (typeof node.select === "function") {
+      node.select();
+    }
+
+    const setter =
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement?.prototype || {}, "value")?.set ||
+      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement?.prototype || {}, "value")?.set;
+
+    if (setter) {
+      setter.call(node, value);
     } else {
       node.value = value;
     }
-    node.dispatchEvent(new Event("input", { bubbles: true }));
+
+    node.dispatchEvent(new KeyboardEvent("keydown", { key: "a", bubbles: true }));
+    try {
+      document.execCommand("selectAll", false);
+      document.execCommand("insertText", false, value);
+    } catch (error) {
+    }
+    node.dispatchEvent(new InputEvent("input", { bubbles: true, data: value, inputType: "insertText" }));
+    node.dispatchEvent(new KeyboardEvent("keyup", { key: "a", bubbles: true }));
     node.dispatchEvent(new Event("change", { bubbles: true }));
   };
 
@@ -212,7 +254,10 @@ language_page_script() {
 
   if (missing.length > 0) {
     const nextMissing = missing[0];
-    if (!addDialog) {
+    const searchRoot = addDialog || pageRoot;
+    const searchInput = findSearchInput(searchRoot);
+
+    if (!searchInput) {
       const addButton = findClickable(["add another language", "add language", "add"], cardRoot || pageRoot) || findClickable(["add another language", "add language", "add"]);
       if (!addButton) {
         return JSON.stringify({ status: "error", message: `Could not locate the add-language button while trying to add ${nextMissing}.` });
@@ -221,24 +266,23 @@ language_page_script() {
       return JSON.stringify({ status: "waiting", message: `Opening the add-language dialog for ${nextMissing}.` });
     }
 
-    const searchInput = findSearchInput(addDialog);
-    if (!searchInput) {
-      return JSON.stringify({ status: "error", message: `Could not locate the language search field while trying to add ${nextMissing}.` });
-    }
-
     if (slug(searchInput.value || "") !== nextMissing) {
-      setInputValue(searchInput, requested[expected.indexOf(nextMissing)]);
-      return JSON.stringify({ status: "waiting", message: `Searching for ${nextMissing}.` });
+      setInputValue(searchInput, "");
+      return JSON.stringify({
+        status: "native-input",
+        value: requested[expected.indexOf(nextMissing)],
+        message: `Typing ${nextMissing} into the add-language field.`
+      });
     }
 
-    const optionNode = findMatchingOption(addDialog, nextMissing);
+    const optionNode = findMatchingOption(searchRoot, nextMissing) || findMatchingOption(pageRoot, nextMissing);
     if (!optionNode) {
       return JSON.stringify({ status: "waiting", message: `Waiting for a search result for ${nextMissing}.` });
     }
 
     optionNode.click();
 
-    const confirmButton = findClickable(["done", "save", "add"], addDialog);
+    const confirmButton = findClickable(["done", "save", "add"], searchRoot) || findClickable(["done", "save", "add"], pageRoot);
     if (confirmButton) {
       confirmButton.click();
     }
@@ -312,6 +356,7 @@ wait_for_payload() {
   local deadline=$((SECONDS + timeout_seconds))
   local payload=""
   local status=""
+  local native_value=""
 
   while [ "$SECONDS" -lt "$deadline" ]; do
     payload="$(run_language_script "$mode" "$requested_json")"
@@ -324,6 +369,11 @@ wait_for_payload() {
       error)
         printf '%s' "$payload" | json_extract message >&2 || true
         return 1
+        ;;
+      native-input)
+        native_value="$(printf '%s' "$payload" | json_extract value)"
+        safari_type_text "$native_value"
+        sleep 1
         ;;
     esac
     sleep 2

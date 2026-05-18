@@ -229,8 +229,8 @@ assert_contains "$output" $'New Google Account preferred languages:\n  English' 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --dry-run "English:Czech")"
 assert_contains "$output" "Google Account preferred languages are already in the requested order." "google-account should treat an anchored no-op as already ordered"
 
-output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" MACOS_APP_LANGUAGE_INHERIT=de-CZ "$script" google-account --dry-run --inherit-macos)"
-assert_contains "$output" $'New Google Account preferred languages:\n  German\n  English\n  Czech' "google-account inheritance should derive an addable Google language label from the first macOS language"
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" MACOS_APP_LANGUAGE_INHERIT=$'de-CZ\ncs-CZ' "$script" google-account --dry-run --inherit-macos)"
+assert_contains "$output" $'New Google Account preferred languages:\n  German\n  Czech' "google-account inheritance should sync the full macOS language list order"
 
 rm -f "$google_helper_log"
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account "Czech")"

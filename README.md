@@ -93,7 +93,7 @@ Usage:
 Notes:
 
 - The command-line token syntax matches the macOS module: `xx`, `+xx`, `-xx`, `xx:yy`, and `xx:`.
-- `--inherit-macos` moves or adds the first macOS preferred language at the front of the Google Account list.
+- `--inherit-macos` replaces the Google Account language list with the full current macOS preferred language order.
 - Version 1 reorders, removes, or adds languages through Safari automation.
 - Arguments are the visible labels from the Google Account page, not a separate ISO-tag mapping layer.
 - Safari may prompt for sign-in or 2-step verification.

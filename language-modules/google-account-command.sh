@@ -32,7 +32,7 @@ read_current_languages_json() {
   "$helper_command" read-json
 }
 
-read_macos_preferred_language() {
+read_macos_preferred_languages() {
   local raw_language=""
   local candidate=""
 
@@ -48,13 +48,12 @@ read_macos_preferred_language() {
     candidate="${candidate//[()\", ]/}"
     if [[ "$candidate" =~ ^[A-Za-z][A-Za-z0-9_-]*$ ]]; then
       printf '%s\n' "$candidate"
-      return 0
     fi
   done <<EOF_LANG
 $raw_language
 EOF_LANG
 
-  return 1
+  return 0
 }
 
 build_language_label_candidates() {
@@ -115,7 +114,7 @@ resolve_inherited_google_language() {
   local normalized_tag=""
   local base_tag=""
 
-  language_tag="$(read_macos_preferred_language || true)"
+  language_tag="$1"
   [ -n "$language_tag" ] || fail "Could not detect the current macOS preferred language."
   normalized_tag="${language_tag//_/-}"
   base_tag="${normalized_tag%%-*}"
@@ -154,6 +153,46 @@ resolve_inherited_google_language() {
   printf '%s\n' "${label_candidates[0]}"
 }
 
+prepare_inherited_google_language_requests() {
+  local macos_languages=()
+  local desired_google_languages=()
+  local macos_language=""
+  local google_language=""
+  local current_language=""
+  local index=0
+  local wanted=""
+  local found=false
+
+  while IFS= read -r macos_language; do
+    [ -n "$macos_language" ] || continue
+    macos_languages+=("$macos_language")
+  done < <(read_macos_preferred_languages)
+
+  [ "${#macos_languages[@]}" -gt 0 ] || fail "Could not detect the current macOS preferred languages."
+
+  for macos_language in "${macos_languages[@]}"; do
+    google_language="$(resolve_inherited_google_language "$macos_language")"
+    desired_google_languages+=("$google_language")
+  done
+
+  for wanted in "${desired_google_languages[@]}"; do
+    parse_language_argument "$wanted"
+  done
+
+  for current_language in "${google_current_languages[@]-}"; do
+    found=false
+    for wanted in "${desired_google_languages[@]}"; do
+      if matches_requested_language "$wanted" "$current_language"; then
+        found=true
+        break
+      fi
+    done
+    if ! $found; then
+      parse_language_argument "-$current_language"
+    fi
+  done
+}
+
 is_valid_configured_language() {
   local language="$1"
 
@@ -187,7 +226,7 @@ show_usage() {
   echo "  --dry-run, -n   Print the planned reorder without changing the Google Account page."
   echo "  --help, -h      Show this help message."
   echo "  --verbose, -v   Show help together with the Safari automation notes."
-  echo "  --inherit-macos, -M  Move or add the current macOS preferred language at the front."
+  echo "  --inherit-macos, -M  Replace the Google Account language list with the current macOS preferred language order."
   echo
   echo "Language arguments:"
   echo "  xx        Move the language at the front."
@@ -198,6 +237,7 @@ show_usage() {
   echo
   echo "Examples:"
   echo "  $display_command"
+  echo "  $display_command --inherit-macos"
   echo "  $display_command --dry-run \"English\""
   echo "  $display_command --dry-run \"English:Czech\""
   echo "  $display_command --dry-run \"English:\" \"-Czech\""
@@ -301,7 +341,7 @@ for item in payload.get('languages', []):
     if [ "${#requested_languages[@]}" -gt 0 ] || [ "${#removed_languages[@]}" -gt 0 ]; then
       fail "The --inherit-macos mode does not accept explicit language arguments."
     fi
-    parse_language_argument "$(resolve_inherited_google_language)"
+    prepare_inherited_google_language_requests
   fi
 
   if [ "${#requested_languages[@]}" -eq 0 ] && [ "${#removed_languages[@]}" -eq 0 ]; then
