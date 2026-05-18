@@ -87,6 +87,7 @@ Usage:
 ./manage-languages.sh google-account
 ./manage-languages.sh google-account --list-browser-profiles
 ./manage-languages.sh google-account --refresh-browser-profiles
+./manage-languages.sh google-account --all-known-browser-profiles --dry-run "English"
 ./manage-languages.sh google-account --browser-profile work --browser-profile personal
 ./manage-languages.sh google-account --disable-auto-add
 ./manage-languages.sh google-account --enable-auto-add
@@ -101,6 +102,7 @@ Notes:
 - `--inherit-macos` replaces the Google Account language list with the full current macOS preferred language order.
 - `--browser-profile NAME` can be repeated to target one or more browser profiles.
 - `--all-browser-profiles` applies the same operation to every valid browser profile.
+- `--all-known-browser-profiles` applies the same operation to every browser profile currently known to the helper.
 - `--list-browser-profiles` prints the valid browser profile names that the automation currently accepts.
 - `--refresh-browser-profiles` refreshes the stored Safari profile-name cache through Safari UI automation.
 - Profile-name refresh does not depend on the localized Safari menu text; it prefers Safari's accessibility identifiers and only falls back to visible menu text parsing.

@@ -230,14 +230,19 @@ tell application "System Events"
         on error
           set currentTitle to ""
         end try
-        if currentIdentifier ends with "isDefaultProfile=true" then
-          if targetProfile is "default" then
-            set profileMenuItem to currentMenuItem
-            exit repeat
+        if currentIdentifier starts with "New" and currentIdentifier contains "Window?isDefaultProfile=" then
+          set identifierSuffixOffset to offset of "Window?isDefaultProfile=" in currentIdentifier
+          if identifierSuffixOffset > 0 then
+            set profileIdentifierName to text 4 thru (identifierSuffixOffset - 1) of currentIdentifier
+          else
+            set profileIdentifierName to ""
           end if
-        else if currentIdentifier starts with "New" and currentIdentifier ends with "Window?isDefaultProfile=false" then
-          set profileIdentifierName to text 4 thru ((offset of "Window?isDefaultProfile=false" in currentIdentifier) - 1) of currentIdentifier
-          if profileIdentifierName is targetProfile then
+          if targetProfile is "default" then
+            if currentIdentifier ends with "isDefaultProfile=true" then
+              set profileMenuItem to currentMenuItem
+              exit repeat
+            end if
+          else if profileIdentifierName is targetProfile then
             set profileMenuItem to currentMenuItem
             exit repeat
           end if

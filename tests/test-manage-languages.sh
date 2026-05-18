@@ -235,6 +235,7 @@ assert_contains "$output" '--disable-auto-add' "google-account help should show 
 assert_contains "$output" '--enable-auto-add' "google-account help should show auto-add enable support"
 assert_contains "$output" '--browser-profile NAME' "google-account help should show browser profile selection"
 assert_contains "$output" '--all-browser-profiles' "google-account help should show all-browser-profiles support"
+assert_contains "$output" '--all-known-browser-profiles' "google-account help should show all-known-browser-profiles support"
 assert_contains "$output" '--list-browser-profiles' "google-account help should show browser profile listing"
 assert_contains "$output" '--refresh-browser-profiles' "google-account help should show browser profile refresh support"
 
@@ -322,6 +323,13 @@ assert_contains "$output" "Browser profile: default" "google-account all-browser
 assert_contains "$output" "Browser profile: work" "google-account all-browser-profiles should print the second profile heading"
 assert_contains "$output" "Browser profile: personal" "google-account all-browser-profiles should print the third profile heading"
 assert_contains "$(cat "$google_helper_log")" $'write\tdefault\nCzech\nEnglish\nwrite\twork\nCzech\nEnglish\nwrite\tpersonal\nCzech\nEnglish' "google-account all-browser-profiles should write to every profile"
+
+rm -f "$google_helper_log"
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --all-known-browser-profiles "Czech")"
+assert_contains "$output" "Browser profile: default" "google-account all-known-browser-profiles should print the first profile heading"
+assert_contains "$output" "Browser profile: work" "google-account all-known-browser-profiles should print the second profile heading"
+assert_contains "$output" "Browser profile: personal" "google-account all-known-browser-profiles should print the third profile heading"
+assert_contains "$(cat "$google_helper_log")" $'write\tdefault\nCzech\nEnglish\nwrite\twork\nCzech\nEnglish\nwrite\tpersonal\nCzech\nEnglish' "google-account all-known-browser-profiles should write to every known profile"
 
 rm -f "$google_helper_log"
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --disable-auto-add)"
