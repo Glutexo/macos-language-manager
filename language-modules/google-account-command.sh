@@ -220,7 +220,7 @@ show_usage() {
   echo "Behavior:"
   echo "  - without language arguments, prints the current Google Account preferred-language list"
   echo "  - with language arguments, uses the same token syntax as the macOS module"
-  echo "  - version 1 reorders or removes existing languages only"
+  echo "  - adds, removes, and reorders languages through Safari automation"
   echo
   echo "Options:"
   echo "  --dry-run, -n   Print the planned reorder without changing the Google Account page."

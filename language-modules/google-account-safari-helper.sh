@@ -15,25 +15,6 @@ run_applescript() {
   osascript - "$@"
 }
 
-safari_type_text() {
-  local value="$1"
-
-  run_applescript "$window_id" "$value" <<'APPLESCRIPT' >/dev/null
-on run argv
-  set targetWindowId to (item 1 of argv) as integer
-  set typedValue to item 2 of argv
-  tell application "Safari"
-    activate
-    set index of (first window whose id is targetWindowId) to 1
-  end tell
-  tell application "System Events"
-    keystroke "a" using command down
-    keystroke typedValue
-  end tell
-end run
-APPLESCRIPT
-}
-
 safari_open_page() {
   local url="$1"
   local separator='?'
@@ -51,6 +32,13 @@ on run argv
     set newDocument to make new document
     delay 0.2
     set URL of newDocument to targetUrl
+    repeat with currentWindow in windows
+      try
+        if (current tab of currentWindow) is newDocument then
+          return id of currentWindow
+        end if
+      end try
+    end repeat
     return id of front window
   end tell
 end run
@@ -77,6 +65,13 @@ tell application "Safari"
       return do JavaScript jsSource in current tab of (first window whose id is targetWindowId)
     end try
   end if
+  repeat with currentWindow in windows
+    try
+      if (URL of current tab of currentWindow) contains sessionMarker then
+        return do JavaScript jsSource in current tab of currentWindow
+      end if
+    end try
+  end repeat
   repeat with currentDocument in documents
     try
       if (URL of currentDocument) contains sessionMarker then
@@ -109,9 +104,14 @@ language_page_script() {
   const requested = __REQUESTED__;
 
   const normalize = (value) => value.replace(/\s+/g, " ").trim();
-  const slug = (value) => normalize(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const slug = (value) => normalize(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   const textOf = (node) => normalize((node && (node.innerText || node.textContent)) || "");
   const isVisible = (node) => !!(node && node.getBoundingClientRect && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
+  const isEnabled = (node) => !!node && !node.disabled && node.getAttribute("aria-disabled") !== "true";
+  const parseRequestedRegion = (value) => {
+    const match = /\(([^)]+)\)\s*$/.exec(value);
+    return match ? slug(match[1]) : "";
+  };
 
   const loginHints = ["sign in", "choose an account", "verify it’s you", "2-step verification"];
   const pageRoot = document.body || document.documentElement;
@@ -189,133 +189,137 @@ language_page_script() {
     });
   }
 
-  const expected = requested.map((item) => slug(item));
-  const actual = currentRows.map((item) => item.slug);
-  const missing = expected.filter((item) => !actual.includes(item));
+  const buildLanguageCatalog = () => {
+    const html = document.documentElement?.outerHTML || "";
+    const entryPattern = /\[\["ac\.c\.lang\.l","([^"]+)","([^"]+)","([^"]+)","([^"]*)","([^"]*)"\],0,\d+(?:,null,\[.*?\],\["([^"]+)","([^"]+)"\])?/gs;
+    const catalog = [];
+    let match;
 
-  const findSearchInput = (root) => {
-    return [...root.querySelectorAll("input, textarea")]
-      .find((node) => isVisible(node) && (
-        node.type === "search" ||
-        node.type === "text" ||
-        node.getAttribute("role") === "combobox" ||
-        /add another language/i.test(node.getAttribute("aria-label") || "")
-      ));
-  };
-
-  const setInputValue = (node, value) => {
-    node.focus();
-    if (typeof node.click === "function") {
-      node.click();
-    }
-    if (typeof node.select === "function") {
-      node.select();
-    }
-
-    const setter =
-      Object.getOwnPropertyDescriptor(window.HTMLInputElement?.prototype || {}, "value")?.set ||
-      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement?.prototype || {}, "value")?.set;
-
-    if (setter) {
-      setter.call(node, value);
-    } else {
-      node.value = value;
-    }
-
-    node.dispatchEvent(new KeyboardEvent("keydown", { key: "a", bubbles: true }));
-    try {
-      document.execCommand("selectAll", false);
-      document.execCommand("insertText", false, value);
-    } catch (error) {
-    }
-    node.dispatchEvent(new InputEvent("input", { bubbles: true, data: value, inputType: "insertText" }));
-    node.dispatchEvent(new KeyboardEvent("keyup", { key: "a", bubbles: true }));
-    node.dispatchEvent(new Event("change", { bubbles: true }));
-  };
-
-  const findMatchingOption = (root, wantedSlug) => {
-    for (const node of root.querySelectorAll('[role="option"], [role="listitem"], li, button, div, span')) {
-      if (!isVisible(node)) {
-        continue;
-      }
-      const optionSlug = slug(textOf(node));
-      if (!optionSlug) {
-        continue;
-      }
-      if (optionSlug === wantedSlug || optionSlug.includes(wantedSlug) || wantedSlug.includes(optionSlug)) {
-        return node;
-      }
-    }
-    return null;
-  };
-
-  const addDialog = [...document.querySelectorAll("[role='dialog'], dialog, c-wiz")]
-    .find((node) => isVisible(node) && (/language/i.test(textOf(node)) || !!findSearchInput(node)));
-
-  if (missing.length > 0) {
-    const nextMissing = missing[0];
-    const searchRoot = addDialog || pageRoot;
-    const searchInput = findSearchInput(searchRoot);
-
-    if (!searchInput) {
-      const addButton = findClickable(["add another language", "add language", "add"], cardRoot || pageRoot) || findClickable(["add another language", "add language", "add"]);
-      if (!addButton) {
-        return JSON.stringify({ status: "error", message: `Could not locate the add-language button while trying to add ${nextMissing}.` });
-      }
-      addButton.click();
-      return JSON.stringify({ status: "waiting", message: `Opening the add-language dialog for ${nextMissing}.` });
-    }
-
-    if (slug(searchInput.value || "") !== nextMissing) {
-      setInputValue(searchInput, "");
-      return JSON.stringify({
-        status: "native-input",
-        value: requested[expected.indexOf(nextMissing)],
-        message: `Typing ${nextMissing} into the add-language field.`
+    while ((match = entryPattern.exec(html)) !== null) {
+      catalog.push({
+        englishName: match[1],
+        languageId: match[2],
+        nativeName: match[3],
+        englishSearch: match[4],
+        nativeSearch: match[5],
+        defaultId: match[6] || match[2],
+        defaultRegion: match[7] || ""
       });
     }
 
-    const optionNode = findMatchingOption(searchRoot, nextMissing) || findMatchingOption(pageRoot, nextMissing);
-    if (!optionNode) {
-      return JSON.stringify({ status: "waiting", message: `Waiting for a search result for ${nextMissing}.` });
+    return catalog.map((item) => ({
+      ...item,
+      englishSlug: slug(item.englishName),
+      nativeSlug: slug(item.nativeName),
+      englishSearchSlug: slug(item.englishSearch),
+      nativeSearchSlug: slug(item.nativeSearch),
+      displaySlug: slug(item.defaultRegion ? `${item.nativeName} (${item.defaultRegion})` : item.nativeName)
+    }));
+  };
+
+  const resolveRequestedLanguageId = (requestedLabel, catalog) => {
+    const requestedSlug = slug(requestedLabel);
+    if (!requestedSlug) {
+      return null;
+    }
+    const requestedHasRegion = /\([^)]+\)\s*$/.test(requestedLabel);
+
+    const currentMatch = currentRows.find((item) =>
+      item.slug === requestedSlug ||
+      item.labelSlug === requestedSlug ||
+      item.slug.includes(requestedSlug) ||
+      requestedSlug.includes(item.slug)
+    );
+    if (currentMatch) {
+      return currentMatch.id;
     }
 
-    optionNode.click();
+    const catalogMatch = catalog.find((item) =>
+      [
+        item.englishSlug,
+        item.nativeSlug,
+        item.englishSearchSlug,
+        item.nativeSearchSlug,
+        item.displaySlug
+      ].some((candidate) =>
+        candidate && (
+          candidate === requestedSlug ||
+          candidate.includes(requestedSlug) ||
+          requestedSlug.includes(candidate)
+        )
+      )
+    );
 
-    const confirmButton = findClickable(["done", "save", "add"], searchRoot) || findClickable(["done", "save", "add"], pageRoot);
-    if (confirmButton) {
-      confirmButton.click();
+    if (catalogMatch) {
+      return requestedHasRegion ? catalogMatch.defaultId : (catalogMatch.languageId || catalogMatch.defaultId);
     }
 
-    return JSON.stringify({ status: "waiting", message: `Adding ${nextMissing}.` });
+    const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const fallbackPattern = new RegExp(
+      `\\[\\["ac\\.c\\.lang\\.l","${escapeRegex(requestedLabel)}","([^"]+)","([^"]+)","[^"]*","[^"]*"\\],\\d,\\d(?:,null,\\[.*?\\],\\["([^"]+)","([^"]+)"\\])?`,
+      "s"
+    );
+    const html = document.documentElement?.outerHTML || "";
+    const fallbackMatch = html.match(fallbackPattern);
+    if (!fallbackMatch) {
+      return null;
+    }
+
+    return requestedHasRegion ? (fallbackMatch[3] || fallbackMatch[1]) : fallbackMatch[1];
+  };
+
+  const submitLanguageUpdate = (languageIds) => {
+    const wizData = window.WIZ_global_data || {};
+    if (!wizData.FdrFJe || !wizData.SNlM0e || !wizData.cfb2h) {
+      return { ok: false, message: "Could not derive the Google language-update request parameters from the page." };
+    }
+
+    const params = new URLSearchParams({
+      "f.sid": String(wizData.FdrFJe),
+      bl: String(wizData.cfb2h),
+      hl: "en",
+      "soc-app": "1",
+      "soc-platform": "1",
+      "soc-device": "1",
+      _reqid: String(Date.now() % 1000000),
+      rt: "j"
+    });
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `/_/language_update?${params.toString()}`, false);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+    xhr.send(`f.req=${encodeURIComponent(JSON.stringify([languageIds]))}&at=${encodeURIComponent(String(wizData.SNlM0e))}&`);
+
+    if (xhr.status < 200 || xhr.status >= 300) {
+      return { ok: false, message: `The Google language-update request failed with HTTP ${xhr.status}.` };
+    }
+
+    return { ok: true };
+  };
+
+  const catalog = buildLanguageCatalog();
+  const expectedIds = requested.map((item) => resolveRequestedLanguageId(item, catalog));
+  if (expectedIds.some((item) => !item)) {
+    const missingIndex = expectedIds.findIndex((item) => !item);
+    return JSON.stringify({ status: "error", message: `Could not resolve a Google Account language id for ${requested[missingIndex]}.` });
   }
 
-  const extras = currentRows.filter((item) => !expected.includes(item.slug));
-  if (extras.length > 0) {
-    const removable = extras.find((item) => item.removeButton);
-    if (!removable) {
-      return JSON.stringify({ status: "error", message: `Could not locate a remove button for ${extras[0].display}.` });
-    }
-    removable.removeButton.click();
-    return JSON.stringify({ status: "waiting", message: `Removing ${removable.display}.` });
+  const actualIds = currentRows.map((item) => item.id);
+  if (JSON.stringify(actualIds) === JSON.stringify(expectedIds)) {
+    return JSON.stringify({ status: "ok", languages: requested });
   }
 
-  const actualOrder = currentRows.map((item) => item.slug);
-  const firstMismatch = expected.findIndex((item, index) => actualOrder[index] !== item);
-  if (firstMismatch >= 0) {
-    const wantedSlug = expected[firstMismatch];
-    const targetRow = currentRows.find((item) => item.slug === wantedSlug);
-    if (!targetRow) {
-      return JSON.stringify({ status: "error", message: `Could not locate the requested language row for ${wantedSlug}.` });
+  if (window.__codexLanguageUpdateSubmitted !== JSON.stringify(expectedIds)) {
+    const submission = submitLanguageUpdate(expectedIds);
+    if (!submission.ok) {
+      return JSON.stringify({ status: "error", message: submission.message });
     }
-    if (!targetRow.moveButton) {
-      return JSON.stringify({ status: "error", message: `Could not locate a move-up button for ${targetRow.display}.` });
-    }
-    targetRow.moveButton.click();
-    return JSON.stringify({ status: "waiting", message: `Moving ${targetRow.display} upward.` });
+    window.__codexLanguageUpdateSubmitted = JSON.stringify(expectedIds);
+    window.location.reload();
+    return JSON.stringify({ status: "waiting", message: "Submitting the Google preferred-language update." });
   }
 
-  return JSON.stringify({ status: "ok", languages: requested });
+  return JSON.stringify({ status: "waiting", message: "Waiting for the Google preferred-language page to refresh." });
 })()
 EOF
 }
@@ -356,11 +360,18 @@ wait_for_payload() {
   local deadline=$((SECONDS + timeout_seconds))
   local payload=""
   local status=""
-  local native_value=""
 
   while [ "$SECONDS" -lt "$deadline" ]; do
     payload="$(run_language_script "$mode" "$requested_json")"
-    status="$(printf '%s' "$payload" | json_extract status)"
+    if [ -z "$payload" ]; then
+      sleep 2
+      continue
+    fi
+    status="$(printf '%s' "$payload" | json_extract status 2>/dev/null || true)"
+    if [ -z "$status" ]; then
+      sleep 2
+      continue
+    fi
     case "$status" in
       ok)
         printf '%s\n' "$payload"
@@ -369,11 +380,6 @@ wait_for_payload() {
       error)
         printf '%s' "$payload" | json_extract message >&2 || true
         return 1
-        ;;
-      native-input)
-        native_value="$(printf '%s' "$payload" | json_extract value)"
-        safari_type_text "$native_value"
-        sleep 1
         ;;
     esac
     sleep 2
