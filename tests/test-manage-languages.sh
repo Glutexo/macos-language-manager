@@ -75,6 +75,21 @@ locale=en
 ; verbose-logging=false
 EOS
 
+wingspan_prefs_file="$tmp_dir/com.Monster-Couch.Wingspan.plist"
+WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" python3 - <<'PY'
+import os
+import plistlib
+
+path = os.environ["WINGSPAN_PREFERENCES_FILE"]
+data = {
+    "I2 Language": "English",
+    "Screenmanager Fullscreen mode": 1,
+}
+
+with open(path, "wb") as handle:
+    plistlib.dump(data, handle, sort_keys=False)
+PY
+
 assert_contains() {
   local haystack="$1"
   local needle="$2"
@@ -116,12 +131,14 @@ assert_contains "$output" "  anki" "global help should include anki"
 assert_contains "$output" "  factorio" "global help should include factorio"
 assert_contains "$output" "  macos" "global help should include macos"
 assert_contains "$output" "  steam" "global help should include steam"
+assert_contains "$output" "  wingspan" "global help should include wingspan"
 
 output="$("$script" --list-apps)"
 assert_contains "$output" "anki" "list-apps should print app ids"
 assert_contains "$output" "factorio" "list-apps should print app ids"
 assert_contains "$output" "macos" "list-apps should print module ids"
 assert_contains "$output" "steam" "list-apps should print app ids"
+assert_contains "$output" "wingspan" "list-apps should print app ids"
 
 output="$("$symlink_script" --list-apps)"
 assert_contains "$output" "steam" "symlinked runner should discover modules from the repository"
@@ -131,6 +148,7 @@ assert_contains "$output" "OK: anki" "self-test should verify anki module contra
 assert_contains "$output" "OK: factorio" "self-test should verify factorio module contract"
 assert_contains "$output" "OK: macos" "self-test should verify macos module contract"
 assert_contains "$output" "OK: steam" "self-test should verify steam module contract"
+assert_contains "$output" "OK: wingspan" "self-test should verify wingspan module contract"
 
 output="$("$script" nope 2>&1 || true)"
 assert_contains "$output" "Unknown module: nope" "unknown modules should fail clearly"
@@ -216,10 +234,31 @@ output="$(FACTORIO_DIR="$factorio_dir" "$script" factorio --restore)"
 assert_contains "$output" "Restored Factorio interface language from zh-CN to en." "runner should restore factorio language"
 assert_contains "$(cat "$factorio_config_file")" "locale=en" "factorio restore should put original value back"
 
-output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" "$script" all)"
+output="$(WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" wingspan --help)"
+assert_contains "$output" "Usage: ./manage-languages.sh wingspan [--dry-run|-n] [--force|-f] [language]" "app help should show wingspan usage"
+assert_contains "$output" "./manage-languages.sh wingspan --inherit-macos [--dry-run|-n] [--force|-f]" "app help should show wingspan inheritance usage"
+assert_contains "$output" "./manage-languages.sh wingspan --restore [--dry-run|-n] [--force|-f]" "app help should show wingspan restore usage"
+
+output="$(WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" wingspan)"
+assert_contains "$output" "Current Wingspan interface language: English" "runner should read Wingspan language"
+output="$(WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" wingspan --verbose)"
+assert_contains "$output" "Supported Wingspan interface language values:" "wingspan verbose help should show supported languages"
+assert_contains "$output" "  de -> Deutsch" "wingspan verbose help should list aliases"
+output="$(WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" MACOS_APP_LANGUAGE_INHERIT=de-DE "$script" wingspan --dry-run --inherit-macos)"
+assert_contains "$output" "Would change Wingspan interface language from English to Deutsch." "wingspan should inherit macOS locale tags"
+output="$(WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" wingspan de)"
+assert_contains "$output" "Changed Wingspan interface language from English to Deutsch." "runner should change wingspan language"
+assert_contains "$output" "Backup saved to $wingspan_prefs_file.bak" "runner should back up wingspan file"
+assert_contains "$(plutil -p "$wingspan_prefs_file")" '"I2 Language" => "Deutsch"' "wingspan change should persist canonical value"
+output="$(WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" wingspan --restore)"
+assert_contains "$output" "Restored Wingspan interface language from Deutsch to English." "runner should restore wingspan language"
+assert_contains "$(plutil -p "$wingspan_prefs_file")" '"I2 Language" => "English"' "wingspan restore should put original value back"
+
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" all)"
 assert_contains "$output" "Current Steam interface language: english" "all mode should read steam"
 assert_contains "$output" "Current Anki interface language: en_US" "all mode should read anki"
 assert_contains "$output" "Current Factorio interface language: en" "all mode should read factorio"
+assert_contains "$output" "Current Wingspan interface language: English" "all mode should read wingspan"
 
 output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" "$script" steam anki)"
 assert_contains "$output" "Current Steam interface language: english" "multi-module mode should read steam"
@@ -233,19 +272,22 @@ output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" "$script" steam anki 
 assert_contains "$output" "Restored Steam interface language from japanese to english." "multi-module restore should revert steam"
 assert_contains "$output" "Restored Anki interface language from ja_JP to en_US." "multi-module restore should revert anki"
 
-output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" MACOS_APP_LANGUAGE_INHERIT=ja-CZ "$script" all --dry-run --inherit-macos)"
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" MACOS_APP_LANGUAGE_INHERIT=ja-CZ "$script" all --dry-run --inherit-macos)"
 assert_contains "$output" "Would change Steam interface language from english to japanese." "all inherit should plan steam change"
 assert_contains "$output" "Would change Anki interface language from en_US to ja_JP." "all inherit should plan anki change"
 assert_contains "$output" "Would change Factorio interface language from en to ja." "all inherit should plan factorio change"
+assert_contains "$output" "Would change Wingspan interface language from English to 日本語." "all inherit should plan wingspan change"
 
-output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" "$script" all ja)"
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" all ja)"
 assert_contains "$output" "Changed Steam interface language from english to japanese." "all mode should change steam"
 assert_contains "$output" "Changed Anki interface language from en_US to ja_JP." "all mode should change anki"
 assert_contains "$output" "Changed Factorio interface language from en to ja." "all mode should change factorio"
+assert_contains "$output" "Changed Wingspan interface language from English to 日本語." "all mode should change wingspan"
 
-output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" "$script" all --restore)"
+output="$(STEAM_DIR="$steam_dir" ANKI_BASE_DIR="$anki_dir" FACTORIO_DIR="$factorio_dir" WINGSPAN_PREFERENCES_FILE="$wingspan_prefs_file" "$script" all --restore)"
 assert_contains "$output" "Restored Steam interface language from japanese to english." "all restore should revert steam"
 assert_contains "$output" "Restored Anki interface language from ja_JP to en_US." "all restore should revert anki"
 assert_contains "$output" "Restored Factorio interface language from ja to en." "all restore should revert factorio"
+assert_contains "$output" "Restored Wingspan interface language from 日本語 to English." "all restore should revert wingspan"
 
 echo "All tests passed."

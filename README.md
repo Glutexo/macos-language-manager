@@ -3,7 +3,7 @@
 Simple shell tooling for macOS language management:
 
 - managing the preferred macOS language order
-- managing application interface languages for Steam, Anki, and Factorio
+- managing application interface languages for Steam, Anki, Factorio, and Wingspan
 
 ## Scripts
 
@@ -99,6 +99,7 @@ Technical details:
 - [steam-language-manager.md](docs/steam-language-manager.md)
 - [anki-language-manager.md](docs/anki-language-manager.md)
 - [factorio-language-manager.md](docs/factorio-language-manager.md)
+- [wingspan-language-manager.md](docs/wingspan-language-manager.md)
 
 ## Tests
 
