@@ -93,7 +93,10 @@ refresh_browser_profiles() {
   local raw_menu_items=""
   local profile_names=""
 
-  raw_menu_items="$(run_applescript <<'APPLESCRIPT'
+  if [ -n "${GOOGLE_ACCOUNT_BROWSER_PROFILE_MENU_ITEMS:-}" ]; then
+    raw_menu_items="${GOOGLE_ACCOUNT_BROWSER_PROFILE_MENU_ITEMS}"
+  else
+    raw_menu_items="$(run_applescript <<'APPLESCRIPT'
 tell application "Safari"
   activate
 end tell
@@ -118,6 +121,7 @@ end tell
 error "Could not read Safari's File menu."
 APPLESCRIPT
 )"
+  fi
 
   profile_names="$(
     RAW_MENU_ITEMS="$raw_menu_items" python3 - <<'PY'

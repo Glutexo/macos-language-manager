@@ -75,7 +75,7 @@ The helper:
 6. when `--disable-auto-add` is requested, follows Google's own `Stop adding` confirmation flow through page JavaScript without depending on the window being frontmost
 7. when `--enable-auto-add` is requested, toggles the same setting back on through page JavaScript
 8. when browser profiles are selected, opens a dedicated Safari window for that profile through Safari's File menu and runs the same flow once per selected profile
-9. when `--refresh-browser-profiles` is requested, reads Safari's File menu through UI automation, extracts `New … Window` profile names, and stores them in a local cache
+9. when `--refresh-browser-profiles` is requested, reads Safari's File menu through UI automation, extracts the quoted profile names without depending on the localized menu text, and stores them in a local cache
 10. when profile names are needed during normal runs, reads the local cache first, then Safari's `SafariTabs.db` profile rows when that database is available, then falls back to `default`
 
 The page is forced to `hl=en` so the automation can rely on stable English UI text when it looks for sign-in or page-state hints.
