@@ -132,6 +132,8 @@ case "$command" in
   read-json)
     if [ "$scenario" = "added-for-you" ]; then
       printf '%s\n' '{"status":"ok","auto_add_enabled":true,"languages":[{"id":"en","display":"English","added_for_you":false},{"id":"ja","display":"Japanese (Added for you)","added_for_you":true},{"id":"cs","display":"Czech","added_for_you":false}]}'
+    elif [ "$scenario" = "inherit-variant-mismatch" ]; then
+      printf '%s\n' '{"status":"ok","auto_add_enabled":false,"languages":[{"id":"de-CZ","display":"German","added_for_you":false},{"id":"sk","display":"Slovak","added_for_you":false}]}'
     else
       printf '%s\n' '{"status":"ok","auto_add_enabled":false,"languages":[{"id":"en","display":"English","added_for_you":false},{"id":"cs","display":"Czech","added_for_you":false}]}'
     fi
@@ -141,6 +143,7 @@ case "$command" in
       case "$label" in
         German) printf 'German\n' ;;
         Czech) printf 'Czech\n' ;;
+        Slovak) printf 'Slovak\n' ;;
         *) printf '%s\n' "$label" ;;
       esac
     done
@@ -346,6 +349,11 @@ assert_contains "$output" "Browser profile: default" "google-account all-known-b
 assert_contains "$output" "Browser profile: work" "google-account all-known-browser-profiles inheritance should print the second profile heading"
 assert_contains "$output" "Browser profile: personal" "google-account all-known-browser-profiles inheritance should print the third profile heading"
 assert_contains "$output" $'New Google Account preferred languages:\n  German\n  Czech' "google-account all-known-browser-profiles inheritance should keep per-profile inherited ordering isolated"
+
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" GOOGLE_ACCOUNT_HELPER_SCENARIO=inherit-variant-mismatch MACOS_APP_LANGUAGE_INHERIT=$'de-CZ\nsk-CZ' "$script" google-account --inherit-macos)"
+assert_contains "$output" "Google Account preferred languages are already in the requested order." "google-account inherit should still recognize label-level no-op states"
+assert_contains "$output" "Warning: Google kept different language variants than macOS requested:" "google-account inherit should warn when Google keeps a different concrete variant"
+assert_contains "$output" "sk-CZ → sk (Slovak)" "google-account inherit should report the exact macOS and Google variant mismatch"
 
 rm -f "$google_helper_log"
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --disable-auto-add)"

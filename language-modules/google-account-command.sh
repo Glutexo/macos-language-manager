@@ -22,6 +22,7 @@ google_current_language_ids=()
 google_current_languages=()
 google_added_for_you_languages=()
 google_auto_add_enabled=false
+inherited_macos_language_ids=()
 reset_ordered_language_state
 
 fail() {
@@ -225,6 +226,10 @@ prepare_inherited_google_language_requests() {
   done < <(read_macos_preferred_languages)
 
   [ "${#macos_languages[@]}" -gt 0 ] || fail "Could not detect the current macOS preferred languages."
+  inherited_macos_language_ids=()
+  for macos_language in "${macos_languages[@]}"; do
+    inherited_macos_language_ids+=("${macos_language//_/-}")
+  done
 
   for macos_language in "${macos_languages[@]}"; do
     google_language="$(resolve_inherited_google_language "$macos_language")"
@@ -503,6 +508,42 @@ print_added_for_you_warning() {
   fi
 }
 
+print_inherited_google_variant_warning() {
+  local mismatch_count=0
+  local max_count=0
+  local index=0
+  local expected_id=""
+  local actual_id=""
+  local actual_display=""
+
+  if ! $inherit_macos || [ "${#inherited_macos_language_ids[@]}" -eq 0 ] || [ "${#google_current_language_ids[@]}" -eq 0 ]; then
+    return 0
+  fi
+
+  max_count="${#inherited_macos_language_ids[@]}"
+  if [ "${#google_current_language_ids[@]}" -gt "$max_count" ]; then
+    max_count="${#google_current_language_ids[@]}"
+  fi
+
+  while [ "$index" -lt "$max_count" ]; do
+    expected_id="${inherited_macos_language_ids[$index]-}"
+    actual_id="${google_current_language_ids[$index]-}"
+    actual_display="${google_current_languages[$index]-}"
+    if [ -n "$expected_id" ] && [ -n "$actual_id" ] && [ "$expected_id" != "$actual_id" ]; then
+      if [ "$mismatch_count" -eq 0 ]; then
+        echo "Warning: Google kept different language variants than macOS requested:"
+      fi
+      if [ -n "$actual_display" ]; then
+        echo "  $expected_id → $actual_id ($actual_display)"
+      else
+        echo "  $expected_id → $actual_id"
+      fi
+      mismatch_count=$((mismatch_count + 1))
+    fi
+    index=$((index + 1))
+  done
+}
+
 main() {
   local current_joined=""
   local result=()
@@ -568,6 +609,7 @@ main() {
   for profile_name in "${target_browser_profiles[@]}"; do
     reset_ordered_language_request_state
     reset_ordered_language_runtime_state
+    inherited_macos_language_ids=()
     if [ "${#original_requested_languages[@]}" -gt 0 ]; then
       requested_languages=("${original_requested_languages[@]}")
     fi
@@ -680,6 +722,7 @@ main() {
 
     if [ "$current_joined" = "$result_joined" ]; then
       echo "Google Account preferred languages are already in the requested order."
+      print_inherited_google_variant_warning
       if [ "$profile_loop_index" -lt "$last_profile_index" ]; then
         echo
       fi
@@ -716,6 +759,7 @@ main() {
     elif $enable_auto_add && ! $google_auto_add_enabled; then
       echo "Warning: Google still reports automatic language additions as disabled."
     fi
+    print_inherited_google_variant_warning
     print_added_for_you_warning
     if [ "$profile_loop_index" -lt "$last_profile_index" ]; then
       echo
