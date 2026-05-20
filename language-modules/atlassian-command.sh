@@ -39,31 +39,33 @@ English (UK)|en-GB|en-GB,en_GB,en-UK,en_UK,en-AU,en_AU,english uk,english gb,bri
 Chinese (Simplified)|zh-CN|zh,zh-CN,zh_CN,zh-Hans,zh_Hans,zh-SG,zh_SG,zh-MY,zh_MY,chinese simplified,simplified chinese|中文 (简体)
 Chinese (Traditional)|zh-TW|zh-TW,zh_TW,zh-HK,zh_HK,zh-MO,zh_MO,zh-Hant,zh_Hant,chinese traditional,traditional chinese|中文 (繁體)
 Czech|cs|cs,cs-CZ,cs_CZ,cestina,čeština,czech|Čeština
-Danish|da|da,da-DK,da_DK,danish|dansk
+Croatian|hr|hr,hr-HR,hr_HR,croatian|Hrvatski
+Danish|da|da,da-DK,da_DK,danish|Dansk
 Dutch|nl|nl,nl-NL,nl_NL,dutch|Nederlands
-Estonian|et|et,et-EE,et_EE,estonian|eesti
-Finnish|fi|fi,fi-FI,fi_FI,finnish|suomi
-French|fr|fr,fr-FR,fr_FR,french|français
+Estonian|et|et,et-EE,et_EE,estonian|Eesti
+Finnish|fi|fi,fi-FI,fi_FI,finnish|Suomi
+French|fr|fr,fr-FR,fr_FR,french|Français
 German|de|de,de-DE,de_DE,german,deutsch|Deutsch
-Hungarian|hu|hu,hu-HU,hu_HU,hungarian|magyar
-Icelandic|is|is,is-IS,is_IS,icelandic|íslenska
-Italian|it|it,it-IT,it_IT,italian|italiano
+Hungarian|hu|hu,hu-HU,hu_HU,hungarian|Magyar
+Icelandic|is|is,is-IS,is_IS,icelandic|Íslenska
+Italian|it|it,it-IT,it_IT,italian|Italiano
 Japanese|ja|ja,ja-JP,ja_JP,japanese|日本語
 Korean|ko|ko,ko-KR,ko_KR,korean|한국어
-Norwegian|nb|no,no-NO,no_NO,nb,nb-NO,nb_NO,norwegian,norwegian bokmal,norwegian bokmål|norsk bokmål
-Polish|pl|pl,pl-PL,pl_PL,polish|polski
-Portuguese (Brazil)|pt-BR|pt-BR,pt_BR,portuguese brazil,brazilian portuguese|português (Brasil)
-Portuguese (Portugal)|pt-PT|pt-PT,pt_PT,portuguese portugal,european portuguese|português europeu
-Romanian|ro|ro,ro-RO,ro_RO,romanian|română
-Russian|ru|ru,ru-RU,ru_RU,russian|русский
-Serbian (Cyrillic)|sr-Cyrl|sr-Cyrl,sr_Cyrl,sr-Cyrl-RS,sr_Cyrl_RS,serbian cyrillic|српски (ћирилица)
-Serbian (Latin)|sr-Latn|sr-Latn,sr_Latn,sr-Latn-RS,sr_Latn_RS,serbian latin|srpski (latinica)
-Slovak|sk|sk,sk-SK,sk_SK,slovak|slovenčina
-Slovenian|sl|sl,sl-SI,sl_SI,slovenian|slovenščina
+Norwegian|nb|no,no-NO,no_NO,nb,nb-NO,nb_NO,norwegian,norwegian bokmal,norwegian bokmål|Norsk
+Polish|pl|pl,pl-PL,pl_PL,polish|Polski
+Portuguese (Brazil)|pt-BR|pt-BR,pt_BR,portuguese brazil,brazilian portuguese|Português (Brasil)
+Portuguese (Portugal)|pt-PT|pt-PT,pt_PT,portuguese portugal,european portuguese|Português (Portugal)
+Romanian|ro|ro,ro-RO,ro_RO,romanian|Română
+Russian|ru|ru,ru-RU,ru_RU,russian|Русский
+Serbian (Cyrillic)|sr-Cyrl|sr-Cyrl,sr_Cyrl,sr-Cyrl-RS,sr_Cyrl_RS,serbian cyrillic|Српски
+Serbian (Latin)|sr-Latn|sr-Latn,sr_Latn,sr-Latn-RS,sr_Latn_RS,serbian latin|Srpski
+Slovak|sk|sk,sk-SK,sk_SK,slovak|Slovenčina
+Slovenian|sl|sl,sl-SI,sl_SI,slovenian|Slovenščina
 Spanish|es|es,es-ES,es_ES,spanish|español
-Swedish|sv|sv,sv-SE,sv_SE,swedish|svenska
+Swedish|sv|sv,sv-SE,sv_SE,swedish|Svenska
+Thai|th|th,th-TH,th_TH,thai|ภาษาไทย‎
 Turkish|tr|tr,tr-TR,tr_TR,turkish|Türkçe
-Ukrainian|uk|uk,uk-UA,uk_UA,ukrainian|українська
+Ukrainian|uk|uk,uk-UA,uk_UA,ukrainian|Українська
 Vietnamese|vi|vi,vi-VN,vi_VN,vietnamese|Tiếng Việt
 EOF
 }

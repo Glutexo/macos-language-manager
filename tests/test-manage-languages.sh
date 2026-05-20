@@ -312,6 +312,8 @@ assert_contains "$output" '--all-known-browser-profiles' "atlassian help should 
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian --verbose)"
 assert_contains "$output" "Supported Atlassian account language values:" "atlassian verbose help should list supported values"
 assert_contains "$output" "  Czech → Čeština (cs,cs-CZ,cs_CZ,cestina,čeština,czech)" "atlassian verbose help should include the Atlassian Czech label and aliases"
+assert_contains "$output" "  Croatian → Hrvatski (hr,hr-HR,hr_HR,croatian)" "atlassian verbose help should include Croatian"
+assert_contains "$output" "  Thai → ภาษาไทย‎ (th,th-TH,th_TH,thai)" "atlassian verbose help should include Thai"
 
 output="$("$script" safari-profiles --help)"
 assert_contains "$output" "Usage: ./manage-languages.sh safari-profiles" "safari-profiles help should show module usage"
