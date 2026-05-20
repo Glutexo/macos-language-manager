@@ -25,6 +25,8 @@ script_dir="$(cd "$(dirname "$script_path")" && pwd)"
 modules_dir="$script_dir/language-modules"
 display_command="${DISPLAY_COMMAND:-./manage-languages.sh}"
 default_app="${DEFAULT_APP:-}"
+# shellcheck disable=SC1091
+source "$modules_dir/macos-language-inherit-helper.sh"
 show_help=false
 verbose_help=false
 list_apps=false
@@ -70,31 +72,6 @@ is_known_app() {
       return 0
     fi
   done
-
-  return 1
-}
-
-read_macos_preferred_language() {
-  local raw_language=""
-  local candidate=""
-
-  if [ -n "${MACOS_APP_LANGUAGE_INHERIT:-}" ]; then
-    printf '%s\n' "$MACOS_APP_LANGUAGE_INHERIT"
-    return 0
-  fi
-
-  raw_language="$(defaults read -g AppleLanguages 2>/dev/null || true)"
-  [ -n "$raw_language" ] || return 1
-
-  while IFS= read -r candidate; do
-    candidate="${candidate//[()\", ]/}"
-    if [[ "$candidate" =~ ^[A-Za-z][A-Za-z0-9_-]*$ ]]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done <<EOF_LANG
-$raw_language
-EOF_LANG
 
   return 1
 }

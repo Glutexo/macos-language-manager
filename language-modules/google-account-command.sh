@@ -11,6 +11,8 @@ helper_browser_profile_env_var="GOOGLE_ACCOUNT_BROWSER_PROFILE"
 source "$script_dir/ordered-language-list-helper.sh"
 # shellcheck disable=SC1091
 source "$script_dir/browser-profile-command-helper.sh"
+# shellcheck disable=SC1091
+source "$script_dir/macos-language-inherit-helper.sh"
 dry_run=false
 verbose_help=false
 inherit_macos=false
@@ -53,30 +55,6 @@ canonicalize_google_language_labels() {
 
   [ "$#" -gt 0 ] || return 0
   run_helper_for_profile "$profile_name" resolve-labels "$@"
-}
-
-read_macos_preferred_languages() {
-  local raw_language=""
-  local candidate=""
-
-  if [ -n "${MACOS_APP_LANGUAGE_INHERIT:-}" ]; then
-    printf '%s\n' "$MACOS_APP_LANGUAGE_INHERIT"
-    return 0
-  fi
-
-  raw_language="$(defaults read -g AppleLanguages 2>/dev/null || true)"
-  [ -n "$raw_language" ] || return 1
-
-  while IFS= read -r candidate; do
-    candidate="${candidate//[()\", ]/}"
-    if [[ "$candidate" =~ ^[A-Za-z][A-Za-z0-9_-]*$ ]]; then
-      printf '%s\n' "$candidate"
-    fi
-  done <<EOF_LANG
-$raw_language
-EOF_LANG
-
-  return 0
 }
 
 build_language_label_candidates() {

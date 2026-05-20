@@ -9,6 +9,8 @@ timeout_seconds="${ATLASSIAN_ACCOUNT_LANGUAGE_TIMEOUT:-180}"
 helper_browser_profile_env_var="ATLASSIAN_ACCOUNT_BROWSER_PROFILE"
 # shellcheck disable=SC1091
 source "$script_dir/browser-profile-command-helper.sh"
+# shellcheck disable=SC1091
+source "$script_dir/macos-language-inherit-helper.sh"
 dry_run=false
 verbose_help=false
 inherit_macos=false
@@ -98,31 +100,6 @@ $(language_catalog)
 EOF
 
   fail "Unsupported Atlassian account language: $1"
-}
-
-read_macos_preferred_language() {
-  local raw_language=""
-  local candidate=""
-
-  if [ -n "${MACOS_APP_LANGUAGE_INHERIT:-}" ]; then
-    printf '%s\n' "$MACOS_APP_LANGUAGE_INHERIT" | awk 'NF { print; exit }'
-    return 0
-  fi
-
-  raw_language="$(defaults read -g AppleLanguages 2>/dev/null || true)"
-  [ -n "$raw_language" ] || return 1
-
-  while IFS= read -r candidate; do
-    candidate="${candidate//[()\", ]/}"
-    if [[ "$candidate" =~ ^[A-Za-z][A-Za-z0-9_-]*$ ]]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done <<EOF_LANG
-$raw_language
-EOF_LANG
-
-  return 1
 }
 
 show_usage() {
