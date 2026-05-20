@@ -132,17 +132,19 @@ account_preferences_script() {
       };
     }
 
+    const isCombobox = (control.getAttribute("role") || "") === "combobox";
     const fieldValue = normalize(control.value || "");
     const buttonText = normalize(textOf(control));
     const singleValueText = normalize(readSingleValueText(control));
+    const committedValue = singleValueText || buttonText;
     return {
-      value: singleValueText || fieldValue || buttonText,
-      label: singleValueText || fieldValue || buttonText
+      value: committedValue || (isCombobox ? "" : fieldValue),
+      label: committedValue || (isCombobox ? "" : fieldValue)
     };
   };
 
   const current = readCurrentLanguage();
-  if (!current.label) {
+  if (mode === "read-json" && !current.label) {
     return JSON.stringify({ status: "waiting", message: "Waiting for the current Atlassian account language value." });
   }
 
@@ -153,6 +155,8 @@ account_preferences_script() {
   const requestedLanguage = requested[0] || "";
   const buildSearchCandidates = (label, tag) => {
     const values = [];
+    const normalizedLabelSlug = slug(label || "");
+    const fromCodePoints = (...points) => String.fromCodePoint(...points);
     const push = (value) => {
       const normalized = normalize(value || "");
       if (!normalized) {
@@ -165,6 +169,17 @@ account_preferences_script() {
 
     push(label);
     push(label.replace(/\s*\([^)]*\)\s*$/u, ""));
+
+    const nativeLabelCases = {
+      "japanese": [fromCodePoints(0x65e5, 0x672c, 0x8a9e), fromCodePoints(0x65e5)],
+      "korean": [fromCodePoints(0xd55c, 0xad6d, 0xc5b4)],
+      "chinese simplified": [fromCodePoints(0x7b80, 0x4f53, 0x4e2d, 0x6587)],
+      "chinese traditional": [fromCodePoints(0x7e41, 0x9ad4, 0x4e2d, 0x6587)],
+      "czech": ["\u010ce\u0161tina", "Cestina", "\u010de\u0161tina"]
+    };
+    for (const variant of nativeLabelCases[normalizedLabelSlug] || []) {
+      push(variant);
+    }
 
     if (tag && typeof Intl !== "undefined" && Intl.DisplayNames) {
       const canonicalTag = Intl.getCanonicalLocales([tag])[0] || tag;
@@ -185,11 +200,11 @@ account_preferences_script() {
       }
 
       const specialCases = {
-        ja: ["日本語"],
-        ko: ["한국어"],
-        zh: ["中文"],
-        "zh-cn": ["简体中文"],
-        "zh-tw": ["繁體中文"]
+        ja: [fromCodePoints(0x65e5, 0x672c, 0x8a9e), fromCodePoints(0x65e5)],
+        ko: [fromCodePoints(0xd55c, 0xad6d, 0xc5b4)],
+        zh: [fromCodePoints(0x4e2d, 0x6587)],
+        "zh-cn": [fromCodePoints(0x7b80, 0x4f53, 0x4e2d, 0x6587)],
+        "zh-tw": [fromCodePoints(0x7e41, 0x9ad4, 0x4e2d, 0x6587)]
       };
       for (const variant of specialCases[canonicalTag.toLowerCase()] || []) {
         push(variant);
@@ -234,7 +249,7 @@ account_preferences_script() {
   };
 
   const findVisibleOption = () => {
-    const options = [...document.querySelectorAll("[role='option'], option, li, button, div")]
+    const options = [...document.querySelectorAll("[role='option'], option")]
       .filter((node) => isVisible(node))
       .map((node) => ({
         node,
@@ -266,7 +281,12 @@ account_preferences_script() {
     if (!node) {
       return false;
     }
-    node.click();
+    if (node.focus) {
+      node.focus();
+    }
+    node.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window }));
+    node.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, view: window }));
+    node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
     return true;
   };
 
@@ -307,6 +327,9 @@ account_preferences_script() {
   }
 
   const phase = window.__codexAtlassianLanguagePhase || "";
+  if (phase === "" && !current.label) {
+    return JSON.stringify({ status: "waiting", message: "Waiting for the current Atlassian account language value." });
+  }
 
   if (control.tagName === "SELECT") {
     const matchingOption = [...control.options].find((option) => {
@@ -348,7 +371,7 @@ account_preferences_script() {
       setComboboxValue(control, currentSearchCandidate());
       return JSON.stringify({ status: "waiting", message: `Waiting for the Atlassian language option ${requestedLanguage}.` });
     }
-    option.node.click();
+    clickNode(option.node);
     window.__codexAtlassianLanguageDidChange = true;
     window.__codexAtlassianLanguagePhase = "confirm";
     return JSON.stringify({ status: "waiting", message: "Selecting the Atlassian account language." });

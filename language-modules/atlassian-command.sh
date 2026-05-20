@@ -308,7 +308,7 @@ else:
         print("true" if value is not False else "false")'
     )"
     load_atlassian_current_state "$profile_name"
-    if [ "$write_changed" = "false" ]; then
+    if [ "$write_changed" = "false" ] && [ "$current_language_label" = "$previous_language_label" ]; then
       echo "Atlassian account language is already set to $current_language_label."
     else
       echo "Changed Atlassian account language from $previous_language_label to $effective_language."
