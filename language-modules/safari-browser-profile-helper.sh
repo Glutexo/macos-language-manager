@@ -198,6 +198,7 @@ set targetUrl to system attribute (system attribute "SAFARI_TARGET_URL_ENV_VAR")
 set targetProfile to system attribute (system attribute "SAFARI_TARGET_PROFILE_ENV_VAR")
 
 tell application "Safari"
+  set windowCountBeforeActivate to count of windows
   activate
   set existingIds to id of every window
 end tell
@@ -255,8 +256,18 @@ tell application "Safari"
   repeat 60 times
     repeat with currentWindow in windows
       if existingIds does not contain (id of currentWindow) then
+        set createdWindowId to id of currentWindow
         set URL of current tab of currentWindow to targetUrl
-        return id of currentWindow
+        if windowCountBeforeActivate is 0 then
+          repeat with previousWindow in windows
+            if existingIds contains (id of previousWindow) then
+              try
+                close previousWindow
+              end try
+            end if
+          end repeat
+        end if
+        return createdWindowId
       end if
     end repeat
     delay 0.2

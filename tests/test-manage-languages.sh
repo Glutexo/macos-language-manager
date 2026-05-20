@@ -378,6 +378,10 @@ atlassian_candidate_builder="$(sed -n '/const buildSearchCandidates = (label, ta
 assert_contains "$atlassian_candidate_builder" "pushFallback(label);" "atlassian helper should keep the English label only as a fallback search candidate"
 assert_contains "$atlassian_candidate_builder" "return [...values, ...fallbackValues];" "atlassian helper should prefer localized search candidates before English fallbacks"
 
+shared_profile_helper_source="$(sed -n '/safari_open_profile_page() {/,/safari_open_page() {/p' "$repo_root/language-modules/safari-browser-profile-helper.sh")"
+assert_contains "$shared_profile_helper_source" "set windowCountBeforeActivate to count of windows" "shared Safari profile helper should detect whether Safari had any windows before activation"
+assert_contains "$shared_profile_helper_source" "if windowCountBeforeActivate is 0 then" "shared Safari profile helper should close Safari's auto-opened empty window after opening a dedicated profile window"
+
 atlassian_helper_menu_cache="$tmp_dir/atlassian-helper-menu-cache.txt"
 output="$(ATLASSIAN_ACCOUNT_BROWSER_PROFILE_CACHE="$atlassian_helper_menu_cache" ATLASSIAN_ACCOUNT_BROWSER_PROFILE_MENU_DATA=$'NewGlutexoWindow?isDefaultProfile=true\t新規Glutexoウインドウ\nNewTwistoWindow?isDefaultProfile=false\t새로운 Twisto 윈도우\nNewPrivateWindow\t새로운 개인정보 보호 브라우징 윈도우\nNewTab\t새로운 탭' "$atlassian_helper_real" refresh-profiles)"
 assert_contains "$output" $'Glutexo\nTwisto' "atlassian helper should parse quoted Safari profile names independently of the menu language"
