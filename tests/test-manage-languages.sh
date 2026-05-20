@@ -299,11 +299,13 @@ assert_contains "$output" '--inherit-macos' "google help should show inheritance
 assert_contains "$output" '--disable-auto-add' "google help should show auto-add cleanup support"
 assert_contains "$output" '--enable-auto-add' "google help should show auto-add enable support"
 assert_contains "$output" '--browser-profile NAME' "google help should show browser profile selection"
+assert_contains "$output" '--all-browser-profiles' "google help should show all-browser-profiles support"
 
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian --help)"
 assert_contains "$output" "Usage: ./manage-languages.sh atlassian [--dry-run|-n] [language]" "atlassian help should show module usage"
 assert_contains "$output" '--inherit-macos' "atlassian help should show inheritance support"
 assert_contains "$output" '--browser-profile NAME' "atlassian help should show browser profile selection"
+assert_contains "$output" '--all-browser-profiles' "atlassian help should show all-browser-profiles support"
 
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian --verbose)"
 assert_contains "$output" "Supported Atlassian account language values:" "atlassian verbose help should list supported values"
@@ -407,6 +409,12 @@ rm -f "$atlassian_helper_log"
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian --browser-profile work Czech)"
 assert_contains "$(cat "$atlassian_helper_log")" $'write\twork\tČeština' "atlassian should target the requested browser profile with the Atlassian language label"
 
+rm -f "$atlassian_helper_log"
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian --all-browser-profiles --dry-run Czech)"
+assert_contains "$output" "Browser profile: default" "atlassian all-browser-profiles should print the first profile heading"
+assert_contains "$output" "Browser profile: work" "atlassian all-browser-profiles should print the second profile heading"
+assert_contains "$output" "Browser profile: personal" "atlassian all-browser-profiles should print the third profile heading"
+
 google_helper_test_home="$tmp_dir/google-helper-home"
 google_helper_test_db_dir="$google_helper_test_home/Library/Containers/com.apple.Safari/Data/Library/Safari"
 mkdir -p "$google_helper_test_db_dir"
@@ -478,6 +486,13 @@ assert_contains "$(cat "$google_helper_log")" $'write\tdefault\nCzech\nEnglish' 
 rm -f "$google_helper_log"
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google --browser-profile work "Czech")"
 assert_contains "$(cat "$google_helper_log")" $'write\twork\nCzech\nEnglish' "google should target the requested browser profile"
+
+rm -f "$google_helper_log"
+output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google --all-browser-profiles "Czech")"
+assert_contains "$output" "Browser profile: default" "google all-browser-profiles should print the first profile heading"
+assert_contains "$output" "Browser profile: work" "google all-browser-profiles should print the second profile heading"
+assert_contains "$output" "Browser profile: personal" "google all-browser-profiles should print the third profile heading"
+assert_contains "$(cat "$google_helper_log")" $'write\tdefault\nCzech\nEnglish\nwrite\twork\nCzech\nEnglish\nwrite\tpersonal\nCzech\nEnglish' "google all-browser-profiles should write to every profile"
 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" GOOGLE_ACCOUNT_HELPER_SCENARIO=inherit-variant-mismatch MACOS_APP_LANGUAGE_INHERIT=$'de-CZ\nsk-CZ' "$script" google --inherit-macos)"
 assert_contains "$output" "Google Account preferred languages are already in the requested order." "google inherit should still recognize label-level no-op states"

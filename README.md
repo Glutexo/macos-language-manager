@@ -89,6 +89,7 @@ Usage:
 
 ```bash
 ./manage-languages.sh google
+./manage-languages.sh google --all-browser-profiles --dry-run "English"
 ./manage-languages.sh google --browser-profile work --browser-profile personal
 ./manage-languages.sh google --disable-auto-add
 ./manage-languages.sh google --enable-auto-add
@@ -102,6 +103,7 @@ Notes:
 - The command-line token syntax matches the macOS module: `xx`, `+xx`, `-xx`, `xx:yy`, and `xx:`.
 - `--inherit-macos` replaces the Google Account language list with the full current macOS preferred language order.
 - `--browser-profile NAME` can be repeated to target one or more browser profiles.
+- `--all-browser-profiles` applies the same operation to every valid browser profile.
 - Use `./manage-languages.sh safari-profiles` to inspect or refresh the shared Safari profile cache.
 - `--disable-auto-add` turns off Google's `Automatically add languages` setting before writing, and it can be used on its own without language arguments.
 - `--enable-auto-add` turns Google's `Automatically add languages` setting back on, and it can also be used on its own.
@@ -127,6 +129,7 @@ Usage:
 ./manage-languages.sh atlassian "English (US)"
 ./manage-languages.sh atlassian --inherit-macos
 ./manage-languages.sh atlassian --browser-profile work Czech
+./manage-languages.sh atlassian --all-browser-profiles --dry-run Japanese
 ```
 
 Notes:
@@ -135,6 +138,7 @@ Notes:
 - The module uses Safari automation because the locally available `acli` does not expose an account-language command.
 - `--inherit-macos` maps the first current macOS `AppleLanguages` tag to a supported Atlassian account language.
 - `--browser-profile NAME` can be repeated to target one or more browser profiles.
+- `--all-browser-profiles` applies the same operation to every valid browser profile.
 - Use `./manage-languages.sh safari-profiles` to inspect or refresh the shared Safari profile cache.
 - Safari may prompt for sign-in or additional verification.
 

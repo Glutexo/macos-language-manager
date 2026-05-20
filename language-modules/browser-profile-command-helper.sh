@@ -23,7 +23,7 @@ load_target_browser_profiles() {
   local requested_profile=""
   local found=false
 
-  if [ "${#selected_browser_profiles[@]}" -eq 0 ]; then
+  if ! $all_browser_profiles && [ "${#selected_browser_profiles[@]}" -eq 0 ]; then
     target_browser_profiles=("")
     return 0
   fi
@@ -34,6 +34,11 @@ load_target_browser_profiles() {
   done < <(list_available_browser_profiles)
 
   [ "${#available_profiles[@]}" -gt 0 ] || fail "No valid browser profiles were found."
+
+  if $all_browser_profiles; then
+    target_browser_profiles=("${available_profiles[@]}")
+    return 0
+  fi
 
   target_browser_profiles=()
   for requested_profile in "${selected_browser_profiles[@]}"; do
