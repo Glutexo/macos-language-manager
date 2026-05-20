@@ -120,6 +120,34 @@ _manage_languages_array_words() {
   done
 }
 
+_manage_languages_module_options() {
+  local module="$1"
+
+  case "$module" in
+    atlassian)
+      printf '%s\n' "--dry-run -n --help -h --verbose -v --inherit-macos -M --browser-profile --all-browser-profiles --all-known-browser-profiles"
+      ;;
+    google)
+      printf '%s\n' "--dry-run -n --help -h --verbose -v --inherit-macos -M --disable-auto-add --enable-auto-add --browser-profile --all-browser-profiles --all-known-browser-profiles"
+      ;;
+    safari-profiles)
+      printf '%s\n' "--help -h --verbose -v --refresh --clear-cache"
+      ;;
+    *)
+      printf '%s\n' "--dry-run -n --force -f --help -h --verbose -v --inherit-macos -M --restore -R"
+      ;;
+  esac
+}
+
+_manage_languages_effective_app_options() {
+  if [ "${#selected_modules[@]}" -eq 1 ]; then
+    _manage_languages_module_options "${selected_modules[0]}"
+    return 0
+  fi
+
+  printf '%s\n' "--dry-run -n --force -f --help -h --verbose -v --inherit-macos -M --restore -R"
+}
+
 _manage_languages_get_comp_words_by_ref() {
   if type _get_comp_words_by_ref >/dev/null 2>&1; then
     _get_comp_words_by_ref -n : "$@"
@@ -148,7 +176,6 @@ _manage_languages_get_comp_words_by_ref() {
 _manage_languages() {
   local current_word previous_word command_path=""
   local global_options="--help -h --verbose -v --list-apps --list-modules --self-test"
-  local app_options="--dry-run -n --force -f --help -h --verbose -v --inherit-macos -M --restore -R"
   local everything_options="--dry-run -n --help -h"
   local macos_options="--dry-run -n --restart -r --help -h --verbose -v"
   local macos_targets="account login-window locale startup all"
@@ -163,6 +190,7 @@ _manage_languages() {
   local exclusive_module=""
   local index=0
   local candidate_words=""
+  local app_options=""
 
   _manage_languages_get_comp_words_by_ref current_word previous_word
 
@@ -206,6 +234,8 @@ _manage_languages() {
     _manage_languages_compgen "$current_word" "$candidate_words"
     return 0
   fi
+
+  app_options="$(_manage_languages_effective_app_options)"
 
   for module in "${selected_modules[@]}"; do
     case "$module" in
