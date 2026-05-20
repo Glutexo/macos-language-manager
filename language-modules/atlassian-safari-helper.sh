@@ -155,20 +155,24 @@ account_preferences_script() {
   const requestedLanguage = requested[0] || "";
   const buildSearchCandidates = (label, tag) => {
     const values = [];
+    const fallbackValues = [];
     const normalizedLabelSlug = slug(label || "");
     const fromCodePoints = (...points) => String.fromCodePoint(...points);
-    const push = (value) => {
+    const pushUnique = (target, value) => {
       const normalized = normalize(value || "");
       if (!normalized) {
         return;
       }
-      if (!values.some((existing) => slug(existing) === slug(normalized))) {
-        values.push(normalized);
+      const normalizedSlug = slug(normalized);
+      if (
+        !values.some((existing) => slug(existing) === normalizedSlug) &&
+        !fallbackValues.some((existing) => slug(existing) === normalizedSlug)
+      ) {
+        target.push(normalized);
       }
     };
-
-    push(label);
-    push(label.replace(/\s*\([^)]*\)\s*$/u, ""));
+    const push = (value) => pushUnique(values, value);
+    const pushFallback = (value) => pushUnique(fallbackValues, value);
 
     const nativeLabelCases = {
       "japanese": [fromCodePoints(0x65e5, 0x672c, 0x8a9e), fromCodePoints(0x65e5)],
@@ -214,7 +218,10 @@ account_preferences_script() {
       }
     }
 
-    return values;
+    pushFallback(label);
+    pushFallback(label.replace(/\s*\([^)]*\)\s*$/u, ""));
+
+    return [...values, ...fallbackValues];
   };
 
   const searchCandidates = buildSearchCandidates(requestedLanguage, requestedTag);

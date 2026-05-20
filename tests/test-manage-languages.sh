@@ -374,6 +374,10 @@ atlassian_helper_source="$(sed -n '/if (control.tagName === "SELECT") {/,/window
 assert_not_contains "$atlassian_helper_source" "requestedSlug" "atlassian helper select fallback should not reference an undefined requestedSlug variable"
 assert_contains "$atlassian_helper_source" "searchCandidates.some((candidate)" "atlassian helper select fallback should match supported search candidates"
 
+atlassian_candidate_builder="$(sed -n '/const buildSearchCandidates = (label, tag) => {/,/return \[...values, ...fallbackValues\];/p' "$atlassian_helper_real")"
+assert_contains "$atlassian_candidate_builder" "pushFallback(label);" "atlassian helper should keep the English label only as a fallback search candidate"
+assert_contains "$atlassian_candidate_builder" "return [...values, ...fallbackValues];" "atlassian helper should prefer localized search candidates before English fallbacks"
+
 atlassian_helper_menu_cache="$tmp_dir/atlassian-helper-menu-cache.txt"
 output="$(ATLASSIAN_ACCOUNT_BROWSER_PROFILE_CACHE="$atlassian_helper_menu_cache" ATLASSIAN_ACCOUNT_BROWSER_PROFILE_MENU_DATA=$'NewGlutexoWindow?isDefaultProfile=true\t新規Glutexoウインドウ\nNewTwistoWindow?isDefaultProfile=false\t새로운 Twisto 윈도우\nNewPrivateWindow\t새로운 개인정보 보호 브라우징 윈도우\nNewTab\t새로운 탭' "$atlassian_helper_real" refresh-profiles)"
 assert_contains "$output" $'Glutexo\nTwisto' "atlassian helper should parse quoted Safari profile names independently of the menu language"
