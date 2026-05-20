@@ -79,6 +79,7 @@ supported_language_lines() {
 canonicalize_requested_language() {
   local requested=""
   local normalized=""
+  local candidate=""
   local display=""
   local canonical_tag=""
   local aliases=""
@@ -88,28 +89,36 @@ canonicalize_requested_language() {
   requested="$(normalize_whitespace "$1")"
   [ -n "$requested" ] || fail "Invalid language value: $1"
   normalized="$(printf '%s' "$requested" | tr '[:upper:]' '[:lower:]')"
+  normalized="${normalized//_/-}"
 
-  while IFS='|' read -r display canonical_tag aliases atlassian_label; do
-    if [ "$(printf '%s' "$display" | tr '[:upper:]' '[:lower:]')" = "$normalized" ]; then
-      resolved_requested_language_tag="$canonical_tag"
-      resolved_requested_language_display="$display"
-      resolved_requested_language_label="$atlassian_label"
-      printf '%s\n' "$atlassian_label"
-      return 0
-    fi
-    IFS=',' read -r -a alias_items <<<"$aliases"
-    for alias in "${alias_items[@]}"; do
-      if [ "$(printf '%s' "$alias" | tr '[:upper:]' '[:lower:]')" = "$normalized" ]; then
+  candidate="$normalized"
+  while [ -n "$candidate" ]; do
+    while IFS='|' read -r display canonical_tag aliases atlassian_label; do
+      if [ "$(printf '%s' "$display" | tr '[:upper:]' '[:lower:]')" = "$candidate" ]; then
         resolved_requested_language_tag="$canonical_tag"
         resolved_requested_language_display="$display"
         resolved_requested_language_label="$atlassian_label"
         printf '%s\n' "$atlassian_label"
         return 0
       fi
-    done
-  done <<EOF
+      IFS=',' read -r -a alias_items <<<"$aliases"
+      for alias in "${alias_items[@]}"; do
+        if [ "$(printf '%s' "$alias" | tr '[:upper:]' '[:lower:]')" = "$candidate" ]; then
+          resolved_requested_language_tag="$canonical_tag"
+          resolved_requested_language_display="$display"
+          resolved_requested_language_label="$atlassian_label"
+          printf '%s\n' "$atlassian_label"
+          return 0
+        fi
+      done
+    done <<EOF
 $(language_catalog)
 EOF
+    if [[ "$candidate" != *-* ]]; then
+      break
+    fi
+    candidate="${candidate%-*}"
+  done
 
   fail "Unsupported Atlassian account language: $1"
 }

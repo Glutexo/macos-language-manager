@@ -396,6 +396,9 @@ assert_contains "$output" "Would change the Atlassian account language in Safari
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" MACOS_APP_LANGUAGE_INHERIT=cs-CZ "$script" atlassian --dry-run --inherit-macos)"
 assert_contains "$output" "New Atlassian account language: Čeština" "atlassian inheritance should map the first macOS language to the Atlassian target label"
 
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" MACOS_APP_LANGUAGE_INHERIT=de-CZ "$script" atlassian --dry-run --inherit-macos)"
+assert_contains "$output" "New Atlassian account language: Deutsch" "atlassian inheritance should fall back from unsupported region variants to the base language"
+
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian 'English (US)')"
 assert_contains "$output" "Atlassian account language is already set to English (US)." "atlassian should detect no-op writes"
 
