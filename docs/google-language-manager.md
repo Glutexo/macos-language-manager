@@ -1,6 +1,6 @@
 # Google Account Language Manager Technical Notes
 
-This document describes the experimental `google-account` module behind `manage-languages.sh`.
+This document describes the experimental `google` module behind `manage-languages.sh`.
 
 ## Scope
 
@@ -20,20 +20,20 @@ Version 1 is intentionally narrow:
 ## Entry Point
 
 ```text
-./manage-languages.sh google-account
+./manage-languages.sh google
 ```
 
 ## Usage
 
 ```bash
-./manage-languages.sh google-account
-./manage-languages.sh google-account --all-known-browser-profiles --dry-run "English"
-./manage-languages.sh google-account --browser-profile work --browser-profile personal
-./manage-languages.sh google-account --disable-auto-add
-./manage-languages.sh google-account --enable-auto-add
-./manage-languages.sh google-account --inherit-macos
-./manage-languages.sh google-account --dry-run "English:Czech"
-./manage-languages.sh google-account "English" "-Czech"
+./manage-languages.sh google
+./manage-languages.sh google --all-known-browser-profiles --dry-run "English"
+./manage-languages.sh google --browser-profile work --browser-profile personal
+./manage-languages.sh google --disable-auto-add
+./manage-languages.sh google --enable-auto-add
+./manage-languages.sh google --inherit-macos
+./manage-languages.sh google --dry-run "English:Czech"
+./manage-languages.sh google "English" "-Czech"
 ```
 
 Behavior:
@@ -61,7 +61,7 @@ Token forms:
 The module delegates to:
 
 ```text
-./language-modules/google-account-safari-helper.sh
+./language-modules/google-safari-helper.sh
 ```
 
 The helper:
@@ -107,6 +107,6 @@ The page is forced to `hl=en` so the automation can rely on stable English UI te
 
 ## Related Files
 
-- `language-modules/google-account.sh`
-- `language-modules/google-account-command.sh`
-- `language-modules/google-account-safari-helper.sh`
+- `language-modules/google.sh`
+- `language-modules/google-command.sh`
+- `language-modules/google-safari-helper.sh`

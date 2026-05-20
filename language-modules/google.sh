@@ -1,5 +1,5 @@
 module_init() {
-  module_key="google-account"
+  module_key="google"
   module_display_name="Google Account"
   module_storage_label="account language settings"
   module_example_language="English Czech"
@@ -7,7 +7,7 @@ module_init() {
   module_alias_help="This module uses Safari automation and expects the exact preferred-language labels printed by read-only mode."
   module_supports_bulk="false"
   module_flow_kind="external-cli"
-  google_account_module_command="${GOOGLE_ACCOUNT_LANGUAGE_COMMAND:-$script_dir/language-modules/google-account-command.sh}"
+  google_account_module_command="${GOOGLE_ACCOUNT_LANGUAGE_COMMAND:-$script_dir/language-modules/google-command.sh}"
   google_account_module_args=()
 }
 

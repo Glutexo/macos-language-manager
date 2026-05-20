@@ -44,7 +44,7 @@ run_completion() {
 collect_completion_words < <(run_completion "$script" "")
 assert_contains_word "steam" "${COMPLETION_WORDS[@]}"
 assert_contains_word "macos" "${COMPLETION_WORDS[@]}"
-assert_contains_word "atlassian-account" "${COMPLETION_WORDS[@]}"
+assert_contains_word "atlassian" "${COMPLETION_WORDS[@]}"
 assert_contains_word "safari-profiles" "${COMPLETION_WORDS[@]}"
 assert_contains_word "all" "${COMPLETION_WORDS[@]}"
 assert_contains_word "everything" "${COMPLETION_WORDS[@]}"

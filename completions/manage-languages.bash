@@ -26,7 +26,7 @@ _manage_languages_bulk_modules() {
 
   while IFS= read -r module; do
     case "$module" in
-      all|everything|macos|google-account|atlassian-account|safari-profiles)
+      all|everything|macos|google|atlassian|safari-profiles)
         ;;
       *)
         printf '%s\n' "$module"

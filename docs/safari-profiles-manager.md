@@ -4,7 +4,7 @@ This document describes the `safari-profiles` module behind `manage-languages.sh
 
 ## Scope
 
-The module manages the shared Safari browser-profile cache used by browser-automation modules such as `google-account` and `atlassian-account`.
+The module manages the shared Safari browser-profile cache used by browser-automation modules such as `google` and `atlassian`.
 
 It does not change any language settings.
 

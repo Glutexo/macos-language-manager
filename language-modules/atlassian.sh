@@ -1,5 +1,5 @@
 module_init() {
-  module_key="atlassian-account"
+  module_key="atlassian"
   module_display_name="Atlassian Account"
   module_storage_label="account language preference"
   module_example_language="English (US)"
@@ -7,7 +7,7 @@ module_init() {
   module_alias_help="This module changes the Atlassian account language preference that Jira and other Atlassian Cloud apps inherit for the signed-in account."
   module_supports_bulk="false"
   module_flow_kind="external-cli"
-  atlassian_account_module_command="${ATLASSIAN_ACCOUNT_LANGUAGE_COMMAND:-$script_dir/language-modules/atlassian-account-command.sh}"
+  atlassian_account_module_command="${ATLASSIAN_ACCOUNT_LANGUAGE_COMMAND:-$script_dir/language-modules/atlassian-command.sh}"
   atlassian_account_module_args=()
 }
 

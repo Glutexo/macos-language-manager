@@ -403,9 +403,9 @@ run_language_script() {
   local script=""
 
   template="$(language_page_script)"
-  SCRIPT_TEMPLATE="$template" build_page_script "$mode" "$requested_json" >/tmp/google-account-language-script.$$ 
-  script="$(cat /tmp/google-account-language-script.$$)"
-  rm -f /tmp/google-account-language-script.$$
+  SCRIPT_TEMPLATE="$template" build_page_script "$mode" "$requested_json" >/tmp/google-language-script.$$ 
+  script="$(cat /tmp/google-language-script.$$)"
+  rm -f /tmp/google-language-script.$$
   safari_eval_js "$script"
 }
 

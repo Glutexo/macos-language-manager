@@ -2,8 +2,8 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
-display_command="${DISPLAY_COMMAND:-./manage-languages.sh google-account}"
-helper_command="${GOOGLE_ACCOUNT_LANGUAGE_HELPER:-$script_dir/google-account-safari-helper.sh}"
+display_command="${DISPLAY_COMMAND:-./manage-languages.sh google}"
+helper_command="${GOOGLE_ACCOUNT_LANGUAGE_HELPER:-$script_dir/google-safari-helper.sh}"
 preferred_languages_url="${GOOGLE_ACCOUNT_LANGUAGE_URL:-https://myaccount.google.com/language?hl=en}"
 timeout_seconds="${GOOGLE_ACCOUNT_LANGUAGE_TIMEOUT:-180}"
 helper_browser_profile_env_var="GOOGLE_ACCOUNT_BROWSER_PROFILE"

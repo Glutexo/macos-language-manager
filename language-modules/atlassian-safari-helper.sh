@@ -256,9 +256,9 @@ run_account_preferences_script() {
   local script=""
 
   template="$(account_preferences_script)"
-  SCRIPT_TEMPLATE="$template" build_page_script "$mode" "$requested_json" >/tmp/atlassian-account-language-script.$$
-  script="$(cat /tmp/atlassian-account-language-script.$$)"
-  rm -f /tmp/atlassian-account-language-script.$$
+  SCRIPT_TEMPLATE="$template" build_page_script "$mode" "$requested_json" >/tmp/atlassian-language-script.$$
+  script="$(cat /tmp/atlassian-language-script.$$)"
+  rm -f /tmp/atlassian-language-script.$$
   safari_eval_js "$script"
 }
 

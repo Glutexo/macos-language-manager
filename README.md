@@ -32,8 +32,8 @@ Notes:
 
 - The script discovers modules from `language-modules/`.
 - You can target multiple application modules in one run, for example `./manage-languages.sh steam anki ja`.
-- The `google-account` module keeps its own browser-automation CLI and is not part of `all` or `everything`.
-- The `atlassian-account` module keeps its own browser-automation CLI and is not part of `all` or `everything`.
+- The `google` module keeps its own browser-automation CLI and is not part of `all` or `everything`.
+- The `atlassian` module keeps its own browser-automation CLI and is not part of `all` or `everything`.
 - The `safari-profiles` module manages the shared Safari browser-profile cache and is not part of `all` or `everything`.
 - The pseudo-module `all` runs the shared application-language flow across every simple application module.
 - In `all` mode, a requested language may be applied only to the modules that support it; unsupported modules are skipped and left unchanged.
@@ -81,21 +81,21 @@ Technical details:
 
 Verbose supported-language help uses Apple's renderable UI language list from `IntlPreferences.framework`.
 
-### `manage-languages.sh google-account`
+### `manage-languages.sh google`
 
 Reads or reorders the preferred language list in the signed-in Google account through Safari automation.
 
 Usage:
 
 ```bash
-./manage-languages.sh google-account
-./manage-languages.sh google-account --all-known-browser-profiles --dry-run "English"
-./manage-languages.sh google-account --browser-profile work --browser-profile personal
-./manage-languages.sh google-account --disable-auto-add
-./manage-languages.sh google-account --enable-auto-add
-./manage-languages.sh google-account --inherit-macos
-./manage-languages.sh google-account --dry-run "English:Czech"
-./manage-languages.sh google-account "English" "-Czech"
+./manage-languages.sh google
+./manage-languages.sh google --all-known-browser-profiles --dry-run "English"
+./manage-languages.sh google --browser-profile work --browser-profile personal
+./manage-languages.sh google --disable-auto-add
+./manage-languages.sh google --enable-auto-add
+./manage-languages.sh google --inherit-macos
+./manage-languages.sh google --dry-run "English:Czech"
+./manage-languages.sh google "English" "-Czech"
 ```
 
 Notes:
@@ -116,21 +116,21 @@ Notes:
 
 Technical details:
 
-- [google-account-language-manager.md](docs/google-account-language-manager.md)
+- [google-language-manager.md](docs/google-language-manager.md)
 
-### `manage-languages.sh atlassian-account`
+### `manage-languages.sh atlassian`
 
 Reads or changes the Atlassian account language preference through Safari automation.
 
 Usage:
 
 ```bash
-./manage-languages.sh atlassian-account
-./manage-languages.sh atlassian-account Czech
-./manage-languages.sh atlassian-account "English (US)"
-./manage-languages.sh atlassian-account --inherit-macos
-./manage-languages.sh atlassian-account --browser-profile work Czech
-./manage-languages.sh atlassian-account --all-known-browser-profiles --dry-run Japanese
+./manage-languages.sh atlassian
+./manage-languages.sh atlassian Czech
+./manage-languages.sh atlassian "English (US)"
+./manage-languages.sh atlassian --inherit-macos
+./manage-languages.sh atlassian --browser-profile work Czech
+./manage-languages.sh atlassian --all-known-browser-profiles --dry-run Japanese
 ```
 
 Notes:
@@ -146,7 +146,7 @@ Notes:
 
 Technical details:
 
-- [atlassian-account-language-manager.md](docs/atlassian-account-language-manager.md)
+- [atlassian-language-manager.md](docs/atlassian-language-manager.md)
 
 ### `manage-languages.sh safari-profiles`
 
@@ -242,8 +242,8 @@ Both completion files register completions for `manage-languages` and `./manage-
 - [factorio-language-manager.md](docs/factorio-language-manager.md)
 - [wingspan-language-manager.md](docs/wingspan-language-manager.md)
 - [terraforming-mars-language-manager.md](docs/terraforming-mars-language-manager.md)
-- [google-account-language-manager.md](docs/google-account-language-manager.md)
-- [atlassian-account-language-manager.md](docs/atlassian-account-language-manager.md)
+- [google-language-manager.md](docs/google-language-manager.md)
+- [atlassian-language-manager.md](docs/atlassian-language-manager.md)
 - [safari-profiles-manager.md](docs/safari-profiles-manager.md)
 
 ## Tests

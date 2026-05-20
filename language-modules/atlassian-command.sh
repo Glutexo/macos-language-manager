@@ -2,8 +2,8 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
-display_command="${DISPLAY_COMMAND:-./manage-languages.sh atlassian-account}"
-helper_command="${ATLASSIAN_ACCOUNT_LANGUAGE_HELPER:-$script_dir/atlassian-account-safari-helper.sh}"
+display_command="${DISPLAY_COMMAND:-./manage-languages.sh atlassian}"
+helper_command="${ATLASSIAN_ACCOUNT_LANGUAGE_HELPER:-$script_dir/atlassian-safari-helper.sh}"
 account_preferences_url="${ATLASSIAN_ACCOUNT_LANGUAGE_URL:-https://id.atlassian.com/manage-profile/account-preferences}"
 timeout_seconds="${ATLASSIAN_ACCOUNT_LANGUAGE_TIMEOUT:-180}"
 helper_browser_profile_env_var="ATLASSIAN_ACCOUNT_BROWSER_PROFILE"

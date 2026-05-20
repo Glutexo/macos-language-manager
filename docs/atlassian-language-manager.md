@@ -1,6 +1,6 @@
 # Atlassian Account Language Manager Technical Notes
 
-This document describes the `atlassian-account` module behind `manage-languages.sh`.
+This document describes the `atlassian` module behind `manage-languages.sh`.
 
 ## Scope
 
@@ -12,24 +12,24 @@ Version 1 is intentionally narrow:
 - it reads the current Atlassian account language from the account preferences page
 - it writes one selected Atlassian account language
 - it supports `--inherit-macos` by mapping the first current macOS preferred language to a supported Atlassian account language
-- it supports the same Safari profile-selection flow as `google-account`
+- it supports the same Safari profile-selection flow as `google`
 - it does not use `acli`, because the locally available CLI does not expose an account-language command here
 
 ## Entry Point
 
 ```text
-./manage-languages.sh atlassian-account
+./manage-languages.sh atlassian
 ```
 
 ## Usage
 
 ```bash
-./manage-languages.sh atlassian-account
-./manage-languages.sh atlassian-account Czech
-./manage-languages.sh atlassian-account "English (US)"
-./manage-languages.sh atlassian-account --inherit-macos
-./manage-languages.sh atlassian-account --browser-profile work Czech
-./manage-languages.sh atlassian-account --all-known-browser-profiles --dry-run Japanese
+./manage-languages.sh atlassian
+./manage-languages.sh atlassian Czech
+./manage-languages.sh atlassian "English (US)"
+./manage-languages.sh atlassian --inherit-macos
+./manage-languages.sh atlassian --browser-profile work Czech
+./manage-languages.sh atlassian --all-known-browser-profiles --dry-run Japanese
 ```
 
 Behavior:
@@ -47,7 +47,7 @@ Behavior:
 The module delegates to:
 
 ```text
-./language-modules/atlassian-account-safari-helper.sh
+./language-modules/atlassian-safari-helper.sh
 ```
 
 The helper:
@@ -87,6 +87,6 @@ The helper:
 
 ## Related Files
 
-- `language-modules/atlassian-account.sh`
-- `language-modules/atlassian-account-command.sh`
-- `language-modules/atlassian-account-safari-helper.sh`
+- `language-modules/atlassian.sh`
+- `language-modules/atlassian-command.sh`
+- `language-modules/atlassian-safari-helper.sh`
