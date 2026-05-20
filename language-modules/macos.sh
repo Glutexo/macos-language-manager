@@ -32,7 +32,7 @@ module_parse_arguments() {
 
 module_show_usage() {
   if $module_requested_verbose_help; then
-    "$macos_module_command" --verbose
+    "$macos_module_command" --verbose --help
   else
     "$macos_module_command" --help
   fi

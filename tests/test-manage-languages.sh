@@ -166,6 +166,39 @@ esac
 EOS
 chmod +x "$google_helper_stub"
 
+atlassian_helper_stub="$tmp_dir/atlassian-account-helper.sh"
+atlassian_helper_log="$tmp_dir/atlassian-account-helper.log"
+atlassian_helper_real="$repo_root/language-modules/atlassian-account-safari-helper.sh"
+cat > "$atlassian_helper_stub" <<'EOS'
+#!/bin/bash
+set -euo pipefail
+
+log_file="${ATLASSIAN_ACCOUNT_HELPER_LOG:?}"
+profile_name="${ATLASSIAN_ACCOUNT_BROWSER_PROFILE:-}"
+command="${1:?}"
+shift || true
+
+case "$command" in
+  list-profiles)
+    printf 'default\nwork\npersonal\n'
+    ;;
+  refresh-profiles)
+    printf 'default\nwork\npersonal\n'
+    ;;
+  read-json)
+    printf '%s\n' '{"status":"ok","language":{"value":"en-US","label":"English (US)"}}'
+    ;;
+  write)
+    printf 'write\t%s\t%s\n' "${profile_name:-default}" "$1" >>"$log_file"
+    ;;
+  *)
+    echo "Unknown helper command: $command" >&2
+    exit 1
+    ;;
+esac
+EOS
+chmod +x "$atlassian_helper_stub"
+
 assert_contains() {
   local haystack="$1"
   local needle="$2"
@@ -205,6 +238,7 @@ assert_contains "$output" "  all" "global help should include the all pseudo-app
 assert_contains "$output" "  everything" "global help should include the everything pseudo-app"
 assert_contains "$output" "  anki" "global help should include anki"
 assert_contains "$output" "  factorio" "global help should include factorio"
+assert_contains "$output" "  atlassian-account" "global help should include atlassian-account"
 assert_contains "$output" "  google-account" "global help should include google-account"
 assert_contains "$output" "  macos" "global help should include macos"
 assert_contains "$output" "  steam" "global help should include steam"
@@ -214,6 +248,7 @@ assert_contains "$output" "  terraforming-mars" "global help should include terr
 output="$("$script" --list-apps)"
 assert_contains "$output" "anki" "list-apps should print app ids"
 assert_contains "$output" "factorio" "list-apps should print app ids"
+assert_contains "$output" "atlassian-account" "list-apps should print module ids"
 assert_contains "$output" "google-account" "list-apps should print module ids"
 assert_contains "$output" "macos" "list-apps should print module ids"
 assert_contains "$output" "steam" "list-apps should print app ids"
@@ -226,6 +261,7 @@ assert_contains "$output" "steam" "symlinked runner should discover modules from
 output="$("$script" --self-test)"
 assert_contains "$output" "OK: anki" "self-test should verify anki module contract"
 assert_contains "$output" "OK: factorio" "self-test should verify factorio module contract"
+assert_contains "$output" "OK: atlassian-account" "self-test should verify atlassian-account module contract"
 assert_contains "$output" "OK: google-account" "self-test should verify google-account module contract"
 assert_contains "$output" "OK: macos" "self-test should verify macos module contract"
 assert_contains "$output" "OK: steam" "self-test should verify steam module contract"
@@ -250,6 +286,88 @@ assert_contains "$output" '--all-browser-profiles' "google-account help should s
 assert_contains "$output" '--all-known-browser-profiles' "google-account help should show all-known-browser-profiles support"
 assert_contains "$output" '--list-browser-profiles' "google-account help should show browser profile listing"
 assert_contains "$output" '--refresh-browser-profiles' "google-account help should show browser profile refresh support"
+
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account --help)"
+assert_contains "$output" "Usage: ./manage-languages.sh atlassian-account [--dry-run|-n] [language]" "atlassian-account help should show module usage"
+assert_contains "$output" '--inherit-macos' "atlassian-account help should show inheritance support"
+assert_contains "$output" '--browser-profile NAME' "atlassian-account help should show browser profile selection"
+assert_contains "$output" '--all-browser-profiles' "atlassian-account help should show all-browser-profiles support"
+assert_contains "$output" '--all-known-browser-profiles' "atlassian-account help should show all-known-browser-profiles support"
+assert_contains "$output" '--list-browser-profiles' "atlassian-account help should show browser profile listing"
+assert_contains "$output" '--refresh-browser-profiles' "atlassian-account help should show browser profile refresh support"
+
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account --verbose)"
+assert_contains "$output" "Supported Atlassian account language values:" "atlassian-account verbose help should list supported values"
+assert_contains "$output" "  Czech (cs,cs-CZ,cs_CZ,cestina,čeština,czech)" "atlassian-account verbose help should include Czech aliases"
+
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account --list-browser-profiles)"
+assert_contains "$output" $'default\nwork\npersonal' "atlassian-account should list valid browser profiles"
+
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account --refresh-browser-profiles)"
+assert_contains "$output" $'default\nwork\npersonal' "atlassian-account should refresh and print valid browser profiles"
+
+atlassian_helper_test_home="$tmp_dir/atlassian-helper-home"
+atlassian_helper_test_db_dir="$atlassian_helper_test_home/Library/Containers/com.apple.Safari/Data/Library/Safari"
+mkdir -p "$atlassian_helper_test_db_dir"
+atlassian_helper_test_db="$atlassian_helper_test_db_dir/SafariTabs.db"
+ATLASSIAN_HELPER_TEST_DB="$atlassian_helper_test_db" python3 - <<'PY'
+import os
+import sqlite3
+
+path = os.environ["ATLASSIAN_HELPER_TEST_DB"]
+conn = sqlite3.connect(path)
+conn.execute(
+    "create table bookmarks (id integer primary key, title text, external_uuid text, type integer, subtype integer, order_index integer)"
+)
+conn.executemany(
+    "insert into bookmarks (id, title, external_uuid, type, subtype, order_index) values (?, ?, ?, ?, ?, ?)",
+    [
+        (1, "Ignored Folder", "folder-1", 2, 0, 0),
+        (2, "", "DefaultProfile", 1, 2, 0),
+        (3, "Work", "uuid-work", 1, 2, 1),
+        (4, "Personal", "uuid-personal", 1, 2, 2),
+    ],
+)
+conn.commit()
+conn.close()
+PY
+
+output="$(HOME="$atlassian_helper_test_home" "$atlassian_helper_real" list-profiles)"
+assert_contains "$output" $'default\nWork\nPersonal' "atlassian-account helper should read Safari profile names from SafariTabs.db"
+
+atlassian_helper_menu_cache="$tmp_dir/atlassian-helper-menu-cache.txt"
+output="$(ATLASSIAN_ACCOUNT_BROWSER_PROFILE_CACHE="$atlassian_helper_menu_cache" ATLASSIAN_ACCOUNT_BROWSER_PROFILE_MENU_DATA=$'NewGlutexoWindow?isDefaultProfile=true\t新規Glutexoウインドウ\nNewTwistoWindow?isDefaultProfile=false\t새로운 Twisto 윈도우\nNewPrivateWindow\t새로운 개인정보 보호 브라우징 윈도우\nNewTab\t새로운 탭' "$atlassian_helper_real" refresh-profiles)"
+assert_contains "$output" $'Glutexo\nTwisto' "atlassian-account helper should parse quoted Safari profile names independently of the menu language"
+assert_contains "$(cat "$atlassian_helper_menu_cache")" $'Glutexo\nTwisto' "atlassian-account helper should store refreshed browser profile names in cache"
+
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account)"
+assert_contains "$output" "Current Atlassian account language: English (US)" "atlassian-account read mode should print the current language"
+
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account --dry-run Czech)"
+assert_contains "$output" "Current Atlassian account language: English (US)" "atlassian-account dry-run should print the current language"
+assert_contains "$output" "New Atlassian account language: Czech" "atlassian-account dry-run should print the target language"
+assert_contains "$output" "Would change the Atlassian account language in Safari." "atlassian-account dry-run should describe the planned write"
+
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" MACOS_APP_LANGUAGE_INHERIT=cs-CZ "$script" atlassian-account --dry-run --inherit-macos)"
+assert_contains "$output" "New Atlassian account language: Czech" "atlassian-account inheritance should map the first macOS language"
+
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account 'English (US)')"
+assert_contains "$output" "Atlassian account language is already set to English (US)." "atlassian-account should detect no-op writes"
+
+rm -f "$atlassian_helper_log"
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account Czech)"
+assert_contains "$output" "Changed Atlassian account language from English (US) to Czech." "atlassian-account write should print the change"
+assert_contains "$(cat "$atlassian_helper_log")" $'write\tdefault\tCzech' "atlassian-account write should pass the requested language to the helper"
+
+rm -f "$atlassian_helper_log"
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account --browser-profile work Czech)"
+assert_contains "$(cat "$atlassian_helper_log")" $'write\twork\tCzech' "atlassian-account should target the requested browser profile"
+
+rm -f "$atlassian_helper_log"
+output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account --all-known-browser-profiles --dry-run Czech)"
+assert_contains "$output" "Browser profile: default" "atlassian-account all-known-browser-profiles should print the first profile heading"
+assert_contains "$output" "Browser profile: work" "atlassian-account all-known-browser-profiles should print the second profile heading"
+assert_contains "$output" "Browser profile: personal" "atlassian-account all-known-browser-profiles should print the third profile heading"
 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --list-browser-profiles)"
 assert_contains "$output" $'default\nwork\npersonal' "google-account should list valid browser profiles"

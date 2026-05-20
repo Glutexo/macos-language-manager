@@ -32,7 +32,7 @@ module_parse_arguments() {
 
 module_show_usage() {
   if $module_requested_verbose_help; then
-    "$google_account_module_command" --verbose
+    "$google_account_module_command" --verbose --help
   else
     "$google_account_module_command" --help
   fi

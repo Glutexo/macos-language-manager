@@ -6,6 +6,7 @@ This document describes the shared architecture behind `manage-languages.sh` and
 
 The runner manages application interface languages for supported macOS applications and loads the macOS target-based workflow through the same module lifecycle as the application modules.
 It also supports external modules whose implementation lives behind a module-specific CLI, such as `macos` and `google-account`.
+It also supports external modules whose implementation lives behind a module-specific CLI, such as `macos`, `google-account`, and `atlassian-account`.
 
 ## Entry Points
 
@@ -35,6 +36,7 @@ Examples:
 - `language-modules/terraforming-mars.sh` → `terraforming-mars`
 - `language-modules/macos.sh` → `macos`
 - `language-modules/google-account.sh` → `google-account`
+- `language-modules/atlassian-account.sh` → `atlassian-account`
 
 `--list-apps` and `--list-modules` print the discovered ids.
 
@@ -206,3 +208,4 @@ Modules own application-specific errors, and shared-flow modules additionally ow
 - [wingspan-language-manager.md](wingspan-language-manager.md)
 - [terraforming-mars-language-manager.md](terraforming-mars-language-manager.md)
 - [google-account-language-manager.md](google-account-language-manager.md)
+- [atlassian-account-language-manager.md](atlassian-account-language-manager.md)

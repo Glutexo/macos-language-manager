@@ -3,6 +3,7 @@
 Simple shell tooling for macOS language management:
 
 - managing the preferred macOS language order
+- changing the Atlassian account language preference used by Jira and other Atlassian Cloud apps through Safari automation
 - reading or reordering the preferred language list in a Google account through Safari automation
 - managing application interface languages for Steam, Anki, Factorio, Wingspan, and Terraforming Mars
 
@@ -31,6 +32,7 @@ Notes:
 - The script discovers modules from `language-modules/`.
 - You can target multiple application modules in one run, for example `./manage-languages.sh steam anki ja`.
 - The `google-account` module keeps its own browser-automation CLI and is not part of `all` or `everything`.
+- The `atlassian-account` module keeps its own browser-automation CLI and is not part of `all` or `everything`.
 - The pseudo-module `all` runs the shared application-language flow across every simple application module.
 - In `all` mode, a requested language may be applied only to the modules that support it; unsupported modules are skipped and left unchanged.
 - The pseudo-module `everything` runs `all` and then `macos all` in one command.
@@ -119,6 +121,37 @@ Technical details:
 
 - [google-account-language-manager.md](docs/google-account-language-manager.md)
 
+### `manage-languages.sh atlassian-account`
+
+Reads or changes the Atlassian account language preference through Safari automation.
+
+Usage:
+
+```bash
+./manage-languages.sh atlassian-account
+./manage-languages.sh atlassian-account Czech
+./manage-languages.sh atlassian-account "English (US)"
+./manage-languages.sh atlassian-account --inherit-macos
+./manage-languages.sh atlassian-account --browser-profile work Czech
+./manage-languages.sh atlassian-account --all-known-browser-profiles --dry-run Japanese
+```
+
+Notes:
+
+- This targets the Atlassian account preference that Jira and other Atlassian Cloud apps inherit for the signed-in account.
+- The module uses Safari automation because the locally available `acli` does not expose an account-language command.
+- `--inherit-macos` maps the first current macOS `AppleLanguages` tag to a supported Atlassian account language.
+- `--browser-profile NAME` can be repeated to target one or more browser profiles.
+- `--all-browser-profiles` applies the same operation to every valid browser profile.
+- `--all-known-browser-profiles` applies the same operation to every browser profile currently known to the helper.
+- `--list-browser-profiles` prints the valid browser profile names that the automation currently accepts.
+- `--refresh-browser-profiles` refreshes the stored Safari profile-name cache through Safari UI automation.
+- Safari may prompt for sign-in or additional verification.
+
+Technical details:
+
+- [atlassian-account-language-manager.md](docs/atlassian-account-language-manager.md)
+
 ### `extract-system-settings-languages.swift`
 
 Extracts the preferred language list and the full addable-language list from System Settings > Language & Region via Accessibility.
@@ -187,6 +220,7 @@ Both completion files register completions for `manage-languages` and `./manage-
 - [wingspan-language-manager.md](docs/wingspan-language-manager.md)
 - [terraforming-mars-language-manager.md](docs/terraforming-mars-language-manager.md)
 - [google-account-language-manager.md](docs/google-account-language-manager.md)
+- [atlassian-account-language-manager.md](docs/atlassian-account-language-manager.md)
 
 ## Tests
 
