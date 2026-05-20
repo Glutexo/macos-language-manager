@@ -74,6 +74,8 @@ The runner handles:
 - restore from `.bak` files for the same module-declared backup set
 - generic status output
 - shared ordered-language token parsing is implemented once in `language-modules/ordered-language-list-helper.sh` and reused by modules that manage ordered language lists
+- shared browser-profile command handling for external Safari-automation modules is implemented in `language-modules/browser-profile-command-helper.sh`
+- shared Safari profile discovery, cache handling, profile-window opening, and JavaScript execution for external browser modules is implemented in `language-modules/safari-browser-profile-helper.sh`
 
 ## Module Contract
 
