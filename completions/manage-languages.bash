@@ -120,6 +120,31 @@ _manage_languages_array_words() {
   done
 }
 
+_manage_languages_get_comp_words_by_ref() {
+  if type _get_comp_words_by_ref >/dev/null 2>&1; then
+    _get_comp_words_by_ref -n : "$@"
+    if [ "$?" -eq 0 ]; then
+      return
+    fi
+  fi
+
+  local current_word_ref="$1"
+  local previous_word_ref="$2"
+  local current_value=""
+  local previous_value=""
+
+  if [ "${COMP_CWORD:-0}" -ge 0 ] && [ "${#COMP_WORDS[@]:-0}" -gt 0 ]; then
+    current_value="${COMP_WORDS[COMP_CWORD]}"
+  fi
+
+  if [ "${COMP_CWORD:-0}" -gt 0 ]; then
+    previous_value="${COMP_WORDS[COMP_CWORD-1]}"
+  fi
+
+  printf -v "$current_word_ref" '%s' "$current_value"
+  printf -v "$previous_word_ref" '%s' "$previous_value"
+}
+
 _manage_languages() {
   local current_word previous_word command_path=""
   local global_options="--help -h --verbose -v --list-apps --list-modules --self-test"
@@ -139,12 +164,7 @@ _manage_languages() {
   local index=0
   local candidate_words=""
 
-  if declare -F _get_comp_words_by_ref >/dev/null 2>&1; then
-    _get_comp_words_by_ref -n : current_word previous_word
-  else
-    current_word="${COMP_WORDS[COMP_CWORD]}"
-    previous_word="${COMP_WORDS[COMP_CWORD-1]}"
-  fi
+  _manage_languages_get_comp_words_by_ref current_word previous_word
 
   command_path="$(_manage_languages_command_path "${COMP_WORDS[0]}")"
 
