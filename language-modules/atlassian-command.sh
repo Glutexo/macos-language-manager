@@ -19,6 +19,7 @@ all_known_browser_profiles=false
 selected_browser_profiles=()
 requested_language=""
 target_browser_profiles=()
+resolved_requested_language_tag=""
 
 fail() {
   echo "$1" >&2
@@ -85,12 +86,14 @@ canonicalize_requested_language() {
 
   while IFS='|' read -r display canonical_tag aliases; do
     if [ "$(printf '%s' "$display" | tr '[:upper:]' '[:lower:]')" = "$normalized" ]; then
+      resolved_requested_language_tag="$canonical_tag"
       printf '%s\n' "$display"
       return 0
     fi
     IFS=',' read -r -a alias_items <<<"$aliases"
     for alias in "${alias_items[@]}"; do
       if [ "$(printf '%s' "$alias" | tr '[:upper:]' '[:lower:]')" = "$normalized" ]; then
+        resolved_requested_language_tag="$canonical_tag"
         printf '%s\n' "$display"
         return 0
       fi
@@ -211,9 +214,12 @@ main() {
   local profile_loop_index=0
   local last_profile_index=0
   local canonical_language=""
+  local canonical_language_tag=""
   local inherited_language=""
   local effective_language=""
   local previous_language_label=""
+  local write_payload=""
+  local write_changed=""
 
   parse_arguments "$@"
 
@@ -232,6 +238,7 @@ main() {
 
   if [ -n "$requested_language" ]; then
     canonical_language="$(canonicalize_requested_language "$requested_language")"
+    canonical_language_tag="$resolved_requested_language_tag"
   fi
 
   for profile_name in "${target_browser_profiles[@]}"; do
@@ -277,9 +284,35 @@ main() {
     fi
 
     previous_language_label="$current_language_label"
-    run_helper_for_profile "$profile_name" write "$effective_language"
+    if [ -n "$profile_name" ]; then
+      write_payload="$(env \
+        "$helper_browser_profile_env_var=$profile_name" \
+        "ATLASSIAN_ACCOUNT_REQUESTED_LANGUAGE_TAG=$canonical_language_tag" \
+        "$helper_command" write "$effective_language")"
+    else
+      write_payload="$(env \
+        "ATLASSIAN_ACCOUNT_REQUESTED_LANGUAGE_TAG=$canonical_language_tag" \
+        "$helper_command" write "$effective_language")"
+    fi
+    write_changed="$(
+      printf '%s' "$write_payload" | python3 -c 'import json, sys
+payload = sys.stdin.read().strip()
+if not payload:
+    print("true")
+else:
+    try:
+        value = json.loads(payload).get("changed")
+    except Exception:
+        print("true")
+    else:
+        print("true" if value is not False else "false")'
+    )"
     load_atlassian_current_state "$profile_name"
-    echo "Changed Atlassian account language from $previous_language_label to $effective_language."
+    if [ "$write_changed" = "false" ]; then
+      echo "Atlassian account language is already set to $current_language_label."
+    else
+      echo "Changed Atlassian account language from $previous_language_label to $effective_language."
+    fi
     if [ "$profile_loop_index" -lt "$last_profile_index" ]; then
       echo
     fi

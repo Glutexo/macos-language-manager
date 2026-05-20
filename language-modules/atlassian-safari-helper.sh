@@ -31,6 +31,7 @@ account_preferences_script() {
 (() => {
   const mode = __MODE__;
   const requested = __REQUESTED__;
+  const requestedTag = __REQUESTED_TAG__;
 
   const normalize = (value) => value.replace(/\s+/g, " ").trim();
   const slug = (value) => normalize(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -73,19 +74,49 @@ account_preferences_script() {
     return normalize(parts.join(" "));
   };
 
+  const readSingleValueText = (node) => {
+    if (!node || !node.getAttribute) {
+      return "";
+    }
+    const describedByIds = (node.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+    for (const describedById of describedByIds) {
+      const describedByNode = document.getElementById(describedById);
+      const describedByText = textOf(describedByNode);
+      if (describedByText) {
+        return describedByText;
+      }
+    }
+
+    const fieldGroup = node.closest("label, div, section, form") || node.parentElement;
+    if (!fieldGroup) {
+      return "";
+    }
+
+    const singleValueNode = fieldGroup.querySelector("[id$='-single-value']");
+    return textOf(singleValueNode);
+  };
+
   const controlCandidates = [...document.querySelectorAll("select, input, button, [role='combobox'], [aria-haspopup='listbox']")]
     .filter((node) => isVisible(node))
     .map((node) => {
       const combinedText = [
+        node.getAttribute("id") || "",
         node.getAttribute("aria-label") || "",
         node.getAttribute("name") || "",
         node.getAttribute("placeholder") || "",
         findLabelText(node),
         textOf(node.parentElement || node)
       ].join(" ");
-      return { node, score: slug(combinedText).includes("language") ? 1 : 0 };
+      const combinedSlug = slug(combinedText);
+      const score = combinedSlug.includes("language dropdown") || combinedSlug.includes("language")
+        ? 2
+        : combinedSlug.includes("timezone dropdown") || combinedSlug.includes("time zone")
+          ? -1
+          : 0;
+      return { node, score };
     })
-    .filter((item) => item.score > 0);
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score);
 
   const control = controlCandidates.length > 0 ? controlCandidates[0].node : null;
   if (!control) {
@@ -103,9 +134,10 @@ account_preferences_script() {
 
     const fieldValue = normalize(control.value || "");
     const buttonText = normalize(textOf(control));
+    const singleValueText = normalize(readSingleValueText(control));
     return {
-      value: fieldValue || buttonText,
-      label: fieldValue || buttonText
+      value: singleValueText || fieldValue || buttonText,
+      label: singleValueText || fieldValue || buttonText
     };
   };
 
@@ -119,11 +151,87 @@ account_preferences_script() {
   }
 
   const requestedLanguage = requested[0] || "";
-  const requestedSlug = slug(requestedLanguage);
-  const matchesCurrent = requestedSlug && (slug(current.label) === requestedSlug || slug(current.value) === requestedSlug);
+  const buildSearchCandidates = (label, tag) => {
+    const values = [];
+    const push = (value) => {
+      const normalized = normalize(value || "");
+      if (!normalized) {
+        return;
+      }
+      if (!values.some((existing) => slug(existing) === slug(normalized))) {
+        values.push(normalized);
+      }
+    };
+
+    push(label);
+    push(label.replace(/\s*\([^)]*\)\s*$/u, ""));
+
+    if (tag && typeof Intl !== "undefined" && Intl.DisplayNames) {
+      const canonicalTag = Intl.getCanonicalLocales([tag])[0] || tag;
+      const baseLanguage = canonicalTag.split("-")[0];
+      const localeCandidates = [
+        document.documentElement.lang || "",
+        navigator.language || "",
+        "en"
+      ].filter(Boolean);
+
+      for (const locale of localeCandidates) {
+        try {
+          const displayNames = new Intl.DisplayNames([locale], { type: "language" });
+          push(displayNames.of(canonicalTag));
+          push(displayNames.of(baseLanguage));
+        } catch (_) {
+        }
+      }
+
+      const specialCases = {
+        ja: ["日本語"],
+        ko: ["한국어"],
+        zh: ["中文"],
+        "zh-cn": ["简体中文"],
+        "zh-tw": ["繁體中文"]
+      };
+      for (const variant of specialCases[canonicalTag.toLowerCase()] || []) {
+        push(variant);
+      }
+      for (const variant of specialCases[baseLanguage.toLowerCase()] || []) {
+        push(variant);
+      }
+    }
+
+    return values;
+  };
+
+  const searchCandidates = buildSearchCandidates(requestedLanguage, requestedTag);
+  const matchesRequestedLanguage = (language) => {
+    if (searchCandidates.length === 0) {
+      return false;
+    }
+    const currentSlugs = [slug(language.label || ""), slug(language.value || "")].filter(Boolean);
+    return searchCandidates.some((candidate) => {
+      const candidateSlug = slug(candidate);
+      return currentSlugs.includes(candidateSlug);
+    });
+  };
+
+  const matchesCurrent = matchesRequestedLanguage(current);
   if (mode === "write" && matchesCurrent) {
-    return JSON.stringify({ status: "ok", language: current });
+    return JSON.stringify({ status: "ok", changed: false, language: current });
   }
+
+  const currentSearchCandidate = () => {
+    const index = window.__codexAtlassianLanguageSearchIndex || 0;
+    return searchCandidates[index] || searchCandidates[0] || requestedLanguage;
+  };
+
+  const advanceSearchCandidate = () => {
+    const index = window.__codexAtlassianLanguageSearchIndex || 0;
+    if (index + 1 >= searchCandidates.length) {
+      return false;
+    }
+    window.__codexAtlassianLanguageSearchIndex = index + 1;
+    return true;
+  };
 
   const findVisibleOption = () => {
     const options = [...document.querySelectorAll("[role='option'], option, li, button, div")]
@@ -138,7 +246,10 @@ account_preferences_script() {
     return options.find((item) => {
       const labelSlug = slug(item.label);
       const valueSlug = slug(item.value);
-      return labelSlug === requestedSlug || valueSlug === requestedSlug;
+      return searchCandidates.some((candidate) => {
+        const candidateSlug = slug(candidate);
+        return labelSlug === candidateSlug || valueSlug === candidateSlug;
+      });
     }) || null;
   };
 
@@ -159,10 +270,40 @@ account_preferences_script() {
     return true;
   };
 
+  const setComboboxValue = (node, value) => {
+    if (!node || typeof value !== "string") {
+      return;
+    }
+    if (node.focus) {
+      node.focus();
+    }
+    if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      if (setter) {
+        setter.call(node, value);
+      } else {
+        node.value = value;
+      }
+    } else {
+      node.value = value;
+    }
+    node.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: value.slice(-1) || " ", code: "KeyA" }));
+    node.dispatchEvent(new Event("input", { bubbles: true }));
+    node.dispatchEvent(new Event("change", { bubbles: true }));
+    node.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: value.slice(-1) || " ", code: "KeyA" }));
+  };
+
+  const visibleOptionsContainNoResults = () => {
+    const optionContainerText = textOf(document.querySelector("[role='listbox']") || document.body).toLowerCase();
+    return optionContainerText.includes("no options") || optionContainerText.includes("no results");
+  };
+
   const marker = window.__codexAtlassianLanguageTarget || "";
   if (marker !== requestedLanguage) {
     window.__codexAtlassianLanguageTarget = requestedLanguage;
     window.__codexAtlassianLanguagePhase = "";
+    window.__codexAtlassianLanguageSearchIndex = 0;
+    window.__codexAtlassianLanguageDidChange = false;
   }
 
   const phase = window.__codexAtlassianLanguagePhase || "";
@@ -179,6 +320,7 @@ account_preferences_script() {
     control.value = matchingOption.value;
     control.dispatchEvent(new Event("input", { bubbles: true }));
     control.dispatchEvent(new Event("change", { bubbles: true }));
+    window.__codexAtlassianLanguageDidChange = true;
     const saveButton = findSaveButton();
     if (saveButton && !saveButton.disabled) {
       saveButton.click();
@@ -191,6 +333,7 @@ account_preferences_script() {
 
   if (phase === "") {
     clickNode(control);
+    setComboboxValue(control, currentSearchCandidate());
     window.__codexAtlassianLanguagePhase = "choose";
     return JSON.stringify({ status: "waiting", message: "Opening the Atlassian language selector." });
   }
@@ -198,22 +341,17 @@ account_preferences_script() {
   if (phase === "choose") {
     const option = findVisibleOption();
     if (!option) {
+      if (visibleOptionsContainNoResults() && advanceSearchCandidate()) {
+        setComboboxValue(control, currentSearchCandidate());
+        return JSON.stringify({ status: "waiting", message: `Retrying the Atlassian language search for ${requestedLanguage}.` });
+      }
+      setComboboxValue(control, currentSearchCandidate());
       return JSON.stringify({ status: "waiting", message: `Waiting for the Atlassian language option ${requestedLanguage}.` });
     }
     option.node.click();
-    window.__codexAtlassianLanguagePhase = "save";
-    return JSON.stringify({ status: "waiting", message: "Selecting the Atlassian account language." });
-  }
-
-  if (phase === "save") {
-    const saveButton = findSaveButton();
-    if (saveButton && !saveButton.disabled) {
-      saveButton.click();
-      window.__codexAtlassianLanguagePhase = "confirm";
-      return JSON.stringify({ status: "waiting", message: "Saving the Atlassian account language." });
-    }
+    window.__codexAtlassianLanguageDidChange = true;
     window.__codexAtlassianLanguagePhase = "confirm";
-    return JSON.stringify({ status: "waiting", message: "Waiting for Atlassian to persist the selected language." });
+    return JSON.stringify({ status: "waiting", message: "Selecting the Atlassian account language." });
   }
 
   const saveButton = findSaveButton();
@@ -223,8 +361,12 @@ account_preferences_script() {
   }
 
   const refreshedCurrent = readCurrentLanguage();
-  if (slug(refreshedCurrent.label) === requestedSlug || slug(refreshedCurrent.value) === requestedSlug) {
-    return JSON.stringify({ status: "ok", language: refreshedCurrent });
+  if (matchesRequestedLanguage(refreshedCurrent)) {
+    return JSON.stringify({
+      status: "ok",
+      changed: !!window.__codexAtlassianLanguageDidChange,
+      language: refreshedCurrent
+    });
   }
 
   return JSON.stringify({ status: "waiting", message: "Waiting for the Atlassian account language to refresh." });
@@ -235,16 +377,19 @@ EOF
 build_page_script() {
   local mode="$1"
   local requested_json="${2:-[]}"
-  MODE="$mode" REQUESTED_JSON="$requested_json" python3 - <<'PY'
+  local requested_tag="${3:-}"
+  MODE="$mode" REQUESTED_JSON="$requested_json" REQUESTED_TAG="$requested_tag" python3 - <<'PY'
 import json
 import os
 
 script = os.environ["SCRIPT_TEMPLATE"]
 mode = json.dumps(os.environ["MODE"])
 requested = os.environ["REQUESTED_JSON"]
+requested_tag = json.dumps(os.environ["REQUESTED_TAG"])
 
 script = script.replace("__MODE__", mode)
 script = script.replace("__REQUESTED__", requested)
+script = script.replace("__REQUESTED_TAG__", requested_tag)
 print(script)
 PY
 }
@@ -252,11 +397,12 @@ PY
 run_account_preferences_script() {
   local mode="$1"
   local requested_json="${2:-[]}"
+  local requested_tag="${3:-}"
   local template=""
   local script=""
 
   template="$(account_preferences_script)"
-  SCRIPT_TEMPLATE="$template" build_page_script "$mode" "$requested_json" >/tmp/atlassian-language-script.$$
+  SCRIPT_TEMPLATE="$template" build_page_script "$mode" "$requested_json" "$requested_tag" >/tmp/atlassian-language-script.$$
   script="$(cat /tmp/atlassian-language-script.$$)"
   rm -f /tmp/atlassian-language-script.$$
   safari_eval_js "$script"
@@ -265,12 +411,13 @@ run_account_preferences_script() {
 wait_for_payload() {
   local mode="$1"
   local requested_json="${2:-[]}"
+  local requested_tag="${3:-}"
   local deadline=$((SECONDS + timeout_seconds))
   local payload=""
   local status=""
 
   while [ "$SECONDS" -lt "$deadline" ]; do
-    payload="$(run_account_preferences_script "$mode" "$requested_json")"
+    payload="$(run_account_preferences_script "$mode" "$requested_json" "$requested_tag")"
     if [ -z "$payload" ]; then
       sleep 2
       continue
@@ -328,7 +475,7 @@ case "$command" in
     ;;
   write)
     [ "$#" -gt 0 ] || fail "The write helper requires a requested language label."
-    wait_for_payload write "$(requested_json_from_args "$@")" >/dev/null
+    wait_for_payload write "$(requested_json_from_args "$@")" "${ATLASSIAN_ACCOUNT_REQUESTED_LANGUAGE_TAG:-}"
     ;;
   *)
     fail "Unknown helper command: $command"
