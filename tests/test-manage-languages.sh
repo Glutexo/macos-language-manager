@@ -213,6 +213,20 @@ assert_contains() {
   fi
 }
 
+assert_not_contains() {
+  local haystack="$1"
+  local needle="$2"
+  local message="$3"
+
+  if [[ "$haystack" == *"$needle"* ]]; then
+    echo "FAIL: $message"
+    echo "Unexpected: $needle"
+    echo "Output:"
+    printf '%s\n' "$haystack"
+    exit 1
+  fi
+}
+
 read_anki_default_lang() {
   PREFS_FILE="$anki_prefs_file" python3 - <<'PY'
 import os
@@ -355,6 +369,10 @@ PY
 
 output="$(HOME="$atlassian_helper_test_home" "$atlassian_helper_real" list-profiles)"
 assert_contains "$output" $'default\nWork\nPersonal' "atlassian helper should read Safari profile names from SafariTabs.db"
+
+atlassian_helper_source="$(sed -n '/if (control.tagName === "SELECT") {/,/window.__codexAtlassianLanguageDidChange = true;/p' "$atlassian_helper_real")"
+assert_not_contains "$atlassian_helper_source" "requestedSlug" "atlassian helper select fallback should not reference an undefined requestedSlug variable"
+assert_contains "$atlassian_helper_source" "searchCandidates.some((candidate)" "atlassian helper select fallback should match supported search candidates"
 
 atlassian_helper_menu_cache="$tmp_dir/atlassian-helper-menu-cache.txt"
 output="$(ATLASSIAN_ACCOUNT_BROWSER_PROFILE_CACHE="$atlassian_helper_menu_cache" ATLASSIAN_ACCOUNT_BROWSER_PROFILE_MENU_DATA=$'NewGlutexoWindow?isDefaultProfile=true\t新規Glutexoウインドウ\nNewTwistoWindow?isDefaultProfile=false\t새로운 Twisto 윈도우\nNewPrivateWindow\t새로운 개인정보 보호 브라우징 윈도우\nNewTab\t새로운 탭' "$atlassian_helper_real" refresh-profiles)"

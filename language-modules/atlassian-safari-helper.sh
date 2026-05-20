@@ -335,7 +335,10 @@ account_preferences_script() {
     const matchingOption = [...control.options].find((option) => {
       const labelSlug = slug(option.textContent || "");
       const valueSlug = slug(option.value || "");
-      return labelSlug === requestedSlug || valueSlug === requestedSlug;
+      return searchCandidates.some((candidate) => {
+        const candidateSlug = slug(candidate);
+        return labelSlug === candidateSlug || valueSlug === candidateSlug;
+      });
     });
     if (!matchingOption) {
       return JSON.stringify({ status: "error", message: `Could not find Atlassian account language option ${requestedLanguage}.` });
