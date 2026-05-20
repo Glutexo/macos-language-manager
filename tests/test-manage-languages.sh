@@ -311,7 +311,7 @@ assert_contains "$output" '--all-known-browser-profiles' "atlassian help should 
 
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian --verbose)"
 assert_contains "$output" "Supported Atlassian account language values:" "atlassian verbose help should list supported values"
-assert_contains "$output" "  Czech (cs,cs-CZ,cs_CZ,cestina,čeština,czech)" "atlassian verbose help should include Czech aliases"
+assert_contains "$output" "  Czech → Čeština (cs,cs-CZ,cs_CZ,cestina,čeština,czech)" "atlassian verbose help should include the Atlassian Czech label and aliases"
 
 output="$("$script" safari-profiles --help)"
 assert_contains "$output" "Usage: ./manage-languages.sh safari-profiles" "safari-profiles help should show module usage"
@@ -388,23 +388,23 @@ assert_contains "$output" "Current Atlassian account language: English (US)" "at
 
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian --dry-run Czech)"
 assert_contains "$output" "Current Atlassian account language: English (US)" "atlassian dry-run should print the current language"
-assert_contains "$output" "New Atlassian account language: Czech" "atlassian dry-run should print the target language"
+assert_contains "$output" "New Atlassian account language: Čeština" "atlassian dry-run should print the Atlassian target language label"
 assert_contains "$output" "Would change the Atlassian account language in Safari." "atlassian dry-run should describe the planned write"
 
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" MACOS_APP_LANGUAGE_INHERIT=cs-CZ "$script" atlassian --dry-run --inherit-macos)"
-assert_contains "$output" "New Atlassian account language: Czech" "atlassian inheritance should map the first macOS language"
+assert_contains "$output" "New Atlassian account language: Čeština" "atlassian inheritance should map the first macOS language to the Atlassian target label"
 
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian 'English (US)')"
 assert_contains "$output" "Atlassian account language is already set to English (US)." "atlassian should detect no-op writes"
 
 rm -f "$atlassian_helper_log"
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian Czech)"
-assert_contains "$output" "Changed Atlassian account language from English (US) to Czech." "atlassian write should print the change"
-assert_contains "$(cat "$atlassian_helper_log")" $'write\tdefault\tCzech' "atlassian write should pass the requested language to the helper"
+assert_contains "$output" "Changed Atlassian account language from English (US) to Čeština." "atlassian write should print the Atlassian target language label"
+assert_contains "$(cat "$atlassian_helper_log")" $'write\tdefault\tČeština' "atlassian write should pass the Atlassian language label to the helper"
 
 rm -f "$atlassian_helper_log"
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian --browser-profile work Czech)"
-assert_contains "$(cat "$atlassian_helper_log")" $'write\twork\tCzech' "atlassian should target the requested browser profile"
+assert_contains "$(cat "$atlassian_helper_log")" $'write\twork\tČeština' "atlassian should target the requested browser profile with the Atlassian language label"
 
 rm -f "$atlassian_helper_log"
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian --all-known-browser-profiles --dry-run Czech)"

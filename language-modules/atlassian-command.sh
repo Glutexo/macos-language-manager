@@ -20,6 +20,8 @@ selected_browser_profiles=()
 requested_language=""
 target_browser_profiles=()
 resolved_requested_language_tag=""
+resolved_requested_language_display=""
+resolved_requested_language_label=""
 
 fail() {
   echo "$1" >&2
@@ -32,43 +34,43 @@ normalize_whitespace() {
 
 language_catalog() {
   cat <<'EOF'
-English (US)|en-US|en,en-US,en_US,english,english us,english usa
-English (UK)|en-GB|en-GB,en_GB,en-UK,en_UK,en-AU,en_AU,english uk,english gb,british english
-Chinese (Simplified)|zh-CN|zh,zh-CN,zh_CN,zh-Hans,zh_Hans,zh-SG,zh_SG,zh-MY,zh_MY,chinese simplified,simplified chinese
-Chinese (Traditional)|zh-TW|zh-TW,zh_TW,zh-HK,zh_HK,zh-MO,zh_MO,zh-Hant,zh_Hant,chinese traditional,traditional chinese
-Czech|cs|cs,cs-CZ,cs_CZ,cestina,čeština,czech
-Danish|da|da,da-DK,da_DK,danish
-Dutch|nl|nl,nl-NL,nl_NL,dutch
-Estonian|et|et,et-EE,et_EE,estonian
-Finnish|fi|fi,fi-FI,fi_FI,finnish
-French|fr|fr,fr-FR,fr_FR,french
-German|de|de,de-DE,de_DE,german,deutsch
-Hungarian|hu|hu,hu-HU,hu_HU,hungarian
-Icelandic|is|is,is-IS,is_IS,icelandic
-Italian|it|it,it-IT,it_IT,italian
-Japanese|ja|ja,ja-JP,ja_JP,japanese
-Korean|ko|ko,ko-KR,ko_KR,korean
-Norwegian|nb|no,no-NO,no_NO,nb,nb-NO,nb_NO,norwegian,norwegian bokmal,norwegian bokmål
-Polish|pl|pl,pl-PL,pl_PL,polish
-Portuguese (Brazil)|pt-BR|pt-BR,pt_BR,portuguese brazil,brazilian portuguese
-Portuguese (Portugal)|pt-PT|pt-PT,pt_PT,portuguese portugal,european portuguese
-Romanian|ro|ro,ro-RO,ro_RO,romanian
-Russian|ru|ru,ru-RU,ru_RU,russian
-Serbian (Cyrillic)|sr-Cyrl|sr-Cyrl,sr_Cyrl,sr-Cyrl-RS,sr_Cyrl_RS,serbian cyrillic
-Serbian (Latin)|sr-Latn|sr-Latn,sr_Latn,sr-Latn-RS,sr_Latn_RS,serbian latin
-Slovak|sk|sk,sk-SK,sk_SK,slovak
-Slovenian|sl|sl,sl-SI,sl_SI,slovenian
-Spanish|es|es,es-ES,es_ES,spanish
-Swedish|sv|sv,sv-SE,sv_SE,swedish
-Turkish|tr|tr,tr-TR,tr_TR,turkish
-Ukrainian|uk|uk,uk-UA,uk_UA,ukrainian
-Vietnamese|vi|vi,vi-VN,vi_VN,vietnamese
+English (US)|en-US|en,en-US,en_US,english,english us,english usa|English (US)
+English (UK)|en-GB|en-GB,en_GB,en-UK,en_UK,en-AU,en_AU,english uk,english gb,british english|English (UK)
+Chinese (Simplified)|zh-CN|zh,zh-CN,zh_CN,zh-Hans,zh_Hans,zh-SG,zh_SG,zh-MY,zh_MY,chinese simplified,simplified chinese|中文 (简体)
+Chinese (Traditional)|zh-TW|zh-TW,zh_TW,zh-HK,zh_HK,zh-MO,zh_MO,zh-Hant,zh_Hant,chinese traditional,traditional chinese|中文 (繁體)
+Czech|cs|cs,cs-CZ,cs_CZ,cestina,čeština,czech|Čeština
+Danish|da|da,da-DK,da_DK,danish|dansk
+Dutch|nl|nl,nl-NL,nl_NL,dutch|Nederlands
+Estonian|et|et,et-EE,et_EE,estonian|eesti
+Finnish|fi|fi,fi-FI,fi_FI,finnish|suomi
+French|fr|fr,fr-FR,fr_FR,french|français
+German|de|de,de-DE,de_DE,german,deutsch|Deutsch
+Hungarian|hu|hu,hu-HU,hu_HU,hungarian|magyar
+Icelandic|is|is,is-IS,is_IS,icelandic|íslenska
+Italian|it|it,it-IT,it_IT,italian|italiano
+Japanese|ja|ja,ja-JP,ja_JP,japanese|日本語
+Korean|ko|ko,ko-KR,ko_KR,korean|한국어
+Norwegian|nb|no,no-NO,no_NO,nb,nb-NO,nb_NO,norwegian,norwegian bokmal,norwegian bokmål|norsk bokmål
+Polish|pl|pl,pl-PL,pl_PL,polish|polski
+Portuguese (Brazil)|pt-BR|pt-BR,pt_BR,portuguese brazil,brazilian portuguese|português (Brasil)
+Portuguese (Portugal)|pt-PT|pt-PT,pt_PT,portuguese portugal,european portuguese|português europeu
+Romanian|ro|ro,ro-RO,ro_RO,romanian|română
+Russian|ru|ru,ru-RU,ru_RU,russian|русский
+Serbian (Cyrillic)|sr-Cyrl|sr-Cyrl,sr_Cyrl,sr-Cyrl-RS,sr_Cyrl_RS,serbian cyrillic|српски (ћирилица)
+Serbian (Latin)|sr-Latn|sr-Latn,sr_Latn,sr-Latn-RS,sr_Latn_RS,serbian latin|srpski (latinica)
+Slovak|sk|sk,sk-SK,sk_SK,slovak|slovenčina
+Slovenian|sl|sl,sl-SI,sl_SI,slovenian|slovenščina
+Spanish|es|es,es-ES,es_ES,spanish|español
+Swedish|sv|sv,sv-SE,sv_SE,swedish|svenska
+Turkish|tr|tr,tr-TR,tr_TR,turkish|Türkçe
+Ukrainian|uk|uk,uk-UA,uk_UA,ukrainian|українська
+Vietnamese|vi|vi,vi-VN,vi_VN,vietnamese|Tiếng Việt
 EOF
 }
 
 supported_language_lines() {
-  language_catalog | while IFS='|' read -r display _ aliases; do
-    printf '  %s (%s)\n' "$display" "$aliases"
+  language_catalog | while IFS='|' read -r display _ aliases atlassian_label; do
+    printf '  %s → %s (%s)\n' "$display" "$atlassian_label" "$aliases"
   done
 }
 
@@ -78,23 +80,28 @@ canonicalize_requested_language() {
   local display=""
   local canonical_tag=""
   local aliases=""
+  local atlassian_label=""
   local alias=""
 
   requested="$(normalize_whitespace "$1")"
   [ -n "$requested" ] || fail "Invalid language value: $1"
   normalized="$(printf '%s' "$requested" | tr '[:upper:]' '[:lower:]')"
 
-  while IFS='|' read -r display canonical_tag aliases; do
+  while IFS='|' read -r display canonical_tag aliases atlassian_label; do
     if [ "$(printf '%s' "$display" | tr '[:upper:]' '[:lower:]')" = "$normalized" ]; then
       resolved_requested_language_tag="$canonical_tag"
-      printf '%s\n' "$display"
+      resolved_requested_language_display="$display"
+      resolved_requested_language_label="$atlassian_label"
+      printf '%s\n' "$atlassian_label"
       return 0
     fi
     IFS=',' read -r -a alias_items <<<"$aliases"
     for alias in "${alias_items[@]}"; do
       if [ "$(printf '%s' "$alias" | tr '[:upper:]' '[:lower:]')" = "$normalized" ]; then
         resolved_requested_language_tag="$canonical_tag"
-        printf '%s\n' "$display"
+        resolved_requested_language_display="$display"
+        resolved_requested_language_label="$atlassian_label"
+        printf '%s\n' "$atlassian_label"
         return 0
       fi
     done
@@ -214,6 +221,7 @@ main() {
   local profile_loop_index=0
   local last_profile_index=0
   local canonical_language=""
+  local canonical_language_display=""
   local canonical_language_tag=""
   local inherited_language=""
   local effective_language=""
@@ -238,6 +246,7 @@ main() {
 
   if [ -n "$requested_language" ]; then
     canonical_language="$(canonicalize_requested_language "$requested_language")"
+    canonical_language_display="$resolved_requested_language_display"
     canonical_language_tag="$resolved_requested_language_tag"
   fi
 
@@ -263,7 +272,7 @@ main() {
     fi
 
     effective_language="$canonical_language"
-    if [ "$current_language_label" = "$effective_language" ]; then
+    if [ "$current_language_label" = "$effective_language" ] || [ "$current_language_label" = "$canonical_language_display" ]; then
       echo "Atlassian account language is already set to $effective_language."
       if [ "$profile_loop_index" -lt "$last_profile_index" ]; then
         echo
