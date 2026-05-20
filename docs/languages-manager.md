@@ -37,6 +37,7 @@ Examples:
 - `language-modules/macos.sh` → `macos`
 - `language-modules/google-account.sh` → `google-account`
 - `language-modules/atlassian-account.sh` → `atlassian-account`
+- `language-modules/safari-profiles.sh` → `safari-profiles`
 
 `--list-apps` and `--list-modules` print the discovered ids.
 
@@ -211,3 +212,4 @@ Modules own application-specific errors, and shared-flow modules additionally ow
 - [terraforming-mars-language-manager.md](terraforming-mars-language-manager.md)
 - [google-account-language-manager.md](google-account-language-manager.md)
 - [atlassian-account-language-manager.md](atlassian-account-language-manager.md)
+- [safari-profiles-manager.md](safari-profiles-manager.md)

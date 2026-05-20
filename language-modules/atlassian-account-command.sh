@@ -12,8 +12,6 @@ source "$script_dir/browser-profile-command-helper.sh"
 dry_run=false
 verbose_help=false
 inherit_macos=false
-list_browser_profiles=false
-refresh_browser_profiles=false
 all_browser_profiles=false
 all_known_browser_profiles=false
 selected_browser_profiles=()
@@ -145,8 +143,6 @@ show_usage() {
   echo "  --browser-profile NAME  Use the named browser profile. Repeatable."
   echo "  --all-browser-profiles  Apply the command to every valid browser profile."
   echo "  --all-known-browser-profiles  Apply the command to every browser profile currently known to the helper."
-  echo "  --list-browser-profiles Print valid browser profile names."
-  echo "  --refresh-browser-profiles Refresh the stored Safari browser profile names through UI automation."
   echo
   echo "Examples:"
   echo "  $display_command"
@@ -169,7 +165,7 @@ show_usage() {
   echo "  Timeout: ${timeout_seconds}s"
   echo "  Safari must be allowed to run JavaScript on the Atlassian account preferences page."
   echo "  If Atlassian requests sign-in or verification, complete it in Safari before the timeout expires."
-  echo "  The browser-profile options work the same way as the Google account module."
+  echo "  Use ./manage-languages.sh safari-profiles to inspect or refresh the shared Safari profile cache."
 }
 
 parse_arguments() {
@@ -204,12 +200,6 @@ parse_arguments() {
         ;;
       --all-known-browser-profiles)
         all_known_browser_profiles=true
-        ;;
-      --list-browser-profiles)
-        list_browser_profiles=true
-        ;;
-      --refresh-browser-profiles)
-        refresh_browser_profiles=true
         ;;
       --force|-f)
         fail "The Atlassian account module does not support --force."
@@ -249,22 +239,6 @@ main() {
   local previous_language_label=""
 
   parse_arguments "$@"
-
-  if $list_browser_profiles; then
-    if $refresh_browser_profiles || $all_browser_profiles || $all_known_browser_profiles || [ "${#selected_browser_profiles[@]}" -gt 0 ] || [ -n "$requested_language" ] || $inherit_macos; then
-      fail "The --list-browser-profiles mode does not accept other options."
-    fi
-    list_available_browser_profiles
-    return 0
-  fi
-
-  if $refresh_browser_profiles; then
-    if $all_browser_profiles || $all_known_browser_profiles || [ "${#selected_browser_profiles[@]}" -gt 0 ] || [ -n "$requested_language" ] || $inherit_macos; then
-      fail "The --refresh-browser-profiles mode does not accept other options."
-    fi
-    refresh_available_browser_profiles
-    return 0
-  fi
 
   load_target_browser_profiles
   if [ "${#target_browser_profiles[@]}" -gt 1 ]; then

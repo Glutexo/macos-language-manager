@@ -240,6 +240,7 @@ assert_contains "$output" "  anki" "global help should include anki"
 assert_contains "$output" "  factorio" "global help should include factorio"
 assert_contains "$output" "  atlassian-account" "global help should include atlassian-account"
 assert_contains "$output" "  google-account" "global help should include google-account"
+assert_contains "$output" "  safari-profiles" "global help should include safari-profiles"
 assert_contains "$output" "  macos" "global help should include macos"
 assert_contains "$output" "  steam" "global help should include steam"
 assert_contains "$output" "  wingspan" "global help should include wingspan"
@@ -250,6 +251,7 @@ assert_contains "$output" "anki" "list-apps should print app ids"
 assert_contains "$output" "factorio" "list-apps should print app ids"
 assert_contains "$output" "atlassian-account" "list-apps should print module ids"
 assert_contains "$output" "google-account" "list-apps should print module ids"
+assert_contains "$output" "safari-profiles" "list-apps should print module ids"
 assert_contains "$output" "macos" "list-apps should print module ids"
 assert_contains "$output" "steam" "list-apps should print app ids"
 assert_contains "$output" "wingspan" "list-apps should print app ids"
@@ -263,6 +265,7 @@ assert_contains "$output" "OK: anki" "self-test should verify anki module contra
 assert_contains "$output" "OK: factorio" "self-test should verify factorio module contract"
 assert_contains "$output" "OK: atlassian-account" "self-test should verify atlassian-account module contract"
 assert_contains "$output" "OK: google-account" "self-test should verify google-account module contract"
+assert_contains "$output" "OK: safari-profiles" "self-test should verify safari-profiles module contract"
 assert_contains "$output" "OK: macos" "self-test should verify macos module contract"
 assert_contains "$output" "OK: steam" "self-test should verify steam module contract"
 assert_contains "$output" "OK: wingspan" "self-test should verify wingspan module contract"
@@ -284,8 +287,6 @@ assert_contains "$output" '--enable-auto-add' "google-account help should show a
 assert_contains "$output" '--browser-profile NAME' "google-account help should show browser profile selection"
 assert_contains "$output" '--all-browser-profiles' "google-account help should show all-browser-profiles support"
 assert_contains "$output" '--all-known-browser-profiles' "google-account help should show all-known-browser-profiles support"
-assert_contains "$output" '--list-browser-profiles' "google-account help should show browser profile listing"
-assert_contains "$output" '--refresh-browser-profiles' "google-account help should show browser profile refresh support"
 
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account --help)"
 assert_contains "$output" "Usage: ./manage-languages.sh atlassian-account [--dry-run|-n] [language]" "atlassian-account help should show module usage"
@@ -293,18 +294,38 @@ assert_contains "$output" '--inherit-macos' "atlassian-account help should show 
 assert_contains "$output" '--browser-profile NAME' "atlassian-account help should show browser profile selection"
 assert_contains "$output" '--all-browser-profiles' "atlassian-account help should show all-browser-profiles support"
 assert_contains "$output" '--all-known-browser-profiles' "atlassian-account help should show all-known-browser-profiles support"
-assert_contains "$output" '--list-browser-profiles' "atlassian-account help should show browser profile listing"
-assert_contains "$output" '--refresh-browser-profiles' "atlassian-account help should show browser profile refresh support"
 
 output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account --verbose)"
 assert_contains "$output" "Supported Atlassian account language values:" "atlassian-account verbose help should list supported values"
 assert_contains "$output" "  Czech (cs,cs-CZ,cs_CZ,cestina,čeština,czech)" "atlassian-account verbose help should include Czech aliases"
 
-output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account --list-browser-profiles)"
-assert_contains "$output" $'default\nwork\npersonal' "atlassian-account should list valid browser profiles"
+output="$("$script" safari-profiles --help)"
+assert_contains "$output" "Usage: ./manage-languages.sh safari-profiles" "safari-profiles help should show module usage"
+assert_contains "$output" '--refresh' "safari-profiles help should show refresh support"
+assert_contains "$output" '--clear-cache' "safari-profiles help should show cache clearing support"
+assert_contains "$output" '--list-cache' "safari-profiles help should show cache listing support"
+assert_contains "$output" '--list-effective' "safari-profiles help should show effective listing support"
+assert_contains "$output" '--show-cache-path' "safari-profiles help should show cache-path support"
 
-output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_ACCOUNT_HELPER_LOG="$atlassian_helper_log" "$script" atlassian-account --refresh-browser-profiles)"
-assert_contains "$output" $'default\nwork\npersonal' "atlassian-account should refresh and print valid browser profiles"
+safari_profiles_cache="$tmp_dir/safari-browser-profiles.txt"
+output="$(SAFARI_BROWSER_PROFILE_CACHE="$safari_profiles_cache" "$script" safari-profiles --show-cache-path)"
+assert_contains "$output" "$safari_profiles_cache" "safari-profiles should print the requested cache path"
+
+output="$(SAFARI_BROWSER_PROFILE_CACHE="$safari_profiles_cache" SAFARI_BROWSER_PROFILE_MENU_DATA=$'NewGlutexoWindow?isDefaultProfile=true\t新規Glutexoウインドウ\nNewTwistoWindow?isDefaultProfile=false\t새로운 Twisto 윈도우\nNewPrivateWindow\t새로운 개인정보 보호 브라우징 윈도우\nNewTab\t새로운 탭' "$script" safari-profiles --refresh)"
+assert_contains "$output" "Refreshed Safari browser profiles:" "safari-profiles refresh should print a heading"
+assert_contains "$output" $'  Glutexo\n  Twisto' "safari-profiles refresh should print refreshed names"
+assert_contains "$(cat "$safari_profiles_cache")" $'Glutexo\nTwisto' "safari-profiles refresh should store the refreshed cache"
+
+output="$(SAFARI_BROWSER_PROFILE_CACHE="$safari_profiles_cache" "$script" safari-profiles --list-cache)"
+assert_contains "$output" $'Glutexo\nTwisto' "safari-profiles should list cached names"
+
+output="$(SAFARI_BROWSER_PROFILE_CACHE="$safari_profiles_cache" "$script" safari-profiles)"
+assert_contains "$output" "Safari browser-profile cache path: $safari_profiles_cache" "safari-profiles default mode should print the cache path"
+assert_contains "$output" "Cached Safari browser profiles:" "safari-profiles default mode should print cached names"
+assert_contains "$output" "Effective Safari browser profiles:" "safari-profiles default mode should print effective names"
+
+output="$(SAFARI_BROWSER_PROFILE_CACHE="$safari_profiles_cache" "$script" safari-profiles --clear-cache)"
+assert_contains "$output" "Removed Safari browser-profile cache: $safari_profiles_cache" "safari-profiles should clear the cache"
 
 atlassian_helper_test_home="$tmp_dir/atlassian-helper-home"
 atlassian_helper_test_db_dir="$atlassian_helper_test_home/Library/Containers/com.apple.Safari/Data/Library/Safari"
@@ -368,12 +389,6 @@ output="$(ATLASSIAN_ACCOUNT_LANGUAGE_HELPER="$atlassian_helper_stub" ATLASSIAN_A
 assert_contains "$output" "Browser profile: default" "atlassian-account all-known-browser-profiles should print the first profile heading"
 assert_contains "$output" "Browser profile: work" "atlassian-account all-known-browser-profiles should print the second profile heading"
 assert_contains "$output" "Browser profile: personal" "atlassian-account all-known-browser-profiles should print the third profile heading"
-
-output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --list-browser-profiles)"
-assert_contains "$output" $'default\nwork\npersonal' "google-account should list valid browser profiles"
-
-output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --refresh-browser-profiles)"
-assert_contains "$output" $'default\nwork\npersonal' "google-account should refresh and print valid browser profiles"
 
 google_helper_test_home="$tmp_dir/google-helper-home"
 google_helper_test_db_dir="$google_helper_test_home/Library/Containers/com.apple.Safari/Data/Library/Safari"
@@ -496,9 +511,6 @@ assert_contains "$output" "Use either --disable-auto-add or --enable-auto-add, n
 
 output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --browser-profile nope 2>&1 || true)"
 assert_contains "$output" "Unknown browser profile: nope" "google-account should reject an unknown browser profile"
-
-output="$(GOOGLE_ACCOUNT_LANGUAGE_HELPER="$google_helper_stub" GOOGLE_ACCOUNT_HELPER_LOG="$google_helper_log" "$script" google-account --refresh-browser-profiles --browser-profile work 2>&1 || true)"
-assert_contains "$output" "The --refresh-browser-profiles mode does not accept other options." "google-account should keep browser profile refresh exclusive"
 
 output="$("$script" steam macos ja 2>&1 || true)"
 assert_contains "$output" "The macos module cannot be combined with other modules." "macos should stay exclusive"

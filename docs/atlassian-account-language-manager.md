@@ -30,8 +30,6 @@ Version 1 is intentionally narrow:
 ./manage-languages.sh atlassian-account --inherit-macos
 ./manage-languages.sh atlassian-account --browser-profile work Czech
 ./manage-languages.sh atlassian-account --all-known-browser-profiles --dry-run Japanese
-./manage-languages.sh atlassian-account --list-browser-profiles
-./manage-languages.sh atlassian-account --refresh-browser-profiles
 ```
 
 Behavior:
@@ -42,8 +40,7 @@ Behavior:
 - `--browser-profile NAME` targets one browser profile; repeat the switch to target more than one
 - `--all-browser-profiles` targets every valid browser profile
 - `--all-known-browser-profiles` targets every browser profile currently known to the helper
-- `--list-browser-profiles` prints the valid browser profile names
-- `--refresh-browser-profiles` refreshes the stored Safari profile-name cache through UI automation
+- use `./manage-languages.sh safari-profiles` to inspect or refresh the shared Safari profile cache
 
 ## Automation Strategy
 
@@ -61,8 +58,7 @@ The helper:
 4. reads the current language value from that control
 5. when writing, selects the requested language and clicks a visible save button when Atlassian renders one
 6. when browser profiles are selected, opens a dedicated Safari window for that profile through Safari's File menu and runs the same flow once per selected profile
-7. when `--refresh-browser-profiles` is requested, reads Safari's File menu through UI automation, prefers Safari accessibility identifiers to extract profile names without depending on localized menu text, and stores them in a local cache
-8. when profile names are needed during normal runs, reads the local cache first, then Safari's `SafariTabs.db` profile rows when that database is available, then falls back to `default`
+7. when profile names are needed during normal runs, reads the shared Safari profile cache first, then Safari's `SafariTabs.db` profile rows when that database is available, then falls back to `default`
 
 ## Requirements
 
@@ -84,7 +80,8 @@ The helper:
 - `ATLASSIAN_ACCOUNT_LANGUAGE_URL` → override the Atlassian account preferences URL
 - `ATLASSIAN_ACCOUNT_LANGUAGE_TIMEOUT` → timeout in seconds for sign-in and page loading
 - `ATLASSIAN_ACCOUNT_SAFARI_TABS_DB` → override the Safari profile database path, useful for tests
-- `ATLASSIAN_ACCOUNT_BROWSER_PROFILE_CACHE` → override the stored Safari profile-name cache path
+- `ATLASSIAN_ACCOUNT_BROWSER_PROFILE_CACHE` → override the shared Safari profile-name cache path for this module
+- `SAFARI_BROWSER_PROFILE_CACHE` → override the shared default Safari profile-name cache path
 - `ATLASSIAN_ACCOUNT_BROWSER_PROFILE` → helper-internal selector for one browser profile
 - `ATLASSIAN_ACCOUNT_BROWSER_PROFILES` → newline-separated helper override for valid browser profile names, useful for tests
 

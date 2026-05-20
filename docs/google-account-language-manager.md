@@ -27,8 +27,6 @@ Version 1 is intentionally narrow:
 
 ```bash
 ./manage-languages.sh google-account
-./manage-languages.sh google-account --list-browser-profiles
-./manage-languages.sh google-account --refresh-browser-profiles
 ./manage-languages.sh google-account --all-known-browser-profiles --dry-run "English"
 ./manage-languages.sh google-account --browser-profile work --browser-profile personal
 ./manage-languages.sh google-account --disable-auto-add
@@ -54,8 +52,7 @@ Token forms:
 - `--browser-profile NAME` → target one browser profile; repeat the switch to target more than one
 - `--all-browser-profiles` → target every valid browser profile
 - `--all-known-browser-profiles` → target every browser profile currently known to the helper
-- `--list-browser-profiles` → print the valid browser profile names
-- `--refresh-browser-profiles` → refresh the stored Safari profile-name cache through UI automation
+- use `./manage-languages.sh safari-profiles` to inspect or refresh the shared Safari profile cache
 - `--disable-auto-add` → turn off Google's `Automatically add languages` setting before writing; with no language arguments it performs only that maintenance step
 - `--enable-auto-add` → turn Google's `Automatically add languages` setting back on before writing; with no language arguments it performs only that maintenance step
 
@@ -77,8 +74,7 @@ The helper:
 6. when `--disable-auto-add` is requested, follows Google's own `Stop adding` confirmation flow through page JavaScript without depending on the window being frontmost
 7. when `--enable-auto-add` is requested, toggles the same setting back on through page JavaScript
 8. when browser profiles are selected, opens a dedicated Safari window for that profile through Safari's File menu and runs the same flow once per selected profile
-9. when `--refresh-browser-profiles` is requested, reads Safari's File menu through UI automation, prefers Safari accessibility identifiers to extract profile names without depending on the localized menu text, and stores them in a local cache
-10. when profile names are needed during normal runs, reads the local cache first, then Safari's `SafariTabs.db` profile rows when that database is available, then falls back to `default`
+9. when profile names are needed during normal runs, reads the shared Safari profile cache first, then Safari's `SafariTabs.db` profile rows when that database is available, then falls back to `default`
 
 The page is forced to `hl=en` so the automation can rely on stable English UI text when it looks for sign-in or page-state hints.
 
@@ -104,7 +100,8 @@ The page is forced to `hl=en` so the automation can rely on stable English UI te
 - `GOOGLE_ACCOUNT_LANGUAGE_URL` → override the Google Account language page URL
 - `GOOGLE_ACCOUNT_LANGUAGE_TIMEOUT` → timeout in seconds for sign-in and page loading
 - `GOOGLE_ACCOUNT_SAFARI_TABS_DB` → override the Safari profile database path, useful for tests
-- `GOOGLE_ACCOUNT_BROWSER_PROFILE_CACHE` → override the stored Safari profile-name cache path
+- `GOOGLE_ACCOUNT_BROWSER_PROFILE_CACHE` → override the shared Safari profile-name cache path for this module
+- `SAFARI_BROWSER_PROFILE_CACHE` → override the shared default Safari profile-name cache path
 - `GOOGLE_ACCOUNT_BROWSER_PROFILE` → helper-internal selector for one browser profile
 - `GOOGLE_ACCOUNT_BROWSER_PROFILES` → newline-separated helper override for valid browser profile names, useful for tests
 

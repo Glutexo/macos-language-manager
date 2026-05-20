@@ -5,6 +5,7 @@ Simple shell tooling for macOS language management:
 - managing the preferred macOS language order
 - changing the Atlassian account language preference used by Jira and other Atlassian Cloud apps through Safari automation
 - reading or reordering the preferred language list in a Google account through Safari automation
+- managing the shared Safari browser-profile cache used by browser-automation modules
 - managing application interface languages for Steam, Anki, Factorio, Wingspan, and Terraforming Mars
 
 ## Scripts
@@ -33,6 +34,7 @@ Notes:
 - You can target multiple application modules in one run, for example `./manage-languages.sh steam anki ja`.
 - The `google-account` module keeps its own browser-automation CLI and is not part of `all` or `everything`.
 - The `atlassian-account` module keeps its own browser-automation CLI and is not part of `all` or `everything`.
+- The `safari-profiles` module manages the shared Safari browser-profile cache and is not part of `all` or `everything`.
 - The pseudo-module `all` runs the shared application-language flow across every simple application module.
 - In `all` mode, a requested language may be applied only to the modules that support it; unsupported modules are skipped and left unchanged.
 - The pseudo-module `everything` runs `all` and then `macos all` in one command.
@@ -87,8 +89,6 @@ Usage:
 
 ```bash
 ./manage-languages.sh google-account
-./manage-languages.sh google-account --list-browser-profiles
-./manage-languages.sh google-account --refresh-browser-profiles
 ./manage-languages.sh google-account --all-known-browser-profiles --dry-run "English"
 ./manage-languages.sh google-account --browser-profile work --browser-profile personal
 ./manage-languages.sh google-account --disable-auto-add
@@ -105,10 +105,7 @@ Notes:
 - `--browser-profile NAME` can be repeated to target one or more browser profiles.
 - `--all-browser-profiles` applies the same operation to every valid browser profile.
 - `--all-known-browser-profiles` applies the same operation to every browser profile currently known to the helper.
-- `--list-browser-profiles` prints the valid browser profile names that the automation currently accepts.
-- `--refresh-browser-profiles` refreshes the stored Safari profile-name cache through Safari UI automation.
-- Profile-name refresh does not depend on the localized Safari menu text; it prefers Safari's accessibility identifiers and only falls back to visible menu text parsing.
-- `--list-browser-profiles` reads the current cached names, then falls back to local Safari data, then `default`.
+- Use `./manage-languages.sh safari-profiles` to inspect or refresh the shared Safari profile cache.
 - `--disable-auto-add` turns off Google's `Automatically add languages` setting before writing, and it can be used on its own without language arguments.
 - `--enable-auto-add` turns Google's `Automatically add languages` setting back on, and it can also be used on its own.
 - Version 1 reorders, removes, or adds languages through Safari automation.
@@ -144,13 +141,39 @@ Notes:
 - `--browser-profile NAME` can be repeated to target one or more browser profiles.
 - `--all-browser-profiles` applies the same operation to every valid browser profile.
 - `--all-known-browser-profiles` applies the same operation to every browser profile currently known to the helper.
-- `--list-browser-profiles` prints the valid browser profile names that the automation currently accepts.
-- `--refresh-browser-profiles` refreshes the stored Safari profile-name cache through Safari UI automation.
+- Use `./manage-languages.sh safari-profiles` to inspect or refresh the shared Safari profile cache.
 - Safari may prompt for sign-in or additional verification.
 
 Technical details:
 
 - [atlassian-account-language-manager.md](docs/atlassian-account-language-manager.md)
+
+### `manage-languages.sh safari-profiles`
+
+Inspects or refreshes the shared Safari browser-profile cache used by browser-automation modules.
+
+Usage:
+
+```bash
+./manage-languages.sh safari-profiles
+./manage-languages.sh safari-profiles --refresh
+./manage-languages.sh safari-profiles --clear-cache
+./manage-languages.sh safari-profiles --list-cache
+./manage-languages.sh safari-profiles --list-effective
+./manage-languages.sh safari-profiles --show-cache-path
+```
+
+Notes:
+
+- The module does not change languages.
+- `--refresh` updates the shared Safari profile cache through Safari UI automation.
+- `--clear-cache` removes the stored cache file.
+- `--list-cache` prints only cached names.
+- `--list-effective` prints the current effective names using cache first, then local Safari data, then `default`.
+
+Technical details:
+
+- [safari-profiles-manager.md](docs/safari-profiles-manager.md)
 
 ### `extract-system-settings-languages.swift`
 
@@ -221,6 +244,7 @@ Both completion files register completions for `manage-languages` and `./manage-
 - [terraforming-mars-language-manager.md](docs/terraforming-mars-language-manager.md)
 - [google-account-language-manager.md](docs/google-account-language-manager.md)
 - [atlassian-account-language-manager.md](docs/atlassian-account-language-manager.md)
+- [safari-profiles-manager.md](docs/safari-profiles-manager.md)
 
 ## Tests
 
