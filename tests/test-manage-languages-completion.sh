@@ -75,12 +75,18 @@ assert_contains_word "--inherit-macos" "${COMPLETION_WORDS[@]}"
 
 collect_completion_words < <(run_completion "$script" "atlassian" "--")
 assert_contains_word "--browser-profile" "${COMPLETION_WORDS[@]}"
-assert_contains_word "--all-browser-profiles" "${COMPLETION_WORDS[@]}"
-assert_contains_word "--all-known-browser-profiles" "${COMPLETION_WORDS[@]}"
 
 collect_completion_words < <(run_completion "$script" "atlassian" "--")
 if printf '%s\n' "${COMPLETION_WORDS[@]}" | grep -Fx -- "--force" >/dev/null 2>&1; then
   echo "FAIL: atlassian completion should not suggest --force"
+  exit 1
+fi
+if printf '%s\n' "${COMPLETION_WORDS[@]}" | grep -Fx -- "--all-browser-profiles" >/dev/null 2>&1; then
+  echo "FAIL: atlassian completion should not suggest --all-browser-profiles"
+  exit 1
+fi
+if printf '%s\n' "${COMPLETION_WORDS[@]}" | grep -Fx -- "--all-known-browser-profiles" >/dev/null 2>&1; then
+  echo "FAIL: atlassian completion should not suggest --all-known-browser-profiles"
   exit 1
 fi
 

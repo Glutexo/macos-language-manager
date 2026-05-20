@@ -29,7 +29,6 @@ Version 1 is intentionally narrow:
 ./manage-languages.sh atlassian "English (US)"
 ./manage-languages.sh atlassian --inherit-macos
 ./manage-languages.sh atlassian --browser-profile work Czech
-./manage-languages.sh atlassian --all-known-browser-profiles --dry-run Japanese
 ```
 
 Behavior:
@@ -38,8 +37,6 @@ Behavior:
 - with a language argument, the module changes one Atlassian account language preference
 - `--inherit-macos` maps the first current macOS preferred language tag to one supported Atlassian account language
 - `--browser-profile NAME` targets one browser profile; repeat the switch to target more than one
-- `--all-browser-profiles` targets every valid browser profile
-- `--all-known-browser-profiles` targets every browser profile currently known to the helper
 - use `./manage-languages.sh safari-profiles` to inspect or refresh the shared Safari profile cache
 
 ## Automation Strategy

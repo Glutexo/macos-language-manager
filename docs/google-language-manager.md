@@ -27,7 +27,6 @@ Version 1 is intentionally narrow:
 
 ```bash
 ./manage-languages.sh google
-./manage-languages.sh google --all-known-browser-profiles --dry-run "English"
 ./manage-languages.sh google --browser-profile work --browser-profile personal
 ./manage-languages.sh google --disable-auto-add
 ./manage-languages.sh google --enable-auto-add
@@ -50,8 +49,6 @@ Token forms:
 - `xx:` or `+xx:` → move `xx` to the end
 - `--inherit-macos` or `-M` → replace the Google Account list with the full current macOS preferred language order
 - `--browser-profile NAME` → target one browser profile; repeat the switch to target more than one
-- `--all-browser-profiles` → target every valid browser profile
-- `--all-known-browser-profiles` → target every browser profile currently known to the helper
 - use `./manage-languages.sh safari-profiles` to inspect or refresh the shared Safari profile cache
 - `--disable-auto-add` → turn off Google's `Automatically add languages` setting before writing; with no language arguments it performs only that maintenance step
 - `--enable-auto-add` → turn Google's `Automatically add languages` setting back on before writing; with no language arguments it performs only that maintenance step

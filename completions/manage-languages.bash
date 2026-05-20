@@ -125,10 +125,10 @@ _manage_languages_module_options() {
 
   case "$module" in
     atlassian)
-      printf '%s\n' "--dry-run -n --help -h --verbose -v --inherit-macos -M --browser-profile --all-browser-profiles --all-known-browser-profiles"
+      printf '%s\n' "--dry-run -n --help -h --verbose -v --inherit-macos -M --browser-profile"
       ;;
     google)
-      printf '%s\n' "--dry-run -n --help -h --verbose -v --inherit-macos -M --disable-auto-add --enable-auto-add --browser-profile --all-browser-profiles --all-known-browser-profiles"
+      printf '%s\n' "--dry-run -n --help -h --verbose -v --inherit-macos -M --disable-auto-add --enable-auto-add --browser-profile"
       ;;
     safari-profiles)
       printf '%s\n' "--help -h --verbose -v --refresh --clear-cache"

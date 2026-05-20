@@ -14,8 +14,6 @@ source "$script_dir/macos-language-inherit-helper.sh"
 dry_run=false
 verbose_help=false
 inherit_macos=false
-all_browser_profiles=false
-all_known_browser_profiles=false
 selected_browser_profiles=()
 requested_language=""
 target_browser_profiles=()
@@ -139,8 +137,6 @@ show_usage() {
   echo "  --verbose, -v   Show help together with supported values and Safari notes."
   echo "  --inherit-macos, -M  Use the first current macOS preferred language."
   echo "  --browser-profile NAME  Use the named browser profile. Repeatable."
-  echo "  --all-browser-profiles  Apply the command to every valid browser profile."
-  echo "  --all-known-browser-profiles  Apply the command to every browser profile currently known to the helper."
   echo
   echo "Examples:"
   echo "  $display_command"
@@ -148,7 +144,6 @@ show_usage() {
   echo "  $display_command \"English (US)\""
   echo "  $display_command --inherit-macos"
   echo "  $display_command --browser-profile work Czech"
-  echo "  $display_command --all-known-browser-profiles --dry-run Japanese"
 
   if ! $verbose_help; then
     return 0
@@ -192,12 +187,6 @@ parse_arguments() {
         ;;
       --browser-profile=*)
         selected_browser_profiles+=("${1#--browser-profile=}")
-        ;;
-      --all-browser-profiles)
-        all_browser_profiles=true
-        ;;
-      --all-known-browser-profiles)
-        all_known_browser_profiles=true
         ;;
       --force|-f)
         fail "The Atlassian account module does not support --force."

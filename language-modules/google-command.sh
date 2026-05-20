@@ -18,8 +18,6 @@ verbose_help=false
 inherit_macos=false
 disable_auto_add=false
 enable_auto_add=false
-all_browser_profiles=false
-all_known_browser_profiles=false
 selected_browser_profiles=()
 google_current_language_ids=()
 google_current_languages=()
@@ -260,8 +258,6 @@ show_usage() {
   echo "  --disable-auto-add   Turn off Google's automatic language additions before writing."
   echo "  --enable-auto-add    Turn on Google's automatic language additions before writing."
   echo "  --browser-profile NAME  Use the named browser profile. Repeatable."
-  echo "  --all-browser-profiles  Apply the command to every valid browser profile."
-  echo "  --all-known-browser-profiles  Apply the command to every browser profile currently known to the helper."
   echo
   echo "Language arguments:"
   echo "  xx        Move the language at the front."
@@ -274,7 +270,6 @@ show_usage() {
   echo "  $display_command"
   echo "  $display_command --disable-auto-add"
   echo "  $display_command --enable-auto-add"
-  echo "  $display_command --all-known-browser-profiles --dry-run \"English\""
   echo "  $display_command --browser-profile default"
   echo "  $display_command --inherit-macos"
   echo "  $display_command --dry-run \"English\""
@@ -296,8 +291,7 @@ show_usage() {
   echo "  Missing languages are added through the Google Account editor when the helper can find them."
   echo "  --disable-auto-add clicks Google's \"Stop adding\" flow before the write."
   echo "  --enable-auto-add turns Google's automatic language additions back on."
-  echo "  --browser-profile can be repeated, and --all-browser-profiles targets every valid browser profile."
-  echo "  --all-known-browser-profiles targets every browser profile currently known to the helper."
+  echo "  --browser-profile can be repeated to target more than one browser profile."
   echo "  Use ./manage-languages.sh safari-profiles to inspect or refresh the shared Safari profile cache."
   echo "  This flow is experimental because Google does not expose a public API for preferred-language ordering."
 }
@@ -334,12 +328,6 @@ parse_arguments() {
         ;;
       --browser-profile=*)
         selected_browser_profiles+=("${1#--browser-profile=}")
-        ;;
-      --all-browser-profiles)
-        all_browser_profiles=true
-        ;;
-      --all-known-browser-profiles)
-        all_known_browser_profiles=true
         ;;
       --force|-f)
         fail "The Google Account module does not support --force."

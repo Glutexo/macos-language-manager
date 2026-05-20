@@ -120,7 +120,7 @@ parse_arguments() {
       --list-effective)
         list_effective=true
         ;;
-      --dry-run|-n|--force|-f|--restore|-R|--inherit-macos|-M|--browser-profile|--all-browser-profiles|--all-known-browser-profiles|--list-browser-profiles|--refresh-browser-profiles)
+      --dry-run|-n|--force|-f|--restore|-R|--inherit-macos|-M|--browser-profile|--list-browser-profiles|--refresh-browser-profiles)
         fail "Unsupported option for the safari-profiles module: $1"
         ;;
       -*)
