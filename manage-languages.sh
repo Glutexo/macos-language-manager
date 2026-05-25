@@ -355,8 +355,12 @@ restore_module_files() {
 }
 
 try_read_current_language() {
-  if [ -f "$module_primary_storage_path" ]; then
-    module_read_current_language || true
+  module_read_current_language || true
+}
+
+prepare_module_storage_for_write() {
+  if declare -F module_prepare_storage_for_write >/dev/null 2>&1; then
+    module_prepare_storage_for_write "$1"
   fi
 }
 
@@ -431,6 +435,7 @@ standard_module_run() {
     return 0
   fi
 
+  prepare_module_storage_for_write "$canonical_requested_language"
   module_validate_backup_paths "${module_backup_file_paths[@]}"
   backup_module_files
   module_write_language "$canonical_requested_language"

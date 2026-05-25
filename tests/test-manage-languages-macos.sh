@@ -70,6 +70,9 @@ locale=en
 ; verbose-logging=false
 EOS
 
+epic_games_launcher_preferences_dir="$tmp_dir/EpicGamesLauncher"
+epic_games_launcher_process_match="$tmp_dir/EpicGamesLauncher-NotRunning"
+
 stub_dir="$tmp_dir/stubs"
 mkdir -p "$stub_dir"
 renderable_languages_file="$tmp_dir/RenderableUILanguages.plist"
@@ -213,6 +216,8 @@ run_case() {
   PATH="$stub_dir:$PATH" \
     STEAM_DIR="$steam_dir" \
     ANKI_BASE_DIR="$anki_dir" \
+    EPIC_GAMES_LAUNCHER_PREFERENCES_DIR="$epic_games_launcher_preferences_dir" \
+    EPIC_GAMES_LAUNCHER_PROCESS_MATCH="$epic_games_launcher_process_match" \
     FACTORIO_DIR="$factorio_dir" \
     MACOS_LANGUAGE_RENDERABLE_UI_LANGUAGES_PATH="$renderable_languages_file" \
     "$script" macos "$@"
@@ -222,6 +227,8 @@ run_everything_case() {
   PATH="$stub_dir:$PATH" \
     STEAM_DIR="$steam_dir" \
     ANKI_BASE_DIR="$anki_dir" \
+    EPIC_GAMES_LAUNCHER_PREFERENCES_DIR="$epic_games_launcher_preferences_dir" \
+    EPIC_GAMES_LAUNCHER_PROCESS_MATCH="$epic_games_launcher_process_match" \
     FACTORIO_DIR="$factorio_dir" \
     MACOS_LANGUAGE_RENDERABLE_UI_LANGUAGES_PATH="$renderable_languages_file" \
     "$script" everything "$@"
@@ -269,6 +276,7 @@ assert_contains "$output" $'New startup language setting:
 output="$(run_everything_case --dry-run de)"
 assert_contains "$output" "Would change Steam interface language from english to german." "everything should include Steam app planning"
 assert_contains "$output" "Would change Anki interface language from en_US to de_DE." "everything should include Anki app planning"
+assert_contains "$output" "Would change Epic Games Launcher interface language from system to de." "everything should include Epic Games Launcher app planning"
 assert_contains "$output" "Would change Factorio interface language from en to de." "everything should include Factorio app planning"
 assert_contains "$output" $'New language order:
   de-CZ' "everything should include macOS all planning"

@@ -43,6 +43,7 @@ run_completion() {
 
 collect_completion_words < <(run_completion "$script" "")
 assert_contains_word "steam" "${COMPLETION_WORDS[@]}"
+assert_contains_word "epic-games-launcher" "${COMPLETION_WORDS[@]}"
 assert_contains_word "macos" "${COMPLETION_WORDS[@]}"
 assert_contains_word "atlassian" "${COMPLETION_WORDS[@]}"
 assert_contains_word "safari-profiles" "${COMPLETION_WORDS[@]}"
@@ -52,6 +53,7 @@ assert_contains_word "--help" "${COMPLETION_WORDS[@]}"
 
 collect_completion_words < <(run_completion "$script" "steam" "")
 assert_contains_word "anki" "${COMPLETION_WORDS[@]}"
+assert_contains_word "epic-games-launcher" "${COMPLETION_WORDS[@]}"
 assert_contains_word "terraforming-mars" "${COMPLETION_WORDS[@]}"
 assert_contains_word "--restore" "${COMPLETION_WORDS[@]}"
 assert_contains_word "english" "${COMPLETION_WORDS[@]}"

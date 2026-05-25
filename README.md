@@ -6,7 +6,7 @@ Simple shell tooling for macOS language management:
 - changing the Atlassian account language preference used by Jira and other Atlassian Cloud apps through Safari automation
 - reading or reordering the preferred language list in a Google account through Safari automation
 - managing the shared Safari browser-profile cache used by browser-automation modules
-- managing application interface languages for Steam, Anki, Factorio, Wingspan, and Terraforming Mars
+- managing application interface languages for Steam, Anki, Epic Games Launcher, Factorio, Wingspan, and Terraforming Mars
 
 ## Scripts
 
@@ -237,6 +237,7 @@ Both completion files register completions for `manage-languages` and `./manage-
 
 - [steam-language-manager.md](docs/steam-language-manager.md)
 - [anki-language-manager.md](docs/anki-language-manager.md)
+- [epic-games-launcher-language-manager.md](docs/epic-games-launcher-language-manager.md)
 - [factorio-language-manager.md](docs/factorio-language-manager.md)
 - [wingspan-language-manager.md](docs/wingspan-language-manager.md)
 - [terraforming-mars-language-manager.md](docs/terraforming-mars-language-manager.md)

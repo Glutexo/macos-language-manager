@@ -30,6 +30,7 @@ Examples:
 - `all` → pseudo-module that runs the selected operation for every simple application module
 - `language-modules/steam.sh` → `steam`
 - `language-modules/anki.sh` → `anki`
+- `language-modules/epic-games-launcher.sh` → `epic-games-launcher`
 - `language-modules/factorio.sh` → `factorio`
 - `language-modules/wingspan.sh` → `wingspan`
 - `language-modules/terraforming-mars.sh` → `terraforming-mars`
@@ -99,6 +100,10 @@ Modules that use the shared application-language flow must also define:
 - `module_read_current_language`
 - `module_write_language`
 
+Modules may additionally define:
+
+- `module_prepare_storage_for_write`
+
 `module_primary_path` returns the canonical file path the runner should mention in diagnostics for that module.
 
 `module_init` must also populate these variables:
@@ -156,11 +161,12 @@ For a write:
 3. read the current value when possible
 4. canonicalize and validate the requested language through the module
 5. block the write if the app appears to be running unless `--force` was provided
-6. ask the module for the files that must be backed up
-7. ask the module to validate that full backup set
-8. create `.bak` copies of those files
-9. ask the module to write the new value
-10. print the old and new value and ask the user to restart the app
+6. optionally let the module prepare missing storage that must exist before the backup set can be validated
+7. ask the module for the files that must be backed up
+8. ask the module to validate that full backup set
+9. create `.bak` copies of those files
+10. ask the module to write the new value
+11. print the old and new value and ask the user to restart the app
 
 For macOS inheritance:
 
@@ -206,6 +212,7 @@ Modules own application-specific errors, and shared-flow modules additionally ow
 - [macos-language-manager.md](macos-language-manager.md)
 - [steam-language-manager.md](steam-language-manager.md)
 - [anki-language-manager.md](anki-language-manager.md)
+- [epic-games-launcher-language-manager.md](epic-games-launcher-language-manager.md)
 - [factorio-language-manager.md](factorio-language-manager.md)
 - [wingspan-language-manager.md](wingspan-language-manager.md)
 - [terraforming-mars-language-manager.md](terraforming-mars-language-manager.md)
