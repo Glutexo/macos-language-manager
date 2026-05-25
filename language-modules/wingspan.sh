@@ -1,3 +1,7 @@
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$script_dir/plist-language-helper.sh"
+
 module_init() {
   module_key="wingspan"
   module_display_name="Wingspan"
@@ -117,41 +121,11 @@ module_is_running() {
 }
 
 module_read_current_language() {
-  PLIST_FILE="$wingspan_preferences_file" python3 - <<'PY'
-import os
-import plistlib
-import sys
-
-path = os.environ["PLIST_FILE"]
-
-with open(path, "rb") as handle:
-    data = plistlib.load(handle)
-
-value = data.get("I2 Language")
-if not isinstance(value, str) or not value:
-    sys.exit(1)
-
-print(value)
-PY
+  plist_read_first_string_key "$wingspan_preferences_file" "I2 Language"
 }
 
 module_write_language() {
-  PLIST_FILE="$wingspan_preferences_file" REQUESTED_LANGUAGE="$1" python3 - <<'PY'
-import os
-import plistlib
-import sys
-
-path = os.environ["PLIST_FILE"]
-language = os.environ["REQUESTED_LANGUAGE"]
-
-with open(path, "rb") as handle:
-    data = plistlib.load(handle)
-
-data["I2 Language"] = language
-
-with open(path, "wb") as handle:
-    plistlib.dump(data, handle, sort_keys=False)
-PY
+  plist_write_string_keys "$wingspan_preferences_file" "I2 Language" "$1"
 }
 
 module_show_usage() {

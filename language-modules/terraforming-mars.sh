@@ -1,3 +1,7 @@
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$script_dir/plist-language-helper.sh"
+
 module_init() {
   module_key="terraforming-mars"
   module_display_name="Terraforming Mars"
@@ -108,24 +112,7 @@ module_is_running() {
 }
 
 module_read_current_language() {
-  PLIST_FILE="$terraforming_mars_preferences_file" python3 - <<'PY'
-import os
-import plistlib
-import sys
-
-path = os.environ["PLIST_FILE"]
-
-with open(path, "rb") as handle:
-    data = plistlib.load(handle)
-
-for key in ("I2 Language", "OSXPlayerCurrentLanguage"):
-    value = data.get(key)
-    if isinstance(value, str) and value:
-        print(value)
-        sys.exit(0)
-
-sys.exit(1)
-PY
+  plist_read_first_string_key "$terraforming_mars_preferences_file" "I2 Language" "OSXPlayerCurrentLanguage"
 }
 
 module_write_language() {
@@ -134,23 +121,10 @@ module_write_language() {
   locale="$(terraforming_mars_locale_for_language "$1")"
   [ -n "$locale" ] || fail "Unsupported Terraforming Mars locale mapping for: $1"
 
-  PLIST_FILE="$terraforming_mars_preferences_file" REQUESTED_LANGUAGE="$1" REQUESTED_LOCALE="$locale" python3 - <<'PY'
-import os
-import plistlib
-
-path = os.environ["PLIST_FILE"]
-language = os.environ["REQUESTED_LANGUAGE"]
-locale = os.environ["REQUESTED_LOCALE"]
-
-with open(path, "rb") as handle:
-    data = plistlib.load(handle)
-
-data["I2 Language"] = language
-data["OSXPlayerCurrentLanguage"] = locale
-
-with open(path, "wb") as handle:
-    plistlib.dump(data, handle, sort_keys=False)
-PY
+  plist_write_string_keys \
+    "$terraforming_mars_preferences_file" \
+    "I2 Language" "$1" \
+    "OSXPlayerCurrentLanguage" "$locale"
 }
 
 module_show_usage() {
